@@ -1,0 +1,28 @@
+backend:
+  name: github
+  repo: yumi-labs-tokyo/yumi-labs
+  branch: main
+  base_url: https://sveltia-cms-auth.pages.dev
+
+media_folder: public/assets
+public_folder: /assets
+
+locale: ja
+
+collections:
+  - name: work
+    label: 作品集
+    label_singular: 作品
+    folder: src/content/work
+    create: true
+    delete: true
+    slug: "{{slug}}"
+    extension: md
+    fields:
+      - { label: タイトル, name: title, widget: string }
+      - { label: 説明, name: description, widget: text }
+      - { label: 公開日, name: publishDate, widget: datetime, format: "YYYY-MM-DD HH:mm:ss", date_format: "YYYY-MM-DD", time_format: false }
+      - { label: 画像パス, name: img, widget: string, hint: "例: /assets/stock-1.jpg" }
+      - { label: 画像の説明 (alt), name: img_alt, widget: string, required: false }
+      - { label: タグ, name: tags, widget: list, field: { label: タグ, name: tag, widget: string } }
+      - { label: 本文, name: body, widget: markdown }
