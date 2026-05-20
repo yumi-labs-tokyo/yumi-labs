@@ -1,0 +1,468 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="ふるさと納税シミュレーター（独身特化） — yumi-Labs"
+  description="給与・賞与を入れるだけで限度額を正確計算。控除を最大化する返礼品カテゴリも提案。源泉徴収票不要。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🏘️</span>
+      <div>
+        <h1 class="tool-title">ふるさと納税シミュレーター</h1>
+        <p class="tool-sub">独身特化・源泉徴収票なし。給与と賞与を入れるだけで限度額を計算。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">💼 収入を入力</h2>
+
+        <div class="field-group">
+          <label class="field-label" for="monthly-salary">月給（手取りではなく額面）</label>
+          <div class="input-row">
+            <input type="number" id="monthly-salary" class="num-input" placeholder="250000" min="0" max="5000000" step="1000" />
+            <span class="unit">円 / 月</span>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="bonus">賞与（年間合計の額面）</label>
+          <div class="input-row">
+            <input type="number" id="bonus" class="num-input" placeholder="500000" min="0" max="50000000" step="10000" />
+            <span class="unit">円 / 年</span>
+          </div>
+          <p class="hint">なし・不明の場合は 0 のまま</p>
+        </div>
+
+        <!-- 年収プレビュー -->
+        <div class="income-preview" id="income-preview">
+          年収（概算）: <strong id="preview-income">—</strong>
+        </div>
+
+        <button class="calc-btn" onclick="calculate()">⚡ 今すぐ計算する</button>
+
+        <div class="notice-box">
+          <p>📌 <strong>対象：独身・扶養なし・社会保険は会社経由</strong></p>
+          <p>社会保険料は協会けんぽ東京都の標準的な率で推計します。実際の控除額は確定申告・ワンストップ特例の手続きが必要です。</p>
+        </div>
+      </section>
+
+      <!-- RESULT -->
+      <div class="result-col" id="result-col" hidden>
+
+        <!-- メインカード -->
+        <div class="limit-card">
+          <div class="limit-label">🎯 ふるさと納税の寄付上限額（目安）</div>
+          <div class="limit-amount" id="res-limit">—</div>
+          <div class="limit-sub">自己負担 <strong>2,000円</strong> でこの金額まで寄付できます</div>
+        </div>
+
+        <!-- 内訳 -->
+        <section class="card breakdown-card">
+          <h3 class="section-title">📊 計算の内訳</h3>
+          <table class="breakdown-table">
+            <tr><td>推定年収</td><td id="b-income" class="val"></td></tr>
+            <tr><td>給与所得控除</td><td id="b-kyuyo-kojo" class="val deduct"></td></tr>
+            <tr><td>給与所得</td><td id="b-kyuyo-shotoku" class="val"></td></tr>
+            <tr><td>社会保険料控除（推計）</td><td id="b-shakai" class="val deduct"></td></tr>
+            <tr><td>基礎控除</td><td id="b-kiso" class="val deduct"></td></tr>
+            <tr class="total-row"><td>課税所得</td><td id="b-kazei" class="val accent"></td></tr>
+            <tr><td>所得税率</td><td id="b-rate" class="val"></td></tr>
+            <tr><td>住民税所得割（10%）</td><td id="b-jumin" class="val"></td></tr>
+          </table>
+        </section>
+
+        <!-- 節税効果 -->
+        <section class="card saving-card">
+          <h3 class="section-title">💰 節税効果の内訳</h3>
+          <div class="saving-rows">
+            <div class="saving-row">
+              <span>所得税の還付</span>
+              <span class="saving-val" id="s-income-tax">—</span>
+            </div>
+            <div class="saving-row">
+              <span>住民税の控除（基本分）</span>
+              <span class="saving-val" id="s-jumin-basic">—</span>
+            </div>
+            <div class="saving-row">
+              <span>住民税の控除（特例分）</span>
+              <span class="saving-val" id="s-jumin-special">—</span>
+            </div>
+            <div class="saving-row total">
+              <span>合計節税額</span>
+              <span class="saving-val green" id="s-total">—</span>
+            </div>
+            <div class="saving-row burden">
+              <span>自己負担（実質コスト）</span>
+              <span class="saving-val red">2,000円</span>
+            </div>
+          </div>
+          <p class="saving-note" id="saving-note"></p>
+        </section>
+
+        <!-- 手続き -->
+        <section class="card procedure-card">
+          <h3 class="section-title">📋 手続き方法の選択肢</h3>
+          <div class="procedure-items">
+            <div class="procedure-item">
+              <div class="proc-badge green-badge">ワンストップ特例</div>
+              <p>確定申告不要。<strong>寄付先が5自治体以内</strong>なら申請書を送るだけ。会社員に最適。</p>
+            </div>
+            <div class="procedure-item">
+              <div class="proc-badge gray-badge">確定申告</div>
+              <p>6自治体以上に寄付する場合や、副業収入がある場合はこちら。2月〜3月に申告。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 返礼品提案 -->
+        <section class="card gift-card">
+          <h3 class="section-title">🎁 あなたの上限額でもらえる返礼品（30%換算）</h3>
+          <p class="gift-note">返礼品は寄付額の最大30%相当が目安です</p>
+          <div id="gift-grid" class="gift-grid"></div>
+          <p class="gift-disclaimer">※ 掲載は参考例です。実際の取り扱いはふるさとチョイス・楽天ふるさと納税等でご確認ください</p>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+// ─── 税計算ロジック ───────────────────────────────────────────
+
+// 給与所得控除（2020年以降）
+function calcKyuyoKojo(income) {
+  if (income <= 1625000)  return 550000;
+  if (income <= 1800000)  return Math.floor(income * 0.4) - 100000;
+  if (income <= 3600000)  return Math.floor(income * 0.3) + 80000;
+  if (income <= 6600000)  return Math.floor(income * 0.2) + 440000;
+  if (income <= 8500000)  return Math.floor(income * 0.1) + 1100000;
+  return 1950000;
+}
+
+// 社会保険料推計（協会けんぽ東京・独身）
+function calcSocialInsurance(income) {
+  const monthly = income / 12;
+  // 健康保険（介護保険なし、40歳未満）: 9.98% → 折半4.99% 上限: 月1,390,000円
+  const healthBase = Math.min(monthly, 1390000) * 0.0499 * 12;
+  // 厚生年金: 18.3% → 折半9.15% 上限: 月650,000円
+  const pensionBase = Math.min(monthly, 650000) * 0.0915 * 12;
+  // 雇用保険（一般）: 0.6% → 本人負担0.3%
+  const employBase = income * 0.003;
+  return Math.floor(healthBase + pensionBase + employBase);
+}
+
+// 所得税率
+function getIncomeTaxRate(kazeiShotoku) {
+  if (kazeiShotoku <= 1950000)  return 0.05;
+  if (kazeiShotoku <= 3300000)  return 0.10;
+  if (kazeiShotoku <= 6950000)  return 0.20;
+  if (kazeiShotoku <= 9000000)  return 0.23;
+  if (kazeiShotoku <= 18000000) return 0.33;
+  if (kazeiShotoku <= 40000000) return 0.40;
+  return 0.45;
+}
+
+function fmt(n) {
+  return Math.floor(n).toLocaleString('ja-JP') + '円';
+}
+function fmtPlain(n) {
+  return Math.floor(n).toLocaleString('ja-JP');
+}
+
+// ─── メイン計算 ───────────────────────────────────────────────
+function calculate() {
+  const monthly = parseFloat(document.getElementById('monthly-salary').value) || 0;
+  const bonus   = parseFloat(document.getElementById('bonus').value) || 0;
+
+  if (monthly <= 0) {
+    alert('月給を入力してください');
+    return;
+  }
+
+  const income        = Math.floor(monthly * 12 + bonus);
+  const kyuyoKojo     = calcKyuyoKojo(income);
+  const kyuyoShotoku  = income - kyuyoKojo;
+  const shakai        = calcSocialInsurance(income);
+  const kisoKojo      = 480000; // 基礎控除（年収2400万以下）
+  const kazeiShotoku  = Math.max(0, kyuyoShotoku - shakai - kisoKojo);
+  const taxRate       = getIncomeTaxRate(kazeiShotoku);
+  const juminShotokuWari = Math.max(0, kazeiShotoku * 0.10 - 2500); // 調整控除2500円
+
+  // ふるさと納税上限（寄付可能額）
+  // 上限 = (住民税所得割 × 20%) / (90% - 所得税率 × 102.1%) + 2000
+  const denominator = 0.90 - taxRate * 1.021;
+  const limit = denominator > 0
+    ? Math.floor((juminShotokuWari * 0.20) / denominator) + 2000
+    : 2000;
+
+  const donation    = limit - 2000; // 実質控除される金額
+  const incomeTaxRefund   = Math.floor(donation * taxRate * 1.021);
+  const juminBasic        = Math.floor(donation * 0.10);
+  const juminSpecial      = Math.floor(donation * (0.90 - taxRate * 1.021));
+  const totalSaving       = incomeTaxRefund + juminBasic + juminSpecial;
+
+  // 結果表示
+  document.getElementById('res-limit').textContent = fmt(limit);
+
+  document.getElementById('b-income').textContent        = fmt(income);
+  document.getElementById('b-kyuyo-kojo').textContent    = '− ' + fmt(kyuyoKojo);
+  document.getElementById('b-kyuyo-shotoku').textContent = fmt(kyuyoShotoku);
+  document.getElementById('b-shakai').textContent        = '− ' + fmt(shakai);
+  document.getElementById('b-kiso').textContent          = '− ' + fmt(kisoKojo);
+  document.getElementById('b-kazei').textContent         = fmt(kazeiShotoku);
+  document.getElementById('b-rate').textContent          = (taxRate * 100) + '%';
+  document.getElementById('b-jumin').textContent         = fmt(juminShotokuWari);
+
+  document.getElementById('s-income-tax').textContent   = fmt(incomeTaxRefund);
+  document.getElementById('s-jumin-basic').textContent  = fmt(juminBasic);
+  document.getElementById('s-jumin-special').textContent= fmt(juminSpecial);
+  document.getElementById('s-total').textContent        = fmt(totalSaving);
+
+  document.getElementById('saving-note').textContent =
+    `寄付額 ${fmt(limit)} のうち ${fmt(totalSaving)} が税金で戻り、実質負担は 2,000円 のみです。`;
+
+  renderGifts(limit);
+
+  document.getElementById('result-col').hidden = false;
+  document.getElementById('result-col').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── 返礼品提案 ───────────────────────────────────────────────
+const GIFTS = [
+  { min:0,      max:9999,    emoji:'😢', name:'上限が低め',       desc:'まずは地元の応援として1口寄付してみましょう', tags:[] },
+  { min:10000,  max:19999,   emoji:'🍚', name:'お米（5kg）',        desc:'毎日食べるものが無料になる感覚', tags:['新潟コシヒカリ','秋田あきたこまち'] },
+  { min:10000,  max:19999,   emoji:'🧴', name:'日用品・洗剤セット', desc:'生活費が実質ゼロになる返礼品', tags:['トイレットペーパー','シャンプー'] },
+  { min:20000,  max:49999,   emoji:'🍚', name:'お米（20〜30kg）',   desc:'年間の米代を無料化する最強コスパ', tags:['ゆめぴりか','つや姫'] },
+  { min:20000,  max:49999,   emoji:'🥩', name:'国産豚肉・鶏肉セット', desc:'毎月のタンパク質代を節約', tags:['鹿児島黒豚','宮崎地鶏'] },
+  { min:50000,  max:99999,   emoji:'🐄', name:'国産和牛（400g〜）', desc:'普段買えない高級牛肉が食卓に', tags:['松阪牛','飛騨牛','米沢牛'] },
+  { min:50000,  max:99999,   emoji:'🦞', name:'カニ・海鮮セット',   desc:'年に一度の豪華な食卓をゼロ円で', tags:['ズワイガニ','タラバガニ','ホタテ'] },
+  { min:50000,  max:99999,   emoji:'🍺', name:'クラフトビール・地酒', desc:'お酒好きには年間コストが大幅削減', tags:['よなよなエール','獺祭'] },
+  { min:100000, max:199999,  emoji:'🥩', name:'高級和牛（1kg〜）',  desc:'家族（将来）への投資にもなる贅沢品', tags:['近江牛','但馬牛'] },
+  { min:100000, max:199999,  emoji:'🦀', name:'カニ詰め合わせ大',   desc:'冷凍庫がカニで満杯になる幸せ', tags:['福井・越前かに'] },
+  { min:100000, max:199999,  emoji:'🏨', name:'温泉旅館の宿泊券',   desc:'1泊分がほぼタダになる体験型', tags:['箱根','草津','別府'] },
+  { min:200000, max:9999999, emoji:'🏠', name:'大型家電（掃除機・空気清浄機）', desc:'生活家電の買い替えをふるさと納税で', tags:['ルンバ対応','ダイソン系'] },
+  { min:200000, max:9999999, emoji:'🚲', name:'自転車・e-Bike',    desc:'交通費の節約にもなる高額返礼品', tags:['電動アシスト'] },
+  { min:200000, max:9999999, emoji:'✈️', name:'旅行・宿泊クーポン', desc:'旅費をまるごとふるさと納税で賄う', tags:['JTB旅行券','じゃらん'] },
+];
+
+function renderGifts(limit) {
+  const matched = GIFTS.filter(g => limit >= g.min && limit <= g.max);
+  const grid = document.getElementById('gift-grid');
+  grid.innerHTML = '';
+
+  const show = matched.slice(0, 6);
+  show.forEach(g => {
+    const div = document.createElement('div');
+    div.className = 'gift-item';
+    div.innerHTML = `
+      <div class="gift-emoji">${g.emoji}</div>
+      <div class="gift-name">${g.name}</div>
+      <div class="gift-desc">${g.desc}</div>
+      <div class="gift-tags">${g.tags.map(t => `<span class="gtag">${t}</span>`).join('')}</div>
+    `;
+    grid.appendChild(div);
+  });
+
+  if (show.length === 0) {
+    grid.innerHTML = '<p style="color:var(--gray-500);font-size:.85rem">返礼品提案なし（上限が低すぎます）</p>';
+  }
+}
+
+// ─── リアルタイム年収プレビュー ───────────────────────────────
+function updatePreview() {
+  const m = parseFloat(document.getElementById('monthly-salary').value) || 0;
+  const b = parseFloat(document.getElementById('bonus').value) || 0;
+  const income = m * 12 + b;
+  document.getElementById('preview-income').textContent =
+    income > 0 ? Math.floor(income).toLocaleString('ja-JP') + '円' : '—';
+}
+
+document.getElementById('monthly-salary').addEventListener('input', updatePreview);
+document.getElementById('bonus').addEventListener('input', updatePreview);
+</script>
+
+<style>
+  .page-wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: .875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .tool-header {
+    display: flex; align-items: flex-start; gap: 1rem;
+    margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .tool-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+  .tool-title { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; margin: 0 0 .25rem; word-break: break-word; }
+  .tool-sub { margin: 0; color: var(--gray-400); font-size: .9rem; }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .main-layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    box-sizing: border-box; min-width: 0;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 1.25rem; }
+  .section-title { font-size: .875rem; font-weight: 700; margin: 0 0 .875rem; }
+
+  /* Input */
+  .field-group { margin-bottom: 1.1rem; }
+  .field-label { display: block; font-size: .82rem; font-weight: 600; color: var(--gray-300); margin-bottom: .4rem; }
+  .input-row { display: flex; align-items: center; gap: .5rem; }
+  .num-input {
+    flex: 1; min-width: 0;
+    padding: .65rem .875rem;
+    font-size: 1rem;
+    border: 2px solid var(--gray-700);
+    border-radius: .625rem;
+    background: var(--gray-950); color: var(--gray-0);
+    font-family: inherit; font-variant-numeric: tabular-nums;
+    transition: border-color .2s; box-sizing: border-box;
+  }
+  .num-input:focus { outline: none; border-color: var(--accent-regular); }
+  .unit { font-size: .82rem; color: var(--gray-400); flex-shrink: 0; white-space: nowrap; }
+  .hint { font-size: .75rem; color: var(--gray-500); margin: .3rem 0 0; }
+
+  .income-preview {
+    background: var(--gray-950);
+    border: 1px solid var(--gray-800);
+    border-radius: .625rem;
+    padding: .625rem 1rem;
+    font-size: .85rem;
+    color: var(--gray-300);
+    margin-bottom: 1rem;
+  }
+  .income-preview strong { color: var(--accent-regular); }
+
+  .calc-btn {
+    width: 100%; padding: .875rem;
+    background: var(--accent-regular); color: #fff;
+    font-size: 1rem; font-weight: 700;
+    border: none; border-radius: .75rem;
+    cursor: pointer; font-family: inherit;
+    transition: opacity .2s; box-sizing: border-box;
+    margin-bottom: 1rem;
+  }
+  .calc-btn:hover { opacity: .88; }
+
+  .notice-box {
+    background: color-mix(in srgb, var(--gray-800) 60%, transparent);
+    border: 1px solid var(--gray-700);
+    border-radius: .625rem;
+    padding: .75rem 1rem;
+    font-size: .75rem; color: var(--gray-400); line-height: 1.65;
+  }
+  .notice-box p { margin: 0 0 .35rem; }
+  .notice-box p:last-child { margin: 0; }
+
+  /* Result col */
+  .result-col { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Limit card */
+  .limit-card {
+    background: linear-gradient(135deg, var(--accent-regular), color-mix(in srgb, var(--accent-regular) 70%, #7c3aed));
+    border-radius: 1rem;
+    padding: 1.5rem;
+    color: #fff;
+    text-align: center;
+  }
+  .limit-label { font-size: .82rem; opacity: .85; margin-bottom: .5rem; }
+  .limit-amount { font-size: clamp(2rem, 7vw, 3rem); font-weight: 800; margin-bottom: .4rem; }
+  .limit-sub { font-size: .82rem; opacity: .85; }
+  .limit-sub strong { font-weight: 700; }
+
+  /* Breakdown table */
+  .breakdown-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .breakdown-table tr { border-bottom: 1px solid var(--gray-800); }
+  .breakdown-table tr:last-child { border-bottom: none; }
+  .breakdown-table td { padding: .45rem .25rem; }
+  .breakdown-table td:first-child { color: var(--gray-400); }
+  .breakdown-table .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .breakdown-table .deduct { color: #f87171; }
+  .breakdown-table .total-row td { font-weight: 700; padding-top: .6rem; }
+  .breakdown-table .accent { color: var(--accent-regular); }
+
+  /* Saving */
+  .saving-rows { display: flex; flex-direction: column; gap: .5rem; }
+  .saving-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .82rem; color: var(--gray-300);
+    padding: .35rem 0; border-bottom: 1px solid var(--gray-900);
+  }
+  .saving-row:last-child { border: none; }
+  .saving-row.total { font-weight: 700; font-size: .9rem; color: var(--gray-0); border-top: 2px solid var(--gray-700); padding-top: .6rem; margin-top: .25rem; }
+  .saving-row.burden { color: var(--gray-500); }
+  .saving-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .saving-val.green { color: #34d399; }
+  .saving-val.red   { color: #f87171; }
+  .saving-note { font-size: .78rem; color: var(--gray-400); margin: .75rem 0 0; line-height: 1.65; }
+
+  /* Procedure */
+  .procedure-items { display: flex; flex-direction: column; gap: .75rem; }
+  .procedure-item {
+    padding: .75rem .875rem;
+    background: var(--gray-950);
+    border: 1px solid var(--gray-800);
+    border-radius: .625rem;
+  }
+  .procedure-item p { margin: .35rem 0 0; font-size: .82rem; color: var(--gray-300); line-height: 1.65; }
+  .proc-badge {
+    display: inline-block;
+    padding: .2rem .65rem;
+    border-radius: 2rem;
+    font-size: .75rem; font-weight: 700;
+  }
+  .green-badge { background: color-mix(in srgb, #22c55e 20%, transparent); color: #4ade80; border: 1px solid #22c55e55; }
+  .gray-badge  { background: color-mix(in srgb, var(--gray-600) 20%, transparent); color: var(--gray-300); border: 1px solid var(--gray-700); }
+
+  /* Gifts */
+  .gift-note { font-size: .78rem; color: var(--gray-500); margin: -.5rem 0 .875rem; }
+  .gift-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: .75rem;
+  }
+  .gift-item {
+    padding: .875rem;
+    background: var(--gray-950);
+    border: 1px solid var(--gray-800);
+    border-radius: .75rem;
+    transition: border-color .15s;
+  }
+  .gift-item:hover { border-color: var(--accent-regular); }
+  .gift-emoji { font-size: 1.75rem; margin-bottom: .4rem; }
+  .gift-name { font-size: .82rem; font-weight: 700; color: var(--gray-0); margin-bottom: .25rem; }
+  .gift-desc { font-size: .74rem; color: var(--gray-400); line-height: 1.5; margin-bottom: .4rem; }
+  .gift-tags { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .gtag {
+    font-size: .68rem; padding: .1rem .45rem;
+    background: color-mix(in srgb, var(--accent-regular) 12%, transparent);
+    color: var(--accent-regular);
+    border-radius: 2rem;
+    border: 1px solid color-mix(in srgb, var(--accent-regular) 30%, transparent);
+  }
+  .gift-disclaimer { font-size: .7rem; color: var(--gray-600); margin: .75rem 0 0; }
+</style>

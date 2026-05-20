@@ -81,7 +81,7 @@ export const tools: Tool[] = [
 		id: 9, slug: 'furusato-simulator',
 		name: 'ふるさと納税シミュレーター',
 		description: '給与・賞与を入れるだけで限度額を計算。控除最大化の返礼品も提案。',
-		emoji: '🏘️', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '🏘️', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 10, slug: 'hospital-memo',
