@@ -197,7 +197,7 @@ export const tools: Tool[] = [
 		id: 28, slug: 'haiku-image',
 		name: '縦書き俳句・短歌投稿用画像',
 		description: '季語チェック機能付き、和紙テクスチャ背景選択可能。',
-		emoji: '🌸', category: 'creator', status: 'coming-soon',
+		emoji: '🌸', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 29, slug: 'nijisousaku-tags',

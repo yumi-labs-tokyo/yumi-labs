@@ -1,0 +1,635 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="縦書き俳句・短歌 画像メーカー | yumi Labs">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🌸</div>
+      <div class="text-3xl font-bold text-white mb-2">縦書き俳句・短歌 画像メーカー</div>
+      <div class="text-gray-400 text-sm">季語チェック機能付き・和紙テクスチャ背景で投稿用画像を生成</div>
+    </div>
+
+    <div class="flex flex-col xl:flex-row gap-6">
+      <!-- Left: Controls -->
+      <div class="xl:w-96 flex-shrink-0">
+        <div class="bg-white/5 rounded-2xl p-5 space-y-5">
+
+          <!-- Mode selector -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-2">形式</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setMode('haiku')" id="modeHaiku"
+                class="mode-btn py-2 rounded-lg text-sm font-medium border-2 border-pink-500 bg-pink-500/20 text-pink-300 transition-all">
+                俳句 (5-7-5)
+              </button>
+              <button onclick="setMode('tanka')" id="modeTanka"
+                class="mode-btn py-2 rounded-lg text-sm font-medium border-2 border-white/20 text-gray-400 transition-all">
+                短歌 (5-7-5-7-7)
+              </button>
+            </div>
+          </div>
+
+          <!-- Phrase inputs -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-3">句を入力</div>
+            <div id="phraseInputs" class="space-y-2"></div>
+          </div>
+
+          <!-- Kigo check result -->
+          <div id="kigoResult" class="hidden p-3 rounded-xl border text-sm"></div>
+
+          <hr class="border-white/10">
+
+          <!-- Author / Title -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-3">作者・題</div>
+            <div class="space-y-2">
+              <div>
+                <label class="text-xs text-gray-400">作者名（右縦に表示）</label>
+                <input id="author" type="text" placeholder="例: 松尾芭蕉"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">題・前書き（左縦に表示）</label>
+                <input id="poemTitle" type="text" placeholder="例: 旅立ちの朝"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400"
+                  oninput="scheduleRender()">
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-white/10">
+
+          <!-- Background -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-3">背景（和紙テクスチャ）</div>
+            <div class="grid grid-cols-3 gap-2" id="bgGrid"></div>
+          </div>
+
+          <!-- Font -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-2">フォント</div>
+            <div class="grid grid-cols-3 gap-2" id="fontGrid"></div>
+          </div>
+
+          <!-- Border + Decoration -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-2">罫線</div>
+              <select id="borderStyle" onchange="scheduleRender()"
+                class="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-lg text-white text-sm focus:outline-none">
+                <option value="double">二重線</option>
+                <option value="single">一重線</option>
+                <option value="none">なし</option>
+              </select>
+            </div>
+            <div>
+              <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-2">季節装飾</div>
+              <label class="flex items-center gap-2 h-9 cursor-pointer">
+                <input type="checkbox" id="decoration" checked onchange="scheduleRender()" class="rounded accent-pink-500">
+                <span class="text-sm text-gray-300">季語から自動</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Size -->
+          <div>
+            <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-2">サイズ</div>
+            <div class="grid grid-cols-3 gap-2" id="sizeGrid"></div>
+          </div>
+
+          <!-- Download -->
+          <button onclick="downloadImage(this)"
+            class="w-full py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm transition-all">
+            📥 画像をダウンロード
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="flex-1">
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-sm text-gray-400">プレビュー</div>
+            <div class="text-xs text-gray-600" id="sizeLabel">1080×1080 px</div>
+          </div>
+          <div class="flex justify-center">
+            <canvas id="previewCanvas"
+              class="rounded-lg shadow-2xl"
+              style="max-width:100%;max-height:68vh;width:auto;height:auto;border:1px solid rgba(255,255,255,0.1)">
+            </canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // ─── Kigo Database ──────────────────────────────────────
+    const KIGO = {
+      '春': ['桜','花見','春雨','梅','蝶','燕','霞','菜の花','春風','若葉','蛙','朧月',
+             'うぐいす','花吹雪','花曇','春霞','陽炎','春暁','れんげ','タンポポ',
+             '花冷え','土筆','木の芽','春泥','春蝉','花筏','ひばり','雛','春の夜'],
+      '夏': ['蝉','蛍','花火','梅雨','入道雲','夕立','向日葵','朝顔','風鈴','夏祭',
+             '白南風','南風','青葉','新緑','ほととぎす','雷','夏の月','夏草',
+             '蚊帳','扇','汗','涼し','冷奴','麦藁','金魚','滝','川遊び','海'],
+      '秋': ['紅葉','月見','稲穂','銀杏','栗','案山子','秋風','鈴虫','松茸',
+             '彼岸花','落葉','菊','柿','蜩','秋刀魚','霧','露','雁',
+             '秋空','秋の暮','天高し','コスモス','秋麗','里芋'],
+      '冬': ['雪','初雪','霜','冬至','枯れ木','みかん','冬木立','節分',
+             '暖炉','息白い','冬眠','こたつ','除夜','大晦日','冬の月',
+             '北風','氷','冬晴','寒月','水仙','大寒','小寒','春待つ'],
+      '新年': ['初日の出','初夢','初春','門松','鏡餅','年賀','正月','初明かり',
+               '元旦','初詣','七草','成人'],
+    };
+
+    const SEASON_COLOR = { '春':'#e8a0c0', '夏':'#60b0e8', '秋':'#d08040', '冬':'#8090c0', '新年':'#e07860' };
+    const SEASON_LABEL = { '春':'🌸 春の句', '夏':'🌊 夏の句', '秋':'🍁 秋の句', '冬':'❄️ 冬の句', '新年':'🌅 新年の句' };
+
+    // ─── Background presets ─────────────────────────────────
+    const BACKGROUNDS = {
+      white:  { label:'白和紙', bg:'#f8f4eb', dark:false, gr:[120,90,50] },
+      sakura: { label:'薄桜',   bg:'#fde8e9', dark:false, gr:[190,100,110] },
+      grass:  { label:'若草',   bg:'#edf5e3', dark:false, gr:[70,120,60] },
+      beige:  { label:'鳥の子', bg:'#f5edd5', dark:false, gr:[130,100,55] },
+      ai:     { label:'藍',     bg:'#1e2f54', dark:true,  gr:[60,90,200] },
+      sumi:   { label:'墨',     bg:'#1a1a1a', dark:true,  gr:[80,80,80] },
+    };
+
+    const FONTS = {
+      mincho:   { label:'明朝体',   family:'"Noto Serif JP",serif' },
+      shippori: { label:'船橋明朝', family:'"Shippori Mincho",serif' },
+      zen:      { label:'古典明朝', family:'"Zen Old Mincho",serif' },
+    };
+
+    const SIZES = {
+      square:   { label:'正方形',  sub:'1080×1080', w:1080, h:1080 },
+      portrait: { label:'縦長4:5', sub:'1080×1350', w:1080, h:1350 },
+      story:    { label:'ストーリー',sub:'1080×1920',w:1080, h:1920 },
+    };
+
+    const HAIKU_LABELS  = ['上五','中七','下五'];
+    const HAIKU_TARGETS = [5, 7, 5];
+    const TANKA_LABELS  = ['初句','二句','三句','四句','結句'];
+    const TANKA_TARGETS = [5, 7, 5, 7, 7];
+
+    // ─── State ─────────────────────────────────────────────
+    const state = {
+      mode: 'haiku',
+      phrases: ['','','','',''],
+      author: '',
+      poemTitle: '',
+      background: 'white',
+      font: 'mincho',
+      border: 'double',
+      decoration: true,
+      size: 'square',
+    };
+
+    let renderTimer = null;
+
+    // ─── Mora counter ───────────────────────────────────────
+    function countMora(text) {
+      const small = new Set('ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ');
+      let n = 0, prevKana = false;
+      for (const ch of text) {
+        const isH = ch >= 'ぁ' && ch <= 'ゟ';
+        const isK = ch >= 'ァ' && ch <= 'ヿ';
+        const isJ = ch >= '一' && ch <= '鿿';
+        if (isH || isK) {
+          if (small.has(ch) && prevKana) { /* 0 mora */ }
+          else n++;
+          prevKana = true;
+        } else if (isJ || ch === 'ー' || ch === '〜') {
+          n++; prevKana = false;
+        } else prevKana = false;
+      }
+      return n;
+    }
+
+    // ─── Build UI ───────────────────────────────────────────
+    function buildPhraseInputs() {
+      const n     = state.mode === 'haiku' ? 3 : 5;
+      const labels = state.mode === 'haiku' ? HAIKU_LABELS : TANKA_LABELS;
+      const targets = state.mode === 'haiku' ? HAIKU_TARGETS : TANKA_TARGETS;
+      const container = document.getElementById('phraseInputs');
+      container.innerHTML = Array.from({length:n}, (_, i) => `
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500 w-6 flex-shrink-0">${labels[i]}</span>
+          <input type="text" data-idx="${i}" placeholder="${targets[i]}音" maxlength="20"
+            class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400"
+            oninput="onPhraseInput(this)">
+          <span id="mora-${i}" class="text-xs w-8 text-right font-mono text-gray-500">0</span>
+        </div>`).join('');
+      // Restore values
+      container.querySelectorAll('input').forEach(inp => {
+        const idx = parseInt(inp.dataset.idx);
+        inp.value = state.phrases[idx] || '';
+        updateMoraCounter(idx, inp.value);
+      });
+    }
+
+    function buildBgGrid() {
+      document.getElementById('bgGrid').innerHTML = Object.entries(BACKGROUNDS).map(([id, def]) => `
+        <button onclick="setBg('${id}')" data-bg="${id}"
+          class="bg-btn relative rounded-xl overflow-hidden border-2 transition-all h-10 ${state.background === id ? 'border-pink-400' : 'border-transparent hover:border-white/30'}"
+          title="${def.label}">
+          <div class="absolute inset-0" style="background:${def.bg}"></div>
+          <span class="absolute inset-0 flex items-center justify-center text-xs font-medium z-10"
+            style="color:${def.dark ? '#e8e0d0' : '#2a1a08'}">${def.label}</span>
+        </button>`).join('');
+    }
+
+    function buildFontGrid() {
+      document.getElementById('fontGrid').innerHTML = Object.entries(FONTS).map(([id, def]) => `
+        <button onclick="setFont('${id}')" data-font="${id}"
+          class="font-btn py-2 rounded-lg text-xs border-2 transition-all ${state.font === id ? 'border-pink-500 bg-pink-500/20 text-pink-300' : 'border-white/20 text-gray-400 hover:border-white/30'}"
+          style="font-family:${def.family}">${def.label}</button>`).join('');
+    }
+
+    function buildSizeGrid() {
+      document.getElementById('sizeGrid').innerHTML = Object.entries(SIZES).map(([id, def]) => `
+        <button onclick="setSize('${id}')" data-size="${id}"
+          class="size-btn py-2 px-1 rounded-lg text-xs border-2 transition-all ${state.size === id ? 'border-pink-500 bg-pink-500/20 text-pink-300' : 'border-white/20 text-gray-400 hover:border-white/30'}">
+          <div class="font-medium">${def.label}</div>
+          <div class="text-gray-600 text-[10px]">${def.sub}</div>
+        </button>`).join('');
+    }
+
+    // ─── State setters ──────────────────────────────────────
+    function setMode(mode) {
+      state.mode = mode;
+      ['haiku','tanka'].forEach(m => {
+        const btn = document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1));
+        btn.classList.toggle('border-pink-500', m === mode);
+        btn.classList.toggle('bg-pink-500/20', m === mode);
+        btn.classList.toggle('text-pink-300', m === mode);
+        btn.classList.toggle('border-white/20', m !== mode);
+        btn.classList.toggle('text-gray-400', m !== mode);
+      });
+      buildPhraseInputs();
+      scheduleRender();
+    }
+
+    function setBg(id) {
+      state.background = id;
+      document.querySelectorAll('.bg-btn').forEach(b =>
+        b.classList.toggle('border-pink-400', b.dataset.bg === id) ||
+        b.classList.toggle('border-transparent', b.dataset.bg !== id)
+      );
+      scheduleRender();
+    }
+
+    function setFont(id) {
+      state.font = id;
+      document.querySelectorAll('.font-btn').forEach(b => {
+        b.classList.toggle('border-pink-500', b.dataset.font === id);
+        b.classList.toggle('bg-pink-500/20', b.dataset.font === id);
+        b.classList.toggle('text-pink-300', b.dataset.font === id);
+        b.classList.toggle('border-white/20', b.dataset.font !== id);
+        b.classList.toggle('text-gray-400', b.dataset.font !== id);
+      });
+      scheduleRender();
+    }
+
+    function setSize(id) {
+      state.size = id;
+      document.querySelectorAll('.size-btn').forEach(b => {
+        b.classList.toggle('border-pink-500', b.dataset.size === id);
+        b.classList.toggle('bg-pink-500/20', b.dataset.size === id);
+        b.classList.toggle('text-pink-300', b.dataset.size === id);
+        b.classList.toggle('border-white/20', b.dataset.size !== id);
+        b.classList.toggle('text-gray-400', b.dataset.size !== id);
+      });
+      const def = SIZES[id];
+      document.getElementById('sizeLabel').textContent = `${def.w}×${def.h} px`;
+      scheduleRender();
+    }
+
+    function onPhraseInput(inp) {
+      const idx = parseInt(inp.dataset.idx);
+      state.phrases[idx] = inp.value;
+      updateMoraCounter(idx, inp.value);
+      updateKigoResult();
+      scheduleRender();
+    }
+
+    function updateMoraCounter(idx, text) {
+      const el = document.getElementById(`mora-${idx}`);
+      if (!el) return;
+      const n = state.mode === 'haiku' ? 3 : 5;
+      if (idx >= n) return;
+      const targets = state.mode === 'haiku' ? HAIKU_TARGETS : TANKA_TARGETS;
+      const count = countMora(text);
+      const target = targets[idx];
+      el.textContent = count;
+      el.className = `text-xs w-8 text-right font-mono ${
+        count === 0 ? 'text-gray-500' : count === target ? 'text-green-400' : 'text-yellow-400'
+      }`;
+    }
+
+    function updateKigoResult() {
+      const allText = state.phrases.join('');
+      const el = document.getElementById('kigoResult');
+      for (const [season, words] of Object.entries(KIGO)) {
+        for (const word of words) {
+          if (allText.includes(word)) {
+            el.className = 'p-3 rounded-xl border text-sm';
+            el.style.borderColor = SEASON_COLOR[season] + '60';
+            el.style.backgroundColor = SEASON_COLOR[season] + '15';
+            el.style.color = SEASON_COLOR[season];
+            el.textContent = `${SEASON_LABEL[season]} — 季語「${word}」が含まれています`;
+            el.classList.remove('hidden');
+            return;
+          }
+        }
+      }
+      el.classList.add('hidden');
+    }
+
+    // ─── Canvas rendering ────────────────────────────────────
+    function detectKigo() {
+      const t = state.phrases.join('');
+      for (const [season, words] of Object.entries(KIGO))
+        for (const w of words) if (t.includes(w)) return season;
+      return null;
+    }
+
+    function drawWashi(ctx, w, h) {
+      const def = BACKGROUNDS[state.background] || BACKGROUNDS.white;
+      ctx.fillStyle = def.bg;
+      ctx.fillRect(0, 0, w, h);
+      const [gr, gg, gb] = def.gr;
+      // Grain dots
+      const cnt = Math.floor(w * h / 100);
+      for (let i = 0; i < cnt; i++) {
+        const a = Math.random() * 0.045;
+        ctx.fillStyle = `rgba(${gr},${gg},${gb},${a})`;
+        ctx.fillRect(Math.random() * w, Math.random() * h, Math.random() * 1.8 + 0.4, Math.random() * 1.8 + 0.4);
+      }
+      // Paper fibers
+      const fc = Math.floor(Math.min(w, h) / 5);
+      for (let i = 0; i < fc; i++) {
+        const len = Math.random() * 80 + 20;
+        const angle = Math.random() * Math.PI * 2;
+        const a = Math.random() * 0.055 + 0.008;
+        ctx.strokeStyle = `rgba(${gr},${gg},${gb},${a})`;
+        ctx.lineWidth = Math.random() * 0.7 + 0.2;
+        ctx.beginPath();
+        const x0 = Math.random() * w, y0 = Math.random() * h;
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 + Math.cos(angle) * len, y0 + Math.sin(angle) * len);
+        ctx.stroke();
+      }
+    }
+
+    function drawBorder(ctx, w, h, sc, isDark) {
+      if (state.border === 'none') return;
+      const pad = 26 * sc;
+      const color = isDark ? 'rgba(210,185,145,0.45)' : 'rgba(70,50,25,0.28)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5 * sc;
+      ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
+      if (state.border === 'double') {
+        ctx.lineWidth = 0.6 * sc;
+        const p2 = pad + 6 * sc;
+        ctx.strokeRect(p2, p2, w - p2 * 2, h - p2 * 2);
+      }
+    }
+
+    function drawSeasonDeco(ctx, w, h, sc, season, isDark) {
+      const alpha = isDark ? 0.32 : 0.18;
+      const color = isDark ? `rgba(215,185,135,${alpha})` : `rgba(90,60,25,${alpha})`;
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      const pad = 48 * sc;
+      const size = 28 * sc;
+      const x = w - pad - size;
+      const y = pad + size;
+
+      if (season === '春') {
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          ctx.save();
+          ctx.translate(x + Math.cos(a) * size * 0.42, y + Math.sin(a) * size * 0.42);
+          ctx.rotate(a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * 0.22, size * 0.14, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.beginPath(); ctx.arc(x, y, size * 0.09, 0, Math.PI * 2); ctx.fill();
+      } else if (season === '夏') {
+        ctx.lineWidth = size * 0.08;
+        for (let i = 0; i < 3; i++) {
+          const wy = y - size * 0.2 + i * size * 0.22;
+          ctx.beginPath();
+          ctx.moveTo(x - size * 0.6, wy);
+          ctx.quadraticCurveTo(x, wy - size * 0.18, x + size * 0.6, wy);
+          ctx.stroke();
+        }
+      } else if (season === '秋') {
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+          const r = i % 2 === 0 ? size * 0.55 : size * 0.24;
+          i === 0 ? ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r)
+                  : ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.lineWidth = size * 0.07;
+        ctx.beginPath(); ctx.moveTo(x, y + size * 0.56); ctx.lineTo(x, y + size * 0.82); ctx.stroke();
+      } else if (season === '冬') {
+        ctx.lineWidth = size * 0.07;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          ctx.beginPath(); ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(a) * size * 0.56, y + Math.sin(a) * size * 0.56); ctx.stroke();
+          const bx = x + Math.cos(a) * size * 0.33, by = y + Math.sin(a) * size * 0.33;
+          ctx.lineWidth = size * 0.05;
+          const ba = a + Math.PI / 3;
+          ctx.beginPath();
+          ctx.moveTo(bx + Math.cos(ba) * size * 0.14, by + Math.sin(ba) * size * 0.14);
+          ctx.lineTo(bx - Math.cos(ba) * size * 0.14, by - Math.sin(ba) * size * 0.14);
+          ctx.stroke();
+          ctx.lineWidth = size * 0.07;
+        }
+        ctx.beginPath(); ctx.arc(x, y, size * 0.09, 0, Math.PI * 2); ctx.fill();
+      } else if (season === '新年') {
+        ctx.lineWidth = size * 0.06;
+        ctx.beginPath(); ctx.arc(x, y, size * 0.32, Math.PI, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - size * 0.45, y); ctx.lineTo(x + size * 0.45, y); ctx.stroke();
+        for (let i = 0; i < 5; i++) {
+          const a = Math.PI + (i / 4) * Math.PI;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(a) * size * 0.38, y + Math.sin(a) * size * 0.38);
+          ctx.lineTo(x + Math.cos(a) * size * 0.52, y + Math.sin(a) * size * 0.52);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function renderToCanvas(ctx, w, h) {
+      const sc = Math.min(w, h) / 1080;
+      const def = BACKGROUNDS[state.background] || BACKGROUNDS.white;
+      const isDark = def.dark;
+      const textColor  = isDark ? '#ece5d5' : '#150e02';
+      const accentColor = isDark ? 'rgba(210,178,120,0.75)' : 'rgba(85,55,15,0.65)';
+      const fontFamily = FONTS[state.font]?.family || FONTS.mincho.family;
+
+      // 1. Washi background
+      drawWashi(ctx, w, h);
+
+      // 2. Border
+      drawBorder(ctx, w, h, sc, isDark);
+
+      // 3. Season decoration
+      const season = detectKigo();
+      if (season && state.decoration) drawSeasonDeco(ctx, w, h, sc, season, isDark);
+
+      // 4. Main phrases
+      const n = state.mode === 'haiku' ? 3 : 5;
+      const phrases = state.phrases.slice(0, n).filter(p => p.trim());
+      if (phrases.length > 0) drawPhrasesVertical(ctx, w, h, sc, phrases, fontFamily, textColor);
+
+      // 5. Author (left side, vertical)
+      if (state.author.trim()) drawSideText(ctx, w, h, sc, fontFamily, accentColor, state.author, 'left');
+
+      // 6. Title (right side, vertical, smaller)
+      if (state.poemTitle.trim()) drawSideText(ctx, w, h, sc, fontFamily, accentColor, state.poemTitle, 'right');
+    }
+
+    function drawPhrasesVertical(ctx, w, h, sc, phrases, fontFamily, textColor) {
+      const maxChars = Math.max(...phrases.map(p => [...p].length));
+      const pad = 55 * sc;
+      const availH = h - pad * 2;
+      const availW = w - pad * 2;
+
+      // Font size: fit tallest column in 72% of height
+      let fontSize = Math.min(h * 0.065, (availH * 0.72) / (maxChars * 1.18));
+      fontSize = Math.max(fontSize, 24 * sc);
+
+      const charSp = fontSize * 1.18;
+      const colW   = fontSize * 1.38;
+      const colGap = fontSize * 0.62;
+      const nCols  = phrases.length;
+      const totalW = colW * nCols + colGap * (nCols - 1);
+      const totalH = maxChars * charSp;
+
+      const centerX = w / 2;
+      const centerY = h * 0.48;
+
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = textColor;
+
+      phrases.forEach((phrase, ci) => {
+        const chars = [...phrase];
+        // right-to-left: column 0 = rightmost
+        const x = centerX + totalW / 2 - colW / 2 - ci * (colW + colGap);
+        const phraseH = chars.length * charSp;
+        const startY  = centerY - phraseH / 2 + charSp / 2;
+        chars.forEach((ch, ri) => ctx.fillText(ch, x, startY + ri * charSp));
+      });
+    }
+
+    function drawSideText(ctx, w, h, sc, fontFamily, color, text, side) {
+      const fontSize = Math.max(17 * sc, Math.min(22 * sc, h * 0.019));
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      const pad = 44 * sc;
+      const x = side === 'left' ? pad + fontSize * 0.55 : w - pad - fontSize * 0.55;
+      let y = h * 0.5 - ([...text].length * fontSize * 1.42) / 2 + fontSize * 0.71;
+      for (const ch of text) {
+        ctx.fillText(ch, x, y);
+        y += fontSize * 1.42;
+      }
+    }
+
+    function render() {
+      const sizeDef = SIZES[state.size] || SIZES.square;
+      const canvas = document.getElementById('previewCanvas');
+      canvas.width  = sizeDef.w;
+      canvas.height = sizeDef.h;
+      renderToCanvas(canvas.getContext('2d'), sizeDef.w, sizeDef.h);
+    }
+
+    function scheduleRender() {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(render, 80);
+    }
+
+    // ─── Download ────────────────────────────────────────────
+    async function downloadImage(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '⏳ 生成中...'; btn.disabled = true;
+      await new Promise(r => setTimeout(r, 20));
+      try {
+        const canvas = document.getElementById('previewCanvas');
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const phrase0 = state.phrases[0] || '俳句';
+          const safe = phrase0.replace(/[^぀-鿿\w]/g, '').slice(0, 10);
+          a.href = url; a.download = `haiku_${safe || Date.now()}.png`; a.click();
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      } finally {
+        btn.textContent = orig; btn.disabled = false;
+      }
+    }
+
+    // ─── Font loading ────────────────────────────────────────
+    async function loadFonts() {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Shippori+Mincho:wght@400;600&family=Zen+Old+Mincho&display=swap';
+      document.head.appendChild(link);
+      try {
+        await Promise.all([
+          document.fonts.load('400 60px "Noto Serif JP"'),
+          document.fonts.load('400 60px "Shippori Mincho"'),
+          document.fonts.load('400 60px "Zen Old Mincho"'),
+        ]);
+      } catch(e) {}
+      render();
+    }
+
+    // ─── Init ────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      buildBgGrid();
+      buildFontGrid();
+      buildSizeGrid();
+      buildPhraseInputs();
+
+      document.getElementById('author').addEventListener('input', e => {
+        state.author = e.target.value; scheduleRender();
+      });
+      document.getElementById('poemTitle').addEventListener('input', e => {
+        state.poemTitle = e.target.value; scheduleRender();
+      });
+      document.getElementById('borderStyle').addEventListener('change', e => {
+        state.border = e.target.value; scheduleRender();
+      });
+      document.getElementById('decoration').addEventListener('change', e => {
+        state.decoration = e.target.checked; scheduleRender();
+      });
+
+      // Demo values
+      state.phrases[0] = '古池や';
+      state.phrases[1] = '蛙飛び込む';
+      state.phrases[2] = '水の音';
+      state.author = '松尾芭蕉';
+
+      loadFonts().then(() => {
+        buildPhraseInputs();
+        updateKigoResult();
+      });
+    });
+  </script>
+</BaseLayout>
