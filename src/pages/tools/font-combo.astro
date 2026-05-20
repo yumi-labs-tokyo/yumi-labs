@@ -1,0 +1,343 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ロゴ用フォント組み合わせ提案 | yumi Labs">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🔤</div>
+      <div class="text-3xl font-bold text-white mb-2">ロゴ用フォント組み合わせ提案</div>
+      <div class="text-gray-400 text-sm">業種を選ぶと「メイン+サブ」のGoogle Fontの組み合わせを5パターン提案</div>
+    </div>
+
+    <!-- Industry selector -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-6">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">業種・ジャンルを選択</div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2" id="industryGrid"></div>
+    </div>
+
+    <!-- Logo text input -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-6">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">プレビュー用テキスト</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">ロゴテキスト（メインフォント）</label>
+          <input id="inLogo" type="text" value="Brand Name" maxlength="30"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/10 focus:border-purple-400 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">タグライン（サブフォント）</label>
+          <input id="inTagline" type="text" value="Your slogan here." maxlength="40"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/10 focus:border-purple-400 focus:outline-none" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Placeholder -->
+    <div id="placeholder" class="bg-white/5 rounded-2xl p-12 text-center">
+      <div class="text-5xl mb-4">👆</div>
+      <div class="text-gray-400 text-sm">上の業種を選ぶと5パターンのフォント組み合わせを表示します</div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="hidden bg-white/5 rounded-2xl p-10 text-center">
+      <div class="text-4xl mb-3 animate-pulse">⏳</div>
+      <div class="text-gray-400 text-sm">フォントを読み込み中...</div>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden space-y-4"></div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // ── Font data ──────────────────────────────────────────────────────────────
+  const INDUSTRIES = [
+    { id: 'tech',         label: 'テクノロジー',     emoji: '💻' },
+    { id: 'cafe',         label: 'カフェ・飲食',     emoji: '☕' },
+    { id: 'fashion',      label: 'ファッション',     emoji: '👗' },
+    { id: 'medical',      label: '医療・ヘルス',     emoji: '🏥' },
+    { id: 'creative',     label: 'クリエイター',     emoji: '🎨' },
+    { id: 'education',    label: '教育・学習',       emoji: '📚' },
+    { id: 'beauty',       label: '美容・コスメ',     emoji: '✨' },
+    { id: 'realestate',   label: '不動産・建築',     emoji: '🏢' },
+    { id: 'entertainment',label: 'エンタメ・ゲーム', emoji: '🎮' },
+    { id: 'japanese',     label: '和風・伝統',       emoji: '⛩️' },
+  ];
+
+  const COMBOS = {
+    tech: [
+      { name: 'テック・モダン',       main: 'Space Grotesk', mw: 700, sub: 'Inter',          sw: 400, tags: ['モダン','クリーン','信頼感'],   desc: '幾何学的フォルムと高い可読性。スタートアップのロゴに最適な定番コンビ。' },
+      { name: 'フレンドリー・テック', main: 'Outfit',         mw: 700, sub: 'DM Sans',        sw: 400, tags: ['親しみ','革新','シンプル'],     desc: '柔らかな印象を持つ現代的なサンセリフ。BtoC向けSaaSに。' },
+      { name: 'ソフトウェア系',       main: 'Plus Jakarta Sans', mw: 700, sub: 'Nunito',     sw: 400, tags: ['現代的','フレンドリー','安定'],  desc: '読みやすさと個性のバランスが優れた成長企業向けコンボ。' },
+      { name: 'アバンギャルド',       main: 'Syne',           mw: 700, sub: 'Manrope',       sw: 400, tags: ['先進','ミニマル','グラフィカル'], desc: '尖った個性を持つSyne。デザイン系テック企業に。' },
+      { name: 'フューチャリスト',     main: 'Exo 2',          mw: 700, sub: 'Source Sans 3', sw: 400, tags: ['未来的','機能的','ダイナミック'], desc: '未来を感じさせる字形。AIやロボティクス系に。' },
+    ],
+    cafe: [
+      { name: 'クラシックカフェ',   main: 'Playfair Display',   mw: 700, sub: 'Lato',          sw: 400, tags: ['エレガント','温かみ','上品'],     desc: 'セリフとサンセリフの王道コンビ。どんなカフェにも合うタイムレスな組み合わせ。' },
+      { name: '高級レストラン',     main: 'Cormorant Garamond', mw: 700, sub: 'Raleway',       sw: 400, tags: ['高級感','洗練','伝統'],           desc: '繊細なセリフが高級感を演出。フレンチ・イタリアン系に。' },
+      { name: 'モダンビストロ',     main: 'DM Serif Display',   mw: 400, sub: 'DM Sans',       sw: 400, tags: ['モダン','シンプル','クリーン'],   desc: 'DMシリーズの統一感ある組み合わせ。現代的な食空間に。' },
+      { name: 'おしゃれカフェ',     main: 'Josefin Sans',       mw: 700, sub: 'Josefin Slab',  sw: 400, tags: ['おしゃれ','北欧','カジュアル'],   desc: '同じデザイナーによるペア。北欧系カフェやベーカリーに。' },
+      { name: 'ナチュラル系',       main: 'Libre Baskerville',  mw: 700, sub: 'Open Sans',     sw: 400, tags: ['自然体','信頼','親しみ'],         desc: 'オーガニックや地元密着型のカフェ・食堂に馴染む落ち着いたコンビ。' },
+    ],
+    fashion: [
+      { name: 'ラグジュアリー',     main: 'Cormorant Garamond', mw: 700, sub: 'Raleway',       sw: 300, tags: ['高級','ミニマル','洗練'],         desc: '繊細なセリフとスリムなサンセリフ。ハイブランドの雰囲気を演出。' },
+      { name: 'エディトリアル',     main: 'Playfair Display',   mw: 700, sub: 'Montserrat',    sw: 300, tags: ['タイムレス','知性','スタイリッシュ'], desc: 'ファッション誌的なレイアウトに映える組み合わせ。' },
+      { name: 'ストリート',         main: 'Bebas Neue',          mw: 400, sub: 'Montserrat',    sw: 400, tags: ['ボールド','インパクト','アーバン'], desc: '圧倒的な存在感のBebasとMontserrat。ストリートブランドに。' },
+      { name: 'イタリアンモード',   main: 'Italiana',            mw: 400, sub: 'Lato',          sw: 300, tags: ['エレガント','フェミニン','モダン'],  desc: 'イタリア語風の優雅な字形。女性向けファッションブランドに。' },
+      { name: 'スカンジナビアン',   main: 'Josefin Sans',        mw: 700, sub: 'Lora',          sw: 400, tags: ['ミニマル','北欧','クリーン'],      desc: 'ジオメトリックなサンセリフにセリフを添えた北欧ブランド向け。' },
+    ],
+    medical: [
+      { name: 'プロフェッショナル', main: 'Source Serif 4',  mw: 700, sub: 'Source Sans 3', sw: 400, tags: ['信頼','清潔','専門性'],           desc: 'Adobe製の同系列フォント。一貫したデザイン言語で専門性を訴求。' },
+      { name: 'フレンドリー・ケア', main: 'Nunito',           mw: 700, sub: 'Nunito Sans',   sw: 400, tags: ['安心','フレンドリー','親しみ'],   desc: '丸みのある字形が患者に安心感を与える。クリニック・薬局向け。' },
+      { name: 'テック・メディカル', main: 'IBM Plex Serif',   mw: 700, sub: 'IBM Plex Sans',  sw: 400, tags: ['精密','クリーン','現代'],         desc: 'IBM製フォントの組み合わせ。メドテック・デジタルヘルスに。' },
+      { name: 'ウェルネス',         main: 'Merriweather',     mw: 700, sub: 'Open Sans',      sw: 400, tags: ['落ち着き','読みやすい','安心'],   desc: '読みやすさ重視の定番コンビ。長文コンテンツが多い医療サイトに。' },
+      { name: 'クリニック',         main: 'Lora',             mw: 700, sub: 'Roboto',         sw: 400, tags: ['温かみ','プロ','バランス'],       desc: '温かみのセリフとGoogleの定番Robotoの安定コンビ。' },
+    ],
+    creative: [
+      { name: 'グラフィックデザイン', main: 'Syne',          mw: 700, sub: 'Inter',          sw: 400, tags: ['アート','グラフィカル','先進'],   desc: 'デザインスタジオやポートフォリオに最適なエッジのある組み合わせ。' },
+      { name: 'インパクト系',        main: 'Abril Fatface',  mw: 400, sub: 'Lato',           sw: 400, tags: ['ボールド','個性','インパクト'],   desc: '印象的な太字ディスプレイと中性的なサブ。フォトグラファー向け。' },
+      { name: 'テッククリエイティブ', main: 'Space Mono',   mw: 700, sub: 'DM Sans',         sw: 400, tags: ['コーダー','ユニーク','エッジ'],   desc: '等幅フォントのユニークな個性。エンジニア系クリエイターに。' },
+      { name: 'クリエイティブスタジオ', main: 'Raleway',    mw: 700, sub: 'Lato',            sw: 400, tags: ['エレガント','クリーン','プロ'],   desc: 'スタイリッシュなRalewayが主役。映像・音楽プロダクションに。' },
+      { name: 'ダイナミック',        main: 'Bebas Neue',     mw: 400, sub: 'Open Sans',       sw: 400, tags: ['力強い','モダン','ダイナミック'], desc: 'シネマティックな力強さ。映像制作・写真スタジオに。' },
+    ],
+    education: [
+      { name: 'アカデミック',       main: 'Merriweather',       mw: 700, sub: 'Open Sans',      sw: 400, tags: ['学術','信頼','読みやすい'],     desc: '教科書的な読みやすさ。大学・研究機関・塾向けの王道コンビ。' },
+      { name: 'エデュケーション',   main: 'Libre Baskerville',  mw: 700, sub: 'Lato',           sw: 400, tags: ['知性','伝統','現代'],           desc: '格調あるバスカービルで権威を示し、Latoで親近感を添える。' },
+      { name: 'オンライン学習',     main: 'Lora',               mw: 700, sub: 'Roboto',         sw: 400, tags: ['温かみ','読みやすい','モダン'], desc: 'UDEMYのような学習プラットフォームにぴったりのバランス型。' },
+      { name: 'クラシック教育',     main: 'PT Serif',           mw: 700, sub: 'PT Sans',        sw: 400, tags: ['クラシック','信頼','中立'],     desc: 'ロシア発のPTシリーズ。教育機関の公的なイメージに。' },
+      { name: 'フレンドリー学習',   main: 'Nunito',             mw: 700, sub: 'Source Sans 3',  sw: 400, tags: ['親しみ','楽しい','読みやすい'], desc: '子ども向け・入門者向け教育サービスに馴染む柔らかいコンビ。' },
+    ],
+    beauty: [
+      { name: 'ビューティブランド', main: 'Playfair Display',   mw: 700, sub: 'Raleway',       sw: 300, tags: ['エレガント','フェミニン','上品'], desc: 'コスメ・スキンケアブランドの定番。高揚感のあるセリフ×洗練サンセリフ。' },
+      { name: 'ラグジュアリーコスメ', main: 'Cormorant Garamond', mw: 700, sub: 'Josefin Sans', sw: 300, tags: ['高級','ミニマル','洗練'],       desc: '繊細で女性的な字形。デパコス・プレステージブランドに。' },
+      { name: 'モダンビューティ',   main: 'Gilda Display',      mw: 400, sub: 'Raleway',       sw: 400, tags: ['上品','モダン','スレンダー'],   desc: 'スマートで少し個性的なGilda。セレクトショップや美容院に。' },
+      { name: 'ナチュラルビューティ', main: 'Italiana',          mw: 400, sub: 'Nunito',        sw: 400, tags: ['自然','やわらか','イタリアン'],  desc: 'オーガニックコスメ・ナチュラルブランドに似合う温かいコンビ。' },
+      { name: 'コンテンポラリー',   main: 'DM Serif Display',   mw: 400, sub: 'Lato',          sw: 300, tags: ['現代','スタイリッシュ','バランス'], desc: 'モダンなセリフとクリーンなサンセリフ。新感覚美容ブランドに。' },
+    ],
+    realestate: [
+      { name: 'コーポレート',       main: 'Montserrat',        mw: 700, sub: 'Open Sans',      sw: 400, tags: ['プロ','クリーン','信頼感'],     desc: '不動産仲介・大手デベロッパーに映える信頼感のある定番コンビ。' },
+      { name: 'モダン不動産',       main: 'Raleway',           mw: 700, sub: 'Lato',           sw: 400, tags: ['モダン','洗練','信頼'],         desc: 'スマートなRalewayで上質な住空間のイメージを訴求。' },
+      { name: 'ストロング',         main: 'Oswald',            mw: 700, sub: 'Source Sans 3',  sw: 400, tags: ['力強い','明確','インパクト'],   desc: '圧縮字形のOswaldで存在感を発揮。リノベーション会社向け。' },
+      { name: 'プレミアム物件',     main: 'Playfair Display',  mw: 700, sub: 'Montserrat',     sw: 300, tags: ['高級','現代','スタイリッシュ'], desc: '高級マンション・別荘ブランドの格調あるコンビ。' },
+      { name: 'アーキテクチャー',   main: 'Bebas Neue',        mw: 400, sub: 'Roboto',         sw: 400, tags: ['ボールド','機能的','建築的'],   desc: '建築事務所・設計事務所のポートフォリオサイトに。' },
+    ],
+    entertainment: [
+      { name: 'スペース・フューチャー', main: 'Orbitron',      mw: 700, sub: 'Rajdhani',       sw: 400, tags: ['サイファイ','未来的','ゲーミング'], desc: 'SF・宇宙系ゲームタイトルに最適な未来感あるコンビ。' },
+      { name: 'アクション',           main: 'Russo One',       mw: 400, sub: 'Oswald',         sw: 400, tags: ['パワフル','ゲーミング','インパクト'], desc: '力強い太字で迫力を演出。アクション・格闘ゲームに。' },
+      { name: 'ポップエンタメ',       main: 'Righteous',       mw: 400, sub: 'Nunito',         sw: 400, tags: ['ポップ','エネルギー','楽しい'],   desc: 'カジュアルゲーム・アニメ配信サービス向けの明るいコンビ。' },
+      { name: 'カジュアルゲーム',     main: 'Boogaloo',        mw: 400, sub: 'Nunito',         sw: 400, tags: ['カジュアル','楽しい','親しみ'],   desc: 'ハイパーカジュアルゲームやキッズ向けエンタメに。' },
+      { name: 'レトロゲーム',         main: 'Press Start 2P',  mw: 400, sub: 'VT323',          sw: 400, tags: ['レトロ','ピクセル','ノスタルジー'], desc: '8bitゲーム風のピクセルフォントペア。レトロゲームイベントに。' },
+    ],
+    japanese: [
+      { name: '和モダン',    main: 'Noto Serif JP',         mw: 700, sub: 'Noto Sans JP',          sw: 400, tags: ['伝統','現代','バランス'],     desc: 'Googleの和文ペア。和と洋を問わない、最も安定した和文コンビ。' },
+      { name: '品格',        main: 'Shippori Mincho',        mw: 700, sub: 'M PLUS 1p',             sw: 400, tags: ['品格','格調','凛'],           desc: '活字の風合いを持つ明朝体と読みやすいゴシック体。和菓子・料亭に。' },
+      { name: '古典×現代',   main: 'Zen Old Mincho',         mw: 700, sub: 'Zen Kaku Gothic New',   sw: 400, tags: ['古典','コントラスト','モダン'], desc: 'ZENシリーズのコントラスト。伝統工芸・老舗ブランドのリブランドに。' },
+      { name: '優雅',        main: 'Kaisei Opti',            mw: 700, sub: 'Klee One',              sw: 600, tags: ['優雅','親しみ','柔らか'],     desc: '優雅な明朝体と手書き感あるKlee。日本酒・和スイーツブランドに。' },
+      { name: 'ビジネス和風', main: 'BIZ UDPMincho',         mw: 700, sub: 'BIZ UDPGothic',        sw: 400, tags: ['プロ','和風','読みやすい'],   desc: 'ユニバーサルデザイン対応の法人向け和文コンビ。士業・コンサルに。' },
+    ],
+  };
+
+  const CARD_GRADIENTS = [
+    'from-purple-600 to-pink-500',
+    'from-blue-600 to-purple-600',
+    'from-teal-600 to-blue-600',
+    'from-orange-600 to-pink-600',
+    'from-green-600 to-teal-600',
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentIndustry = null;
+  let loadedFontKeys = new Set();
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function init() {
+    const grid = document.getElementById('industryGrid');
+    INDUSTRIES.forEach(ind => {
+      const btn = document.createElement('button');
+      btn.id = 'ind_' + ind.id;
+      btn.className = 'ind-btn py-2.5 px-2 rounded-xl text-xs font-medium border-2 border-white/10 text-gray-400 hover:border-purple-500/50 hover:text-gray-300 transition-all flex flex-col items-center gap-1';
+      btn.innerHTML = `<span class="text-lg">${ind.emoji}</span><span>${ind.label}</span>`;
+      btn.onclick = () => selectIndustry(ind.id);
+      grid.appendChild(btn);
+    });
+
+    ['inLogo','inTagline'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        if (currentIndustry) reRender();
+      });
+    });
+  }
+
+  function selectIndustry(id) {
+    currentIndustry = id;
+    INDUSTRIES.forEach(ind => {
+      const b = document.getElementById('ind_' + ind.id);
+      if (ind.id === id) {
+        b.className = 'ind-btn py-2.5 px-2 rounded-xl text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all flex flex-col items-center gap-1';
+      } else {
+        b.className = 'ind-btn py-2.5 px-2 rounded-xl text-xs font-medium border-2 border-white/10 text-gray-400 hover:border-purple-500/50 hover:text-gray-300 transition-all flex flex-col items-center gap-1';
+      }
+    });
+
+    // Japanese defaults
+    const isJa = id === 'japanese';
+    const logoInput = document.getElementById('inLogo');
+    const tagInput  = document.getElementById('inTagline');
+    if (isJa && logoInput.value === 'Brand Name') {
+      logoInput.value = 'ブランド名';
+      tagInput.value  = 'あなたのスローガン';
+    } else if (!isJa && logoInput.value === 'ブランド名') {
+      logoInput.value = 'Brand Name';
+      tagInput.value  = 'Your slogan here.';
+    }
+
+    loadAndRender(id);
+  }
+
+  function loadAndRender(industryId) {
+    const combos = COMBOS[industryId] || [];
+    const key = industryId;
+
+    document.getElementById('placeholder').classList.add('hidden');
+    document.getElementById('results').classList.add('hidden');
+
+    if (loadedFontKeys.has(key)) {
+      reRender();
+      return;
+    }
+
+    document.getElementById('loading').classList.remove('hidden');
+
+    // Build Google Fonts URL with all fonts for this industry
+    const families = [];
+    combos.forEach(c => {
+      families.push(`family=${encodeURIComponent(c.main)}:wght@${c.mw}`);
+      families.push(`family=${encodeURIComponent(c.sub)}:wght@${c.sw}`);
+    });
+    const url = `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    link.onload = () => {
+      loadedFontKeys.add(key);
+      document.getElementById('loading').classList.add('hidden');
+      reRender();
+    };
+    link.onerror = () => {
+      loadedFontKeys.add(key);
+      document.getElementById('loading').classList.add('hidden');
+      reRender();
+    };
+    document.head.appendChild(link);
+
+    // Fallback timeout
+    setTimeout(() => {
+      if (!loadedFontKeys.has(key)) {
+        loadedFontKeys.add(key);
+        document.getElementById('loading').classList.add('hidden');
+        reRender();
+      }
+    }, 5000);
+  }
+
+  function reRender() {
+    if (!currentIndustry) return;
+    const combos = COMBOS[currentIndustry] || [];
+    const logoText   = document.getElementById('inLogo').value || 'Brand Name';
+    const taglineText = document.getElementById('inTagline').value || 'Your slogan here.';
+
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    combos.forEach((c, i) => {
+      const card = buildCard(c, i, logoText, taglineText);
+      container.appendChild(card);
+    });
+
+    container.classList.remove('hidden');
+  }
+
+  function buildCard(c, i, logoText, taglineText) {
+    const grad = CARD_GRADIENTS[i % CARD_GRADIENTS.length];
+    const importUrl = `https://fonts.googleapis.com/css2?family=${c.main.replace(/ /g,'+')}:wght@${c.mw}&family=${c.sub.replace(/ /g,'+')}:wght@${c.sw}&display=swap`;
+    const css = `@import url('${importUrl}');\n\n.logo-main {\n  font-family: '${c.main}', sans-serif;\n  font-weight: ${c.mw};\n}\n.logo-sub {\n  font-family: '${c.sub}', sans-serif;\n  font-weight: ${c.sw};\n}`;
+
+    const card = document.createElement('div');
+    card.className = 'bg-white/5 rounded-2xl overflow-hidden border border-white/5 hover:border-purple-500/20 transition-all';
+    card.innerHTML = `
+      <div class="flex items-center justify-between px-5 pt-4 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br ${grad}">
+            ${i + 1}
+          </div>
+          <div class="text-sm font-semibold text-white">${escHtml(c.name)}</div>
+        </div>
+        <button onclick="copyCSS(${i})" id="copyBtn${i}"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+          CSS コピー
+        </button>
+      </div>
+
+      <!-- Preview area -->
+      <div class="mx-5 mb-4 bg-black/30 rounded-xl p-6 text-center min-h-[120px] flex flex-col items-center justify-center gap-2">
+        <div style="font-family:'${c.main}',sans-serif;font-weight:${c.mw};font-size:clamp(1.4rem,4vw,2.2rem);color:#fff;line-height:1.2;word-break:break-all;"
+          class="logo-preview-main">${escHtml(logoText)}</div>
+        <div style="font-family:'${c.sub}',sans-serif;font-weight:${c.sw};font-size:clamp(0.7rem,2vw,0.95rem);color:#a0a0a0;letter-spacing:0.08em;"
+          class="logo-preview-sub">${escHtml(taglineText)}</div>
+      </div>
+
+      <!-- Font info -->
+      <div class="px-5 pb-4 space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white/5 rounded-lg p-3">
+            <div class="text-xs text-gray-500 mb-1">メインフォント</div>
+            <div class="text-sm font-medium text-white" style="font-family:'${c.main}',sans-serif;">${escHtml(c.main)}</div>
+            <div class="text-xs text-gray-500 mt-0.5">weight: ${c.mw}</div>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3">
+            <div class="text-xs text-gray-500 mb-1">サブフォント</div>
+            <div class="text-sm font-medium text-white" style="font-family:'${c.sub}',sans-serif;">${escHtml(c.sub)}</div>
+            <div class="text-xs text-gray-500 mt-0.5">weight: ${c.sw}</div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          ${c.tags.map(t => `<span class="px-2 py-0.5 rounded-full text-xs bg-purple-500/15 text-purple-300 border border-purple-500/25">${escHtml(t)}</span>`).join('')}
+        </div>
+        <div class="text-xs text-gray-400 leading-relaxed">${escHtml(c.desc)}</div>
+      </div>
+    `;
+    // Store CSS for copy
+    card.dataset.css = css;
+    card.dataset.idx = i;
+    return card;
+  }
+
+  // Store combo data globally for copy
+  window._comboCSSData = {};
+  function copyCSS(i) {
+    const combos = COMBOS[currentIndustry] || [];
+    const c = combos[i];
+    if (!c) return;
+    const importUrl = `https://fonts.googleapis.com/css2?family=${c.main.replace(/ /g,'+')}:wght@${c.mw}&family=${c.sub.replace(/ /g,'+')}:wght@${c.sw}&display=swap`;
+    const text = `/* ${c.name} */\n@import url('${importUrl}');\n\n.logo-main {\n  font-family: '${c.main}', sans-serif;\n  font-weight: ${c.mw};\n}\n.logo-sub {\n  font-family: '${c.sub}', sans-serif;\n  font-weight: ${c.sw};\n}`;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn' + i);
+      if (!btn) return;
+      const orig = btn.textContent;
+      btn.textContent = 'コピー済み ✓';
+      btn.style.color = '#a78bfa';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
+    });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  init();
+</script>

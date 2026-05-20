@@ -215,7 +215,7 @@ export const tools: Tool[] = [
 		id: 31, slug: 'font-combo',
 		name: 'ロゴ用フォント組み合わせ提案',
 		description: '業種を選ぶとGoogleフォント組み合わせを5パターン提案。',
-		emoji: '🔤', category: 'creator', badge: '人気', status: 'coming-soon',
+		emoji: '🔤', category: 'creator', badge: '人気', status: 'available',
 	},
 	{
 		id: 32, slug: 'handle-check',
