@@ -40,14 +40,13 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 			</div>
 		</div>
 		<div class="hero-visual">
-			<div class="floating-icons">
-				<span class="fi fi-1">🎯</span>
-				<span class="fi fi-2">🎨</span>
-				<span class="fi fi-3">🧠</span>
-				<span class="fi fi-4">🍳</span>
-				<span class="fi fi-5">🎮</span>
-				<span class="fi fi-6">✨</span>
-			</div>
+			<img
+				src="/assets/portrait.jpg"
+				alt="yumi in Asakusa"
+				class="hero-photo"
+				width="240"
+				height="320"
+			/>
 		</div>
 	</section>
 
@@ -267,12 +266,9 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		font-size: var(--text-xl);
 	}
 
-	/* Floating icons */
+	/* Hero photo */
 	.hero-visual {
 		display: none;
-		position: relative;
-		width: 300px;
-		height: 300px;
 		flex-shrink: 0;
 	}
 
@@ -282,37 +278,14 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		}
 	}
 
-	.floating-icons {
-		position: relative;
-		width: 100%;
-		height: 100%;
-	}
-
-	.fi {
-		position: absolute;
-		font-size: 2.5rem;
-		animation: float 6s ease-in-out infinite;
-		background: var(--gradient-subtle);
-		border: 2px solid var(--accent-light);
-		border-radius: 1.25rem;
-		width: 70px;
-		height: 70px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: var(--shadow-sm);
-	}
-
-	.fi-1 { top: 10%; left: 10%; animation-delay: 0s; }
-	.fi-2 { top: 5%; left: 55%; animation-delay: 1s; }
-	.fi-3 { top: 40%; left: 70%; animation-delay: 2s; }
-	.fi-4 { top: 65%; left: 45%; animation-delay: 0.5s; }
-	.fi-5 { top: 70%; left: 5%; animation-delay: 1.5s; }
-	.fi-6 { top: 35%; left: 25%; animation-delay: 2.5s; }
-
-	@keyframes float {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-12px); }
+	.hero-photo {
+		width: 200px;
+		height: auto;
+		border-radius: 2rem;
+		object-fit: cover;
+		object-position: top;
+		border: 3px solid var(--accent-light);
+		box-shadow: var(--shadow-md);
 	}
 
 	/* Search */
