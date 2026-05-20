@@ -194,58 +194,78 @@ function getValues() {
 }
 
 // ---- Build document HTML ----
-function buildDocHTML(v, scale) {
-  const s = scale || 1;
-  const base = 16 * s;
+// 外側のdivにwriting-modeを当てると flex-direction:row が縦方向になる。
+// 各列に個別にwriting-mode:vertical-rlを当て、外側は普通の横並びflexにする。
+function buildDocHTML(v) {
+  // 各列共通スタイル（writing-mode は各列に個別指定）
+  const colBase = 'flex-shrink:0; letter-spacing:0.1em; line-height:2;';
+
   return `
 <div style="
-  width:${540 * s}px;
-  min-height:${720 * s}px;
-  padding:${40 * s}px ${50 * s}px;
-  font-family:'Klee One',serif;
-  writing-mode:vertical-rl;
-  direction:ltr;
-  display:flex;
-  flex-direction:row;
-  align-items:flex-start;
-  justify-content:center;
-  gap:${24 * s}px;
+  width:540px; height:720px;
+  padding:44px 52px;
   box-sizing:border-box;
+  display:flex;
+  flex-direction:row-reverse;
+  align-items:stretch;
+  gap:18px;
   background:#fff;
+  font-family:'Klee One',serif;
   color:#1a1a1a;
-  line-height:2;
-  letter-spacing:0.15em;
 ">
-  <!-- タイトル列 -->
-  <div style="font-size:${base * 1.6}px;font-weight:600;text-align:center;flex-shrink:0;margin-top:${10*s}px;">
-    ${v.docType}
+
+  <!-- タイトル列（右端） -->
+  <div style="${colBase}
+    writing-mode:vertical-rl;
+    font-size:26px;
+    font-weight:600;
+    text-align:center;
+    letter-spacing:0.25em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  ">${v.docType}</div>
+
+  <!-- 本文列：display:blockのspanを使わずインラインで繋げる。
+       writing-modeは本divのみに当て、テキストが自然に縦流れする。 -->
+  <div style="${colBase}
+    writing-mode:vertical-rl;
+    font-size:14px;
+    flex:1;
+    overflow:hidden;
+  ">私儀、${v.reason}、誠に勝手ながら来る<span style="font-weight:600">${v.retireDate}</span>をもちまして退職いたしたく、ここにお届け申し上げます。</div>
+
+  <!-- 日付・署名列（下寄せ）
+       writing-mode:vertical-rl + flex-direction:row → inline方向(上→下)にアイテムが並ぶ
+       justify-content:flex-end で下寄せ -->
+  <div style="${colBase}
+    writing-mode:vertical-rl;
+    font-size:12px;
+    display:flex;
+    flex-direction:row;
+    justify-content:flex-end;
+    align-items:center;
+    gap:10px;
+  ">
+    <span style="white-space:nowrap">${v.submitDate}</span>
+    <span style="white-space:nowrap">${v.department}</span>
+    <span style="white-space:nowrap;font-size:14px;font-weight:600">${v.myName}　㊞</span>
   </div>
 
-  <!-- 本文列 -->
-  <div style="font-size:${base}px;flex:1;min-width:0;">
-    <span style="display:block;margin-bottom:${8*s}px;">
-      私儀、${v.reason}、誠に勝手ながら来る
-    </span>
-    <span style="display:block;font-size:${base * 1.05}px;font-weight:600;margin-bottom:${8*s}px;">
-      ${v.retireDate}
-    </span>
-    <span style="display:block;">
-      をもちまして退職いたしたく、ここにお届け申し上げます。
-    </span>
+  <!-- 宛名列（左端、下寄せ） -->
+  <div style="${colBase}
+    writing-mode:vertical-rl;
+    font-size:12px;
+    display:flex;
+    flex-direction:row;
+    justify-content:flex-end;
+    align-items:center;
+    gap:8px;
+  ">
+    <span style="white-space:nowrap">${v.companyName}</span>
+    <span style="white-space:nowrap">${v.addressee}　殿</span>
   </div>
 
-  <!-- 日付・署名列 -->
-  <div style="font-size:${base * 0.9}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:${12*s}px;flex-shrink:0;align-self:stretch;">
-    <div>${v.submitDate}</div>
-    <div>${v.department}</div>
-    <div style="font-size:${base * 1.05}px;font-weight:600;">${v.myName}　㊞</div>
-  </div>
-
-  <!-- 宛名列 -->
-  <div style="font-size:${base * 0.9}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:${6*s}px;flex-shrink:0;align-self:stretch;">
-    <div>${v.companyName}</div>
-    <div>${v.addressee}　殿</div>
-  </div>
 </div>
   `;
 }
@@ -254,8 +274,9 @@ function buildDocHTML(v, scale) {
 function updatePreview() {
   const v = getValues();
   const preview = document.getElementById('doc-preview');
-  preview.innerHTML = buildDocHTML(v, 1);
-  scalePreview();
+  preview.innerHTML = buildDocHTML(v);
+  // レイアウト確定後にスケール計算
+  requestAnimationFrame(() => requestAnimationFrame(scalePreview));
 }
 
 function scalePreview() {
@@ -265,14 +286,12 @@ function scalePreview() {
   if (!inner) return;
 
   const availW = scroll.clientWidth - 4;
-  const docW = 540; // buildDocHTML scale=1 の固定幅
-  const scale = Math.min(1, availW / docW);
+  const scale = Math.min(1, availW / 540);
 
   inner.style.transformOrigin = 'top left';
   inner.style.transform = `scale(${scale})`;
-  // transform は layout に影響しないので、コンテナ高さを手動で合わせる
-  const docH = inner.scrollHeight;
-  preview.style.height = Math.ceil(docH * scale) + 'px';
+  // buildDocHTML は height:720px 固定なので安定した高さ計算が可能
+  preview.style.height = Math.ceil(720 * scale) + 'px';
 }
 
 // ---- PDF download ----
@@ -291,7 +310,7 @@ async function downloadPDF() {
 
     const v = getValues();
     const renderDiv = document.getElementById('pdf-render');
-    renderDiv.innerHTML = buildDocHTML(v, 1);
+    renderDiv.innerHTML = buildDocHTML(v);
 
     // Wait for font
     await document.fonts.ready;
