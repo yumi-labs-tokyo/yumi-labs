@@ -2,7 +2,7 @@ backend:
   name: github
   repo: yumi-labs-tokyo/yumi-labs
   branch: main
-  base_url: https://sveltia-cms-auth.pages.dev
+  base_url: https://yumi-labs-auth.yumikofurukawa64.workers.dev
 
 media_folder: public/assets
 public_folder: /assets
