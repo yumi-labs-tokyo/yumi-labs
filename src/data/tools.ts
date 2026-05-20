@@ -87,7 +87,7 @@ export const tools: Tool[] = [
 		id: 10, slug: 'hospital-memo',
 		name: '病院問診メモ自動生成',
 		description: '症状・期間・薬を入れると医師に伝わる順序で整形。',
-		emoji: '🏥', category: 'practical', status: 'coming-soon',
+		emoji: '🏥', category: 'practical', status: 'available',
 	},
 	{
 		id: 11, slug: 'resume-pr-rewriter',
