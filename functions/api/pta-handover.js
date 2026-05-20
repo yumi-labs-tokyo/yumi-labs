@@ -92,7 +92,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
@@ -105,12 +105,25 @@ export async function onRequestPost(context) {
 
     const data = await res.json();
     const text = data.content?.[0]?.text ?? '';
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/(\{[\s\S]*\})/);
+
+    // finish_reason が max_tokens の場合は truncated として扱う
+    if (data.stop_reason === 'max_tokens') {
+      return Response.json({ error: 'レスポンスが長すぎて生成が途中で終了しました。行事の選択数を減らして再試行してください。' }, { status: 500 });
+    }
+
+    const codeMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    const rawMatch = text.match(/(\{[\s\S]*\})/);
+    const jsonMatch = codeMatch || rawMatch;
     if (!jsonMatch) {
       return Response.json({ error: 'レスポンスの解析に失敗しました' }, { status: 500 });
     }
 
-    const parsed = JSON.parse(jsonMatch[1]);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[1]);
+    } catch (parseErr) {
+      return Response.json({ error: `JSONの解析に失敗しました。行事の選択数を減らして再試行してください。(${parseErr.message})` }, { status: 500 });
+    }
     return Response.json(parsed);
   } catch (err) {
     return Response.json({ error: `生成に失敗しました: ${err.message}` }, { status: 500 });
