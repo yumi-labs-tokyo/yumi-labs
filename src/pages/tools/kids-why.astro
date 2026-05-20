@@ -1,0 +1,466 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="子どもの「なぜ?」回答アシスタント — yumi-Labs"
+  description="「なんで空は青いの?」など子どもの疑問に、年齢別（3歳/6歳/小学生）にわかりやすい説明文をAIが生成します。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🌟</span>
+      <div>
+        <h1 class="tool-title">子どもの「なぜ?」回答アシスタント</h1>
+        <p class="tool-sub">年齢に合わせたやさしい説明文をAIが生成します</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">❓ 子どもの質問</h2>
+
+        <div class="field-group">
+          <label class="field-label">どんな「なぜ?」ですか？</label>
+          <input
+            id="question-input"
+            type="text"
+            class="question-input"
+            placeholder="例: なんで空は青いの?"
+            maxlength="100"
+          />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">説明する年齢を選んでください（複数可）</label>
+          <div class="age-pills">
+            <label class="age-pill" id="pill-age3">
+              <input type="checkbox" value="age3" class="age-check" checked />
+              <span>🍼 3歳</span>
+            </label>
+            <label class="age-pill" id="pill-age6">
+              <input type="checkbox" value="age6" class="age-check" checked />
+              <span>🎒 6歳</span>
+            </label>
+            <label class="age-pill" id="pill-school">
+              <input type="checkbox" value="school" class="age-check" checked />
+              <span>📚 小学生</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- サンプル -->
+        <div class="field-group">
+          <label class="field-label">サンプル質問</label>
+          <div class="sample-list">
+            <button class="sample-btn" onclick="setSample('なんで空は青いの?')">なんで空は青いの?</button>
+            <button class="sample-btn" onclick="setSample('なんで夜になると暗くなるの?')">なんで夜になると暗くなるの?</button>
+            <button class="sample-btn" onclick="setSample('なんで虹はできるの?')">なんで虹はできるの?</button>
+            <button class="sample-btn" onclick="setSample('なんでおなかがすくの?')">なんでおなかがすくの?</button>
+            <button class="sample-btn" onclick="setSample('なんで雨が降るの?')">なんで雨が降るの?</button>
+            <button class="sample-btn" onclick="setSample('なんで植物は緑なの?')">なんで植物は緑なの?</button>
+          </div>
+        </div>
+
+        <button class="generate-btn" id="generate-btn" onclick="generate()">
+          <span id="btn-text">✨ 説明を生成する</span>
+          <span id="btn-loader" class="loader" hidden></span>
+        </button>
+      </section>
+
+      <!-- RESULT -->
+      <section class="card result-card" id="result-section" hidden>
+        <div class="result-header-row">
+          <h2 class="card-title">📖 年齢別説明</h2>
+          <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">全コピー</button>
+        </div>
+        <p class="result-question" id="result-question-label"></p>
+        <div id="answers-container"></div>
+      </section>
+
+      <!-- ERROR -->
+      <div class="error-banner" id="error-banner" hidden></div>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+function setSample(text) {
+  document.getElementById('question-input').value = text;
+  document.getElementById('question-input').focus();
+}
+
+function getCheckedAges() {
+  return Array.from(document.querySelectorAll('.age-check'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.value);
+}
+
+function updatePillStyles() {
+  document.querySelectorAll('.age-pill').forEach(pill => {
+    const cb = pill.querySelector('.age-check');
+    pill.classList.toggle('checked', cb.checked);
+  });
+}
+
+// init pill styles
+document.querySelectorAll('.age-check').forEach(cb => {
+  cb.addEventListener('change', updatePillStyles);
+});
+updatePillStyles();
+
+async function generate() {
+  const question = document.getElementById('question-input').value.trim();
+  const ages = getCheckedAges();
+
+  const errorBanner = document.getElementById('error-banner');
+  errorBanner.hidden = true;
+
+  if (!question) {
+    showError('質問を入力してください。');
+    return;
+  }
+  if (ages.length === 0) {
+    showError('年齢を1つ以上選択してください。');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch('/api/kids-why', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ question, ages }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showError(data.error || '生成に失敗しました。');
+      return;
+    }
+    renderAnswers(question, data.answers);
+  } catch (e) {
+    showError('通信エラーが発生しました。');
+  } finally {
+    setLoading(false);
+  }
+}
+
+const AGE_COLORS = {
+  age3: { label: '🍼 3歳向け', color: '#ff6b9d' },
+  age6: { label: '🎒 6歳向け', color: '#a78bfa' },
+  school: { label: '📚 小学生向け', color: '#34d399' },
+};
+
+function renderAnswers(question, answers) {
+  const section = document.getElementById('result-section');
+  const container = document.getElementById('answers-container');
+  const qLabel = document.getElementById('result-question-label');
+
+  qLabel.textContent = '「' + question + '」への説明';
+  container.innerHTML = '';
+
+  answers.forEach(a => {
+    const meta = AGE_COLORS[a.ageKey] || { label: a.ageLabel, color: '#94a3b8' };
+    const block = document.createElement('div');
+    block.className = 'answer-block';
+    block.dataset.text = a.text;
+    block.innerHTML = `
+      <div class="answer-header" style="border-left-color: ${meta.color}">
+        <span class="answer-age">${meta.label}</span>
+        <span class="answer-emoji">${a.emoji || ''}</span>
+        <button class="copy-one-btn" onclick="copyOne(this)" title="コピー">コピー</button>
+      </div>
+      <p class="answer-text">${escHtml(a.text)}</p>
+    `;
+    container.appendChild(block);
+  });
+
+  section.hidden = false;
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyOne(btn) {
+  const block = btn.closest('.answer-block');
+  navigator.clipboard.writeText(block.dataset.text).then(() => {
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = 'コピー', 1500);
+  });
+}
+
+function copyAll() {
+  const question = document.getElementById('result-question-label').textContent;
+  const parts = [question, ''];
+  document.querySelectorAll('.answer-block').forEach(block => {
+    const age = block.querySelector('.answer-age').textContent;
+    parts.push(`【${age}】`);
+    parts.push(block.dataset.text);
+    parts.push('');
+  });
+  navigator.clipboard.writeText(parts.join('\n')).then(() => {
+    const btn = document.getElementById('copy-all-btn');
+    btn.textContent = '✓ コピー完了';
+    setTimeout(() => btn.textContent = '全コピー', 1800);
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+function setLoading(on) {
+  document.getElementById('generate-btn').disabled = on;
+  document.getElementById('btn-text').hidden = on;
+  document.getElementById('btn-loader').hidden = !on;
+}
+</script>
+
+<style>
+  .page-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb {
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+  }
+  .breadcrumb a {
+    color: var(--accent-regular);
+    text-decoration: none;
+  }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .tool-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .tool-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+  .tool-title {
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    word-break: break-word;
+  }
+  .tool-sub { margin: 0; color: var(--gray-400); font-size: 0.9rem; }
+
+  .main-layout { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 1.25rem; }
+
+  /* Fields */
+  .field-group { margin-bottom: 1.25rem; }
+  .field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-300);
+    margin-bottom: 0.5rem;
+  }
+
+  .question-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 0.625rem;
+    background: var(--gray-950);
+    color: var(--gray-0);
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .question-input:focus {
+    outline: none;
+    border-color: var(--accent-regular);
+  }
+
+  /* Age pills */
+  .age-pills { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+  .age-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .age-pill input { display: none; }
+  .age-pill.checked {
+    border-color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 15%, transparent);
+    color: var(--accent-regular);
+  }
+
+  /* Samples */
+  .sample-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .sample-btn {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--gray-700);
+    border-radius: 2rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .sample-btn:hover {
+    border-color: var(--accent-regular);
+    color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 10%, transparent);
+  }
+
+  /* Generate button */
+  .generate-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--accent-regular);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .generate-btn:hover { opacity: 0.88; }
+  .generate-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .loader {
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result */
+  .result-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .result-header-row .card-title { margin-bottom: 0; }
+
+  .copy-all-btn {
+    padding: 0.35rem 0.875rem;
+    border: 1px solid var(--gray-600);
+    border-radius: 2rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .copy-all-btn:hover {
+    border-color: var(--accent-regular);
+    color: var(--accent-regular);
+  }
+
+  .result-question {
+    font-size: 0.9rem;
+    color: var(--gray-400);
+    margin: 0 0 1.25rem;
+  }
+
+  /* Answer blocks */
+  .answer-block {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--gray-800);
+    border-radius: 0.75rem;
+    background: var(--gray-950);
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .answer-block:last-child { margin-bottom: 0; }
+
+  .answer-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
+    border-left: 4px solid var(--accent-regular);
+    padding-left: 0.625rem;
+    flex-wrap: wrap;
+  }
+  .answer-age { font-size: 0.85rem; font-weight: 700; flex: 1; min-width: 0; }
+  .answer-emoji { font-size: 1.1rem; flex-shrink: 0; }
+
+  .copy-one-btn {
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--gray-700);
+    border-radius: 1rem;
+    background: transparent;
+    color: var(--gray-400);
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .copy-one-btn:hover { border-color: var(--accent-regular); color: var(--accent-regular); }
+
+  .answer-text {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--gray-100);
+    word-break: break-word;
+  }
+
+  /* Error */
+  .error-banner {
+    background: color-mix(in srgb, #ef4444 15%, transparent);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 0.875rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+  }
+</style>

@@ -51,7 +51,7 @@ export const tools: Tool[] = [
 		id: 4, slug: 'kids-why',
 		name: '子どもの「なぜ?」回答アシスト',
 		description: '年齢別（3歳/6歳/小学生）に分かりやすい説明文を生成。',
-		emoji: '🌟', category: 'practical', status: 'coming-soon',
+		emoji: '🌟', category: 'practical', status: 'available',
 	},
 	{
 		id: 5, slug: 'mercari-listing',
