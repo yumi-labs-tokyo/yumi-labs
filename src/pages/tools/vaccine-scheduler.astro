@@ -1,0 +1,547 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="子育て予防接種スケジューラー — yumi-Labs"
+  description="生年月日を入力するだけで日本の定期・任意接種スケジュールを自動計算。次回接種日と種類を表示、.ics出力でカレンダー連携も。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">💉</span>
+      <div>
+        <h1 class="tool-title">子育て予防接種スケジューラー</h1>
+        <p class="tool-sub">生年月日を入れるだけ。定期・任意接種の全スケジュールを自動計算し、カレンダーに登録できます。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">👶 お子さんの情報を入力</h2>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label class="field-label" for="child-name">お子さんの名前（任意）</label>
+            <input class="text-input" id="child-name" placeholder="例：はなこ" maxlength="20" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="birth-date">生年月日 <span class="req">必須</span></label>
+            <input class="text-input" type="date" id="birth-date" />
+          </div>
+        </div>
+
+        <div class="form-field" style="margin-top:16px">
+          <label class="field-label">ロタウイルスワクチン（定期接種）</label>
+          <div class="radio-row">
+            <label class="radio-lbl"><input type="radio" name="rota" value="1" checked /> 1価・ロタリックス（2回接種）</label>
+            <label class="radio-lbl"><input type="radio" name="rota" value="5" /> 5価・ロタテック（3回接種）</label>
+            <label class="radio-lbl"><input type="radio" name="rota" value="none" /> 接種しない</label>
+          </div>
+        </div>
+
+        <div class="check-row" style="margin-top:14px">
+          <label class="check-lbl">
+            <input type="checkbox" id="incl-mumps" checked />
+            おたふくかぜ（任意接種）を含める
+          </label>
+          <label class="check-lbl">
+            <input type="checkbox" id="incl-hpv" />
+            HPV（子宮頸がん）を含める <span class="note-sm">女の子の場合</span>
+          </label>
+        </div>
+
+        <button class="btn-primary" onclick="buildSchedule()">📅 スケジュールを作成</button>
+        <div id="error-box" class="error-box" style="display:none"></div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result-section" style="display:none">
+
+        <!-- Child info bar -->
+        <div class="child-bar">
+          <span id="child-label" class="child-label"></span>
+          <div class="bar-actions">
+            <button class="btn-ics" onclick="downloadIcs()">📅 カレンダーに登録（.ics）</button>
+            <button class="btn-reset" onclick="resetDone()">チェックをリセット</button>
+          </div>
+        </div>
+
+        <!-- Next upcoming -->
+        <div id="next-card" class="next-card" style="display:none">
+          <div class="next-label">🔔 次回接種</div>
+          <div id="next-content"></div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-row">
+          <span class="lgd lgd-urgent">● 1ヶ月以内</span>
+          <span class="lgd lgd-warn">● 1〜3ヶ月</span>
+          <span class="lgd lgd-blue">● 3ヶ月以降</span>
+          <span class="lgd lgd-gray">● 過去/期限超過</span>
+          <span class="lgd lgd-done">✔ 接種済み</span>
+        </div>
+
+        <!-- Schedule list -->
+        <div id="schedule-list" class="schedule-list"></div>
+
+        <p class="disclaimer">※ このスケジュールは厚生労働省の標準的接種スケジュール（2024年版）に基づく目安です。実際の接種日・間隔は必ずかかりつけ医にご確認ください。</p>
+      </section>
+
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 20px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    .req { background: #ef4444; color: #fff; font-size: 0.7rem; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+    .text-input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; color: var(--text); box-sizing: border-box; width: 100%; }
+    .text-input:focus { outline: none; border-color: var(--accent); }
+
+    .radio-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+    .radio-lbl { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer; }
+    .check-row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .check-lbl { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer; }
+    .note-sm { font-size: 0.75rem; color: var(--muted); }
+
+    .btn-primary { width: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 20px; transition: opacity .2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .error-box { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; color: #b91c1c; font-size: 0.9rem; margin-top: 12px; }
+
+    /* Child bar */
+    .child-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .child-label { font-size: 1.1rem; font-weight: 800; }
+    .bar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-ics { background: #0e7490; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+    .btn-reset { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; font-size: 0.82rem; cursor: pointer; color: var(--muted); }
+
+    /* Next card */
+    .next-card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 20px 24px; color: #fff; margin-bottom: 16px; }
+    .next-label { font-size: 0.8rem; font-weight: 700; opacity: 0.85; margin-bottom: 8px; letter-spacing: 0.05em; }
+    .next-vaccine { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+    .next-date { font-size: 1rem; opacity: 0.9; }
+    .next-badge { display: inline-block; background: rgba(255,255,255,0.25); border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; margin-left: 8px; }
+
+    /* Legend */
+    .legend-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+    .lgd { font-size: 0.8rem; font-weight: 600; }
+    .lgd-urgent { color: #ef4444; }
+    .lgd-warn { color: #f59e0b; }
+    .lgd-blue { color: #3b82f6; }
+    .lgd-gray { color: var(--muted); }
+    .lgd-done { color: #10b981; }
+
+    /* Schedule list */
+    .schedule-list { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Group header */
+    .group-hdr { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 14px 0 6px; border-bottom: 1px solid var(--border); margin-top: 6px; }
+    .group-hdr:first-child { margin-top: 0; }
+
+    /* Vaccine row */
+    .vax-row {
+      display: grid;
+      grid-template-columns: 32px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      transition: background 0.15s;
+    }
+    .vax-row:hover { background: var(--surface); }
+    .vax-row.done-row { opacity: 0.55; }
+
+    .vax-check { width: 22px; height: 22px; cursor: pointer; accent-color: #10b981; }
+
+    .vax-info { min-width: 0; }
+    .vax-name { font-size: 0.92rem; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .vax-dose-badge { font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-weight: 600; color: var(--muted); }
+    .vax-cat-badge { font-size: 0.7rem; border-radius: 4px; padding: 1px 6px; font-weight: 700; }
+    .cat-teiki { background: color-mix(in srgb, #3b82f6 15%, transparent); color: #1d4ed8; }
+    .cat-nin-i { background: color-mix(in srgb, #f59e0b 15%, transparent); color: #92400e; }
+    .vax-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .vax-date-col { text-align: right; white-space: nowrap; }
+    .vax-date { font-size: 0.9rem; font-weight: 700; }
+    .vax-days { font-size: 0.75rem; margin-top: 2px; font-weight: 600; }
+
+    .status-urgent .vax-date { color: #ef4444; }
+    .status-urgent .vax-days { color: #ef4444; }
+    .status-warn .vax-date { color: #d97706; }
+    .status-warn .vax-days { color: #d97706; }
+    .status-blue .vax-date { color: #2563eb; }
+    .status-blue .vax-days { color: #2563eb; }
+    .status-gray .vax-date { color: var(--muted); }
+    .status-done .vax-date { color: #10b981; }
+    .status-done .vax-name { text-decoration: line-through; }
+
+    .disclaimer { font-size: 0.78rem; color: var(--muted); margin-top: 24px; padding: 14px; background: var(--surface); border-radius: 10px; line-height: 1.7; }
+
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      .radio-row { flex-direction: column; gap: 8px; }
+      .bar-actions { flex-direction: column; align-items: flex-start; }
+      .tool-title { font-size: 1.4rem; }
+    }
+  </style>
+
+  <script is:inline>
+    const DAY_MS = 86400000;
+    const MONTH_MS = 30.4375 * DAY_MS;
+
+    function addM(d, m) { return new Date(d.getTime() + m * MONTH_MS); }
+    function addD(d, days) { return new Date(d.getTime() + days * DAY_MS); }
+
+    function getPreSchoolStart(birth) {
+      const y = birth.getFullYear(), mo = birth.getMonth(), day = birth.getDate();
+      const entryYear = (mo < 3 || (mo === 3 && day <= 1)) ? y + 6 : y + 7;
+      return new Date(entryYear - 1, 3, 1);
+    }
+
+    // Vaccine definitions
+    const DEFS = [
+      // ロタウイルス
+      { key:'rota1', vaccine:'ロタウイルス', dose:1, cat:'定期', color:'#f97316', baseM:1.5, note:'生後6〜14週の間に接種' },
+      { key:'rota2', vaccine:'ロタウイルス', dose:2, cat:'定期', color:'#f97316', baseM:2.5, prevKey:'rota1', minD:28, note:'1回目から4週以上／生後24週（1価）or32週（5価）まで' },
+      { key:'rota3', vaccine:'ロタウイルス（5価のみ）', dose:3, cat:'定期', color:'#f97316', baseM:3.5, prevKey:'rota2', minD:28, note:'5価のみ3回目／生後32週まで', rotaOnly5:true },
+      // Hib
+      { key:'hib1', vaccine:'ヒブ (Hib)', dose:1, cat:'定期', color:'#6366f1', baseM:2 },
+      { key:'hib2', vaccine:'ヒブ (Hib)', dose:2, cat:'定期', color:'#6366f1', baseM:3, prevKey:'hib1', minD:28 },
+      { key:'hib3', vaccine:'ヒブ (Hib)', dose:3, cat:'定期', color:'#6366f1', baseM:4.5, prevKey:'hib2', minD:28 },
+      { key:'hib4', vaccine:'ヒブ (Hib)', dose:4, cat:'定期', color:'#6366f1', baseM:13, prevKey:'hib3', minD:210, note:'3回目から7ヶ月以上' },
+      // 小児用肺炎球菌
+      { key:'pcv1', vaccine:'小児用肺炎球菌 (PCV)', dose:1, cat:'定期', color:'#8b5cf6', baseM:2 },
+      { key:'pcv2', vaccine:'小児用肺炎球菌 (PCV)', dose:2, cat:'定期', color:'#8b5cf6', baseM:3, prevKey:'pcv1', minD:28 },
+      { key:'pcv3', vaccine:'小児用肺炎球菌 (PCV)', dose:3, cat:'定期', color:'#8b5cf6', baseM:4.5, prevKey:'pcv2', minD:28 },
+      { key:'pcv4', vaccine:'小児用肺炎球菌 (PCV)', dose:4, cat:'定期', color:'#8b5cf6', baseM:12, prevKey:'pcv3', minD:60, note:'3回目から60日以上' },
+      // B型肝炎
+      { key:'hbv1', vaccine:'B型肝炎 (HBV)', dose:1, cat:'定期', color:'#10b981', baseM:2 },
+      { key:'hbv2', vaccine:'B型肝炎 (HBV)', dose:2, cat:'定期', color:'#10b981', baseM:3, prevKey:'hbv1', minD:27 },
+      { key:'hbv3', vaccine:'B型肝炎 (HBV)', dose:3, cat:'定期', color:'#10b981', baseM:7, prevKey:'hbv1', minD:139, note:'1回目から139日以上' },
+      // 四種混合
+      { key:'dpt1', vaccine:'四種混合 (DPT-IPV)', dose:1, cat:'定期', color:'#3b82f6', baseM:3 },
+      { key:'dpt2', vaccine:'四種混合 (DPT-IPV)', dose:2, cat:'定期', color:'#3b82f6', baseM:4, prevKey:'dpt1', minD:21 },
+      { key:'dpt3', vaccine:'四種混合 (DPT-IPV)', dose:3, cat:'定期', color:'#3b82f6', baseM:5, prevKey:'dpt2', minD:21 },
+      { key:'dpt4', vaccine:'四種混合 (DPT-IPV)', dose:4, cat:'定期', color:'#3b82f6', baseM:18, prevKey:'dpt3', minD:365, note:'3回目から12〜18ヶ月後' },
+      // BCG
+      { key:'bcg1', vaccine:'BCG', dose:1, cat:'定期', color:'#ef4444', baseM:5, note:'生後5〜8ヶ月未満が推奨' },
+      // MR
+      { key:'mr1', vaccine:'MR（麻疹・風疹）', dose:1, cat:'定期', color:'#ec4899', baseM:12, note:'1歳になったらすぐ' },
+      { key:'mr2', vaccine:'MR（麻疹・風疹）', dose:2, cat:'定期', color:'#ec4899', schoolPre:true, note:'就学前年度（年長）4月〜3月' },
+      // 水痘
+      { key:'var1', vaccine:'水痘（みずぼうそう）', dose:1, cat:'定期', color:'#06b6d4', baseM:12 },
+      { key:'var2', vaccine:'水痘（みずぼうそう）', dose:2, cat:'定期', color:'#06b6d4', baseM:15, prevKey:'var1', minD:90, note:'1回目から3ヶ月以上' },
+      // おたふくかぜ
+      { key:'mump1', vaccine:'おたふくかぜ', dose:1, cat:'任意', color:'#f59e0b', baseM:12, opt:'mumps' },
+      { key:'mump2', vaccine:'おたふくかぜ', dose:2, cat:'任意', color:'#f59e0b', schoolPre:true, note:'就学前年度', opt:'mumps' },
+      // 日本脳炎
+      { key:'je1', vaccine:'日本脳炎', dose:1, cat:'定期', color:'#84cc16', baseM:36, note:'3歳から' },
+      { key:'je2', vaccine:'日本脳炎', dose:2, cat:'定期', color:'#84cc16', baseM:36.5, prevKey:'je1', minD:7, note:'1回目から1〜4週後' },
+      { key:'je3', vaccine:'日本脳炎', dose:3, cat:'定期', color:'#84cc16', baseM:48, prevKey:'je2', minD:365, note:'2回目から約1年後（4歳）' },
+      { key:'je4', vaccine:'日本脳炎', dose:4, cat:'定期', color:'#84cc16', baseM:108, note:'9歳（第2期）' },
+      // 二種混合
+      { key:'dt1', vaccine:'二種混合 (DT)', dose:1, cat:'定期', color:'#64748b', baseM:132, note:'11歳' },
+      // HPV
+      { key:'hpv1', vaccine:'HPV（子宮頸がん）', dose:1, cat:'定期', color:'#f43f5e', baseM:144, note:'小6〜高1相当（女児）', opt:'hpv' },
+      { key:'hpv2', vaccine:'HPV（子宮頸がん）', dose:2, cat:'定期', color:'#f43f5e', baseM:150, prevKey:'hpv1', minD:180, note:'1回目から6ヶ月後', opt:'hpv' },
+    ];
+
+    let _scheduleItems = [];
+    let _birthDate = null;
+    let _childName = '';
+    let _doneKey = '';
+
+    function loadDone() {
+      if (!_doneKey) return new Set();
+      try { return new Set(JSON.parse(localStorage.getItem(_doneKey) || '[]')); }
+      catch { return new Set(); }
+    }
+    function saveDone(done) {
+      if (_doneKey) localStorage.setItem(_doneKey, JSON.stringify([...done]));
+    }
+
+    function buildSchedule() {
+      const birthStr = document.getElementById('birth-date').value;
+      if (!birthStr) { showError('生年月日を入力してください。'); return; }
+
+      const birth = new Date(birthStr);
+      if (isNaN(birth.getTime())) { showError('正しい日付を入力してください。'); return; }
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (birth > today) { showError('生年月日は今日以前の日付を入力してください。'); return; }
+
+      clearError();
+      _birthDate = birth;
+      _childName = document.getElementById('child-name').value.trim();
+      _doneKey = `yumi-vax-${birthStr}`;
+
+      const rotaType = document.querySelector('input[name="rota"]:checked').value;
+      const inclMumps = document.getElementById('incl-mumps').checked;
+      const inclHpv = document.getElementById('incl-hpv').checked;
+
+      const preSchoolStart = getPreSchoolStart(birth);
+      const calcDates = {};
+      const items = [];
+
+      for (const def of DEFS) {
+        if (def.opt === 'mumps' && !inclMumps) continue;
+        if (def.opt === 'hpv' && !inclHpv) continue;
+        if (def.key.startsWith('rota') && rotaType === 'none') continue;
+        if (def.rotaOnly5 && rotaType !== '5') continue;
+
+        let targetDate;
+        if (def.schoolPre) {
+          targetDate = new Date(preSchoolStart.getFullYear(), 9, 1); // Oct of pre-school year
+        } else {
+          targetDate = addM(birth, def.baseM);
+        }
+        if (def.prevKey && calcDates[def.prevKey] && def.minD) {
+          const minDate = addD(calcDates[def.prevKey], def.minD);
+          if (minDate > targetDate) targetDate = minDate;
+        }
+        calcDates[def.key] = targetDate;
+
+        const daysDiff = Math.round((targetDate - today) / DAY_MS);
+        items.push({
+          key: def.key,
+          vaccine: def.vaccine,
+          dose: def.dose,
+          cat: def.cat,
+          color: def.color,
+          note: def.note || '',
+          targetDate,
+          daysDiff,
+          schoolPre: def.schoolPre || false,
+          preSchoolYear: def.schoolPre ? preSchoolStart.getFullYear() : null,
+        });
+      }
+
+      _scheduleItems = items;
+      renderResult(today);
+    }
+
+    function getStatus(item, done) {
+      if (done.has(item.key)) return 'done';
+      if (item.daysDiff <= 30) return 'urgent';
+      if (item.daysDiff <= 90) return 'warn';
+      if (item.daysDiff > 0) return 'blue';
+      return 'gray'; // past
+    }
+
+    function fmtDate(d) {
+      return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+    }
+    function fmtYM(d) {
+      return `${d.getFullYear()}年${d.getMonth()+1}月頃`;
+    }
+    function ageLabel(birth, today) {
+      const totalDays = Math.floor((today - birth) / DAY_MS);
+      const months = Math.floor(totalDays / 30.4375);
+      if (months < 24) return `${months}ヶ月`;
+      const y = Math.floor(months / 12), m = months % 12;
+      return m === 0 ? `${y}歳` : `${y}歳${m}ヶ月`;
+    }
+    function ageAtVax(birth, d) {
+      const m = Math.round((d - birth) / MONTH_MS);
+      if (m < 24) return `${m}ヶ月頃`;
+      const y = Math.floor(m / 12), r = m % 12;
+      return r === 0 ? `${y}歳` : `${y}歳${r}ヶ月頃`;
+    }
+    function daysLabel(days) {
+      if (days === 0) return '今日';
+      if (days > 0) return `${days}日後`;
+      return `${-days}日前（期間注意）`;
+    }
+
+    function renderResult(today) {
+      const done = loadDone();
+
+      // child bar
+      const nameStr = _childName ? `${_childName}ちゃん・くん` : 'お子さん';
+      const age = ageLabel(_birthDate, today);
+      document.getElementById('child-label').textContent = `${nameStr}（${age}）のスケジュール`;
+
+      // next card
+      const upcoming = _scheduleItems
+        .filter(i => !done.has(i.key) && i.daysDiff >= 0)
+        .sort((a,b) => a.daysDiff - b.daysDiff);
+      const nextCard = document.getElementById('next-card');
+      const nextContent = document.getElementById('next-content');
+      if (upcoming.length > 0) {
+        const n = upcoming[0];
+        nextContent.innerHTML = `
+          <div class="next-vaccine">${n.vaccine} <span class="next-badge">${n.dose}回目</span></div>
+          <div class="next-date">${fmtDate(n.targetDate)}（${daysLabel(n.daysDiff)}）</div>
+        `;
+        nextCard.style.display = 'block';
+      } else {
+        nextCard.style.display = 'none';
+      }
+
+      // schedule list
+      const GROUPS = [
+        { id:'urgent', label:'🔴 今月中・期限注意（1ヶ月以内）', statuses:['urgent'] },
+        { id:'warn',   label:'🟡 1〜3ヶ月以内',                  statuses:['warn'] },
+        { id:'blue',   label:'🔵 3ヶ月以降の予定',               statuses:['blue'] },
+        { id:'gray',   label:'⚪ 推奨時期を過ぎた接種',           statuses:['gray'] },
+        { id:'done',   label:'✅ 接種済み',                       statuses:['done'] },
+      ];
+
+      const list = document.getElementById('schedule-list');
+      list.innerHTML = '';
+
+      for (const grp of GROUPS) {
+        const grpItems = _scheduleItems
+          .filter(i => grp.statuses.includes(getStatus(i, done)))
+          .sort((a,b) => a.daysDiff - b.daysDiff);
+        if (grpItems.length === 0) continue;
+
+        const hdr = document.createElement('div');
+        hdr.className = 'group-hdr';
+        hdr.textContent = grp.label;
+        list.appendChild(hdr);
+
+        for (const item of grpItems) {
+          const st = getStatus(item, done);
+          const row = document.createElement('div');
+          row.className = `vax-row status-${st}${st === 'done' ? ' done-row' : ''}`;
+          row.id = `vax-row-${item.key}`;
+
+          const catCls = item.cat === '定期' ? 'cat-teiki' : 'cat-nin-i';
+          const dateText = item.schoolPre
+            ? `${item.preSchoolYear}年4月〜${item.preSchoolYear+1}年3月`
+            : fmtDate(item.targetDate);
+          const daysText = item.schoolPre
+            ? ageAtVax(_birthDate, item.targetDate)
+            : daysLabel(item.daysDiff);
+          const noteText = item.note ? `<span class="vax-meta">${item.note}</span>` : '';
+
+          row.innerHTML = `
+            <input type="checkbox" class="vax-check" ${done.has(item.key) ? 'checked' : ''}
+              onchange="toggleDone('${item.key}')" />
+            <div class="vax-info">
+              <div class="vax-name">
+                ${item.vaccine}
+                <span class="vax-dose-badge">${item.dose}回目</span>
+                <span class="vax-cat-badge ${catCls}">${item.cat}</span>
+              </div>
+              ${noteText}
+            </div>
+            <div class="vax-date-col">
+              <div class="vax-date">${dateText}</div>
+              <div class="vax-days">${daysText}</div>
+            </div>
+          `;
+          list.appendChild(row);
+        }
+      }
+
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function toggleDone(key) {
+      const done = loadDone();
+      if (done.has(key)) done.delete(key); else done.add(key);
+      saveDone(done);
+      const today = new Date(); today.setHours(0,0,0,0);
+      renderResult(today);
+    }
+
+    function resetDone() {
+      if (!confirm('すべての「接種済み」チェックをリセットしますか？')) return;
+      if (_doneKey) localStorage.removeItem(_doneKey);
+      const today = new Date(); today.setHours(0,0,0,0);
+      renderResult(today);
+    }
+
+    function icsDate(d) {
+      const p = n => String(n).padStart(2,'0');
+      return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`;
+    }
+
+    function downloadIcs() {
+      if (_scheduleItems.length === 0) return;
+      const done = loadDone();
+      const today = new Date(); today.setHours(0,0,0,0);
+
+      const upcoming = _scheduleItems
+        .filter(i => !done.has(i.key) && i.daysDiff >= -7);
+
+      let lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//yumi-Labs//VaccineScheduler//JA',
+        `X-WR-CALNAME:予防接種スケジュール${_childName ? `（${_childName}）` : ''}`,
+        'X-WR-TIMEZONE:Asia/Tokyo',
+        'CALSCALE:GREGORIAN',
+      ];
+
+      for (const item of upcoming) {
+        const dtStart = icsDate(item.targetDate);
+        const dtEnd = icsDate(addD(item.targetDate, 1));
+        const uid = `${item.key}-${icsDate(_birthDate)}@yumi-labs`;
+        const summary = `${item.vaccine} ${item.dose}回目`;
+        const desc = [item.cat + '接種', item.note].filter(Boolean).join(' / ');
+        lines.push(
+          'BEGIN:VEVENT',
+          `UID:${uid}`,
+          `DTSTART;VALUE=DATE:${dtStart}`,
+          `DTEND;VALUE=DATE:${dtEnd}`,
+          `SUMMARY:💉 ${summary}`,
+          `DESCRIPTION:${desc}`,
+          'BEGIN:VALARM',
+          'TRIGGER:-P7D',
+          'ACTION:DISPLAY',
+          `DESCRIPTION:来週は予防接種の予定があります：${summary}`,
+          'END:VALARM',
+          'END:VEVENT',
+        );
+      }
+
+      lines.push('END:VCALENDAR');
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `予防接種スケジュール${_childName ? `_${_childName}` : ''}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-box');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function clearError() {
+      document.getElementById('error-box').style.display = 'none';
+    }
+
+    // Set max date for birth input to today
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const p = n => String(n).padStart(2, '0');
+      document.getElementById('birth-date').max =
+        `${today.getFullYear()}-${p(today.getMonth()+1)}-${p(today.getDate())}`;
+    });
+  </script>
+</BaseLayout>

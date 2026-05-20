@@ -111,7 +111,7 @@ export const tools: Tool[] = [
 		id: 14, slug: 'vaccine-scheduler',
 		name: '子育て予防接種スケジューラー',
 		description: '生年月日を入れると次回接種日と種類を表示。.ics出力対応。',
-		emoji: '💉', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '💉', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 15, slug: 'condo-value',
