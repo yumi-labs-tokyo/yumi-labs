@@ -1,0 +1,521 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="香典・ご祝儀金額判定ツール — yumi-Labs"
+  description="関係性・年齢・地域を選ぶだけで香典・ご祝儀の相場金額、新札ルール、表書きまで即判定。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🎎</span>
+      <div>
+        <h1 class="tool-title">香典・ご祝儀金額判定ツール</h1>
+        <p class="tool-sub">関係性・年齢・地域を選ぶだけで相場・新札ルール・表書きを即判定</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- FORM -->
+      <section class="card form-card">
+        <h2 class="card-title">🔍 条件を選ぶ</h2>
+
+        <!-- イベント種別 -->
+        <div class="field-group">
+          <label class="field-label">どんな場面ですか？</label>
+          <div class="event-tabs">
+            <button class="event-tab active" data-cat="celebration" onclick="setEventCat(this)">🎉 お祝い</button>
+            <button class="event-tab" data-cat="condolence" onclick="setEventCat(this)">🕯 弔事</button>
+          </div>
+
+          <div id="events-celebration" class="event-list">
+            <label class="event-item"><input type="radio" name="event" value="wedding" checked /><span>💍 結婚式・披露宴</span></label>
+            <label class="event-item"><input type="radio" name="event" value="birth" /><span>👶 出産・誕生</span></label>
+            <label class="event-item"><input type="radio" name="event" value="graduation" /><span>🎓 入学・卒業・就職</span></label>
+            <label class="event-item"><input type="radio" name="event" value="longevity" /><span>🎊 還暦・長寿祝い</span></label>
+          </div>
+          <div id="events-condolence" class="event-list" hidden>
+            <label class="event-item"><input type="radio" name="event" value="funeral" /><span>⛩ 葬儀・告別式</span></label>
+            <label class="event-item"><input type="radio" name="event" value="memorial" /><span>🙏 法要（四十九日・一周忌など）</span></label>
+          </div>
+        </div>
+
+        <!-- 関係性 -->
+        <div class="field-group">
+          <label class="field-label">相手との関係性</label>
+          <div class="select-wrap">
+            <select id="relation" class="select-input">
+              <option value="parent">親（父母）</option>
+              <option value="sibling">兄弟・姉妹</option>
+              <option value="grandparent">祖父母</option>
+              <option value="uncle">おじ・おば</option>
+              <option value="cousin">いとこ</option>
+              <option value="friend" selected>友人・同期</option>
+              <option value="boss">職場の上司</option>
+              <option value="colleague">職場の同僚・部下</option>
+              <option value="neighbor">近所・知人</option>
+              <option value="business">取引先・ビジネス関係</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 年齢 -->
+        <div class="field-group">
+          <label class="field-label">あなたの年代</label>
+          <div class="age-pills">
+            <label class="age-pill"><input type="radio" name="age" value="20s" checked /><span>20代</span></label>
+            <label class="age-pill"><input type="radio" name="age" value="30s" /><span>30代</span></label>
+            <label class="age-pill"><input type="radio" name="age" value="40plus" /><span>40代以上</span></label>
+          </div>
+        </div>
+
+        <!-- 地域 -->
+        <div class="field-group">
+          <label class="field-label">お住まいの地域</label>
+          <div class="select-wrap">
+            <select id="region" class="select-input">
+              <option value="standard" selected>標準（関東・関西・中部など）</option>
+              <option value="tohoku">東北・北海道</option>
+              <option value="hokuriku">北陸（石川・富山・福井）</option>
+              <option value="okinawa">沖縄・南西諸島</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 宗教（弔事のみ） -->
+        <div class="field-group" id="religion-group" hidden>
+          <label class="field-label">宗教・宗派（わかる場合）</label>
+          <div class="select-wrap">
+            <select id="religion" class="select-input">
+              <option value="buddhist" selected>仏式（わからない場合もこちら）</option>
+              <option value="shinto">神式</option>
+              <option value="christian">キリスト教式</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="judge-btn" onclick="judge()">⚡ 今すぐ判定する</button>
+      </section>
+
+      <!-- RESULT -->
+      <section class="card result-card" id="result-card">
+        <h2 class="card-title">📋 判定結果</h2>
+        <div id="result-content">
+          <p class="result-placeholder">左の条件を選んで「今すぐ判定する」を押してください</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+// ─── データテーブル ───────────────────────────────────────────
+
+const AMOUNTS = {
+  wedding: {
+    parent:     { '20s':'100,000円以上', '30s':'100,000円以上', '40plus':'100,000円以上' },
+    sibling:    { '20s':'50,000円',      '30s':'50,000〜100,000円', '40plus':'100,000円以上' },
+    grandparent:{ '20s':'30,000〜50,000円','30s':'50,000円',      '40plus':'50,000円〜' },
+    uncle:      { '20s':'30,000〜50,000円','30s':'30,000〜50,000円','40plus':'50,000円' },
+    cousin:     { '20s':'30,000円',      '30s':'30,000円',       '40plus':'30,000〜50,000円' },
+    friend:     { '20s':'30,000円',      '30s':'30,000円',       '40plus':'30,000〜50,000円' },
+    boss:       { '20s':'30,000円',      '30s':'30,000〜50,000円','40plus':'50,000円' },
+    colleague:  { '20s':'30,000円',      '30s':'30,000円',       '40plus':'30,000円' },
+    neighbor:   { '20s':'10,000〜30,000円','30s':'10,000〜30,000円','40plus':'10,000〜30,000円' },
+    business:   { '20s':'30,000円',      '30s':'30,000円',       '40plus':'30,000〜50,000円' },
+  },
+  birth: {
+    parent:     { '20s':'10,000〜30,000円','30s':'30,000〜50,000円','40plus':'30,000〜50,000円' },
+    sibling:    { '20s':'5,000〜10,000円', '30s':'10,000〜30,000円','40plus':'10,000〜30,000円' },
+    grandparent:{ '20s':'5,000〜10,000円', '30s':'10,000円',       '40plus':'10,000〜30,000円' },
+    uncle:      { '20s':'3,000〜5,000円',  '30s':'5,000〜10,000円','40plus':'5,000〜10,000円' },
+    cousin:     { '20s':'3,000〜5,000円',  '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    friend:     { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    boss:       { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    colleague:  { '20s':'3,000円',         '30s':'3,000〜5,000円', '40plus':'3,000〜5,000円' },
+    neighbor:   { '20s':'3,000円',         '30s':'3,000円',        '40plus':'3,000〜5,000円' },
+    business:   { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000円' },
+  },
+  graduation: {
+    parent:     { '20s':'——（あなた自身が対象になる場合が多い）', '30s':'10,000〜30,000円', '40plus':'10,000〜30,000円' },
+    sibling:    { '20s':'3,000〜5,000円',  '30s':'5,000〜10,000円','40plus':'10,000円' },
+    grandparent:{ '20s':'3,000〜10,000円', '30s':'5,000〜10,000円','40plus':'10,000〜30,000円' },
+    uncle:      { '20s':'3,000〜5,000円',  '30s':'3,000〜5,000円', '40plus':'5,000〜10,000円' },
+    cousin:     { '20s':'3,000円',         '30s':'3,000円',        '40plus':'3,000〜5,000円' },
+    friend:     { '20s':'3,000円',         '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    boss:       { '20s':'——',              '30s':'3,000〜5,000円', '40plus':'5,000〜10,000円' },
+    colleague:  { '20s':'——',              '30s':'3,000円',        '40plus':'3,000〜5,000円' },
+    neighbor:   { '20s':'——',              '30s':'3,000円',        '40plus':'3,000円' },
+    business:   { '20s':'——',              '30s':'3,000〜5,000円', '40plus':'3,000〜5,000円' },
+  },
+  longevity: {
+    parent:     { '20s':'10,000〜30,000円','30s':'30,000〜50,000円','40plus':'50,000円〜' },
+    sibling:    { '20s':'5,000〜10,000円', '30s':'10,000円',        '40plus':'10,000〜30,000円' },
+    grandparent:{ '20s':'3,000〜5,000円',  '30s':'5,000〜10,000円','40plus':'10,000円' },
+    uncle:      { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    cousin:     { '20s':'3,000円',         '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    friend:     { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    boss:       { '20s':'5,000円',         '30s':'5,000〜10,000円','40plus':'10,000円' },
+    colleague:  { '20s':'3,000円',         '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    neighbor:   { '20s':'3,000円',         '30s':'3,000円',        '40plus':'3,000〜5,000円' },
+    business:   { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+  },
+  funeral: {
+    parent:     { '20s':'100,000円以上',   '30s':'100,000円以上',  '40plus':'100,000円以上' },
+    sibling:    { '20s':'30,000〜50,000円','30s':'50,000円',       '40plus':'50,000〜100,000円' },
+    grandparent:{ '20s':'10,000円',        '30s':'10,000〜30,000円','40plus':'30,000〜50,000円' },
+    uncle:      { '20s':'10,000円',        '30s':'10,000〜30,000円','40plus':'30,000円' },
+    cousin:     { '20s':'5,000〜10,000円', '30s':'5,000〜10,000円','40plus':'10,000円' },
+    friend:     { '20s':'5,000〜10,000円', '30s':'10,000円',       '40plus':'10,000円' },
+    boss:       { '20s':'5,000円',         '30s':'5,000〜10,000円','40plus':'10,000円' },
+    colleague:  { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000円' },
+    neighbor:   { '20s':'3,000〜5,000円',  '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    business:   { '20s':'5,000円',         '30s':'5,000〜10,000円','40plus':'10,000円' },
+  },
+  memorial: {
+    parent:     { '20s':'30,000〜50,000円','30s':'50,000円',       '40plus':'50,000〜100,000円' },
+    sibling:    { '20s':'10,000〜30,000円','30s':'30,000円',       '40plus':'30,000〜50,000円' },
+    grandparent:{ '20s':'5,000〜10,000円', '30s':'10,000円',       '40plus':'10,000〜30,000円' },
+    uncle:      { '20s':'5,000〜10,000円', '30s':'10,000円',       '40plus':'10,000〜30,000円' },
+    cousin:     { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    friend:     { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    boss:       { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000〜10,000円' },
+    colleague:  { '20s':'3,000円',         '30s':'3,000〜5,000円', '40plus':'5,000円' },
+    neighbor:   { '20s':'3,000円',         '30s':'3,000円',        '40plus':'3,000〜5,000円' },
+    business:   { '20s':'3,000〜5,000円',  '30s':'5,000円',        '40plus':'5,000円' },
+  },
+};
+
+// 表書き
+const NOSHI = {
+  wedding:    ['寿', '御結婚御祝', '御祝'],
+  birth:      ['御出産御祝', '祝御誕生', '御祝'],
+  graduation: ['御入学御祝', '御卒業御祝', '御就職御祝', '御祝'],
+  longevity:  ['寿', '御長寿御祝', '還暦御祝（60歳）', '古希御祝（70歳）', '喜寿御祝（77歳）', '傘寿御祝（80歳）'],
+  funeral: {
+    buddhist:  ['御霊前', '御香典', '御香料'],
+    shinto:    ['御玉串料', '御榊料', '御神前'],
+    christian: ['御花料', '献花料', '御ミサ料'],
+  },
+  memorial: {
+    buddhist:  ['御仏前', '御香典', '御供物料'],
+    shinto:    ['御玉串料', '御神前'],
+    christian: ['御花料'],
+  },
+};
+
+// 新札ルール
+const NEW_BILL = {
+  wedding:    { use: true,  label:'新札を使う',  reason:'「新しい門出をお祝いする」という気持ちを表します。折り目のないピン札を銀行や郵便局で用意しましょう。' },
+  birth:      { use: true,  label:'新札を使う',  reason:'出産祝いも慶事なので新札が基本です。' },
+  graduation: { use: true,  label:'新札を使う',  reason:'入学・卒業・就職はどれも新しいスタート。新札で渡しましょう。' },
+  longevity:  { use: true,  label:'新札を使う',  reason:'長寿のお祝いも慶事です。新札を用意してください。' },
+  funeral:    { use: false, label:'旧札を使う',  reason:'「あらかじめ準備していた」と思われないよう旧札（使用済み紙幣）を使うのがマナーです。急ぎの場合は新札を一度折り目をつけてから使います。' },
+  memorial:   { use: null,  label:'どちらでも可', reason:'法要では新札・旧札の指定はありませんが、旧札のほうが無難です。' },
+};
+
+// 地域の補足
+const REGION_NOTE = {
+  standard: null,
+  tohoku:   '東北・北海道では香典・祝儀とも「会費制」の地域があります。事前に形式を確認しましょう。',
+  hokuriku: '北陸（特に石川・富山）は香典相場が全国平均より高め（1〜2割増しが目安）。また「香典返し不要」の風習がある地域も。',
+  okinawa:  '沖縄では「模合（もあい）」の慣習などで祝儀・香典の相場が異なる場合があります。地域の慣習を優先してください。',
+};
+
+// マナーメモ
+const MANNER_TIPS = {
+  wedding:    '• お札の枚数は「1・3・5・10枚」など奇数か切りのいい枚数に。\n• 4（死）・6（苦）・9（苦）のつく金額は避けましょう。\n• 2万円は「ペア（対）」でOKですが、紙幣を1万円+5千円×2枚にして偶数枚を避けると安心。',
+  birth:      '• 現金より商品券・カタログギフトを好む人も。迷ったら相手に確認を。\n• お七夜（生後7日）〜お宮参り（生後1ヶ月）頃に渡すのが一般的。',
+  graduation: '• 入学祝いは入学式の1〜2週間前が理想。遅くなった場合はお祝いの一言を添えて。\n• 就職祝いは辞令・出発前に渡すと喜ばれます。',
+  longevity:  '• 還暦（60歳）は赤いちゃんちゃんこが定番のプレゼント。\n• 年齢の節目：還暦60・古希70・喜寿77・傘寿80・米寿88・卒寿90・白寿99歳。',
+  funeral:    '• 通夜か告別式どちらか一方に持参するのが基本（両方に持参しない）。\n• 薄墨（うすずみ）の筆・筆ペンで書くのがマナー。「涙で墨が薄まった」という意味合い。\n• 袋のふくさ（袱紗）に包んで持参し、受付で取り出して渡します。',
+  memorial:   '• 法要に参列する場合は「御仏前」として持参。郵送する場合は現金書留で。\n• 法要後の食事（お斎）に参加する場合は少し多めに包むと丁寧です。',
+};
+
+// ─── UI ロジック ─────────────────────────────────────────────
+
+function setEventCat(btn) {
+  document.querySelectorAll('.event-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cat = btn.dataset.cat;
+  document.getElementById('events-celebration').hidden = (cat !== 'celebration');
+  document.getElementById('events-condolence').hidden  = (cat !== 'condolence');
+  document.getElementById('religion-group').hidden = (cat !== 'condolence');
+  // デフォルト選択
+  const first = document.querySelector(`#events-${cat} input[type=radio]`);
+  if (first) first.checked = true;
+}
+
+function judge() {
+  const event    = document.querySelector('input[name=event]:checked')?.value || 'wedding';
+  const relation = document.getElementById('relation').value;
+  const age      = document.querySelector('input[name=age]:checked')?.value || '20s';
+  const region   = document.getElementById('region').value;
+  const religion = document.getElementById('religion').value;
+
+  // 金額
+  const amount = AMOUNTS[event]?.[relation]?.[age] || '——';
+
+  // 表書き
+  let noshiList = [];
+  const n = NOSHI[event];
+  if (Array.isArray(n)) {
+    noshiList = n;
+  } else if (n && typeof n === 'object') {
+    noshiList = n[religion] || n['buddhist'] || [];
+  }
+
+  // 新札
+  const bill = NEW_BILL[event] || { use: null, label: '——', reason: '' };
+
+  // 地域メモ
+  const regionNote = REGION_NOTE[region];
+
+  // マナーTips
+  const tips = MANNER_TIPS[event] || '';
+
+  // イベント表示名
+  const eventLabel = {
+    wedding:'結婚式・披露宴', birth:'出産・誕生', graduation:'入学・卒業・就職',
+    longevity:'還暦・長寿祝い', funeral:'葬儀・告別式', memorial:'法要',
+  }[event] || event;
+
+  const relationLabel = document.getElementById('relation').options[document.getElementById('relation').selectedIndex].text;
+  const ageLabel = { '20s':'20代', '30s':'30代', '40plus':'40代以上' }[age];
+
+  renderResult({ amount, noshiList, bill, regionNote, tips, eventLabel, relationLabel, ageLabel });
+}
+
+function renderResult({ amount, noshiList, bill, regionNote, tips, eventLabel, relationLabel, ageLabel }) {
+  const billIcon = bill.use === true ? '✅' : bill.use === false ? '❌' : 'ℹ️';
+  const billColor = bill.use === true ? '#34d399' : bill.use === false ? '#f87171' : '#94a3b8';
+
+  const noshiHTML = noshiList.map(t =>
+    `<span class="noshi-chip">${t}</span>`
+  ).join('');
+
+  const tipsHTML = tips
+    ? tips.split('\n').filter(Boolean).map(l =>
+        `<li>${l.replace(/^• /, '')}</li>`
+      ).join('')
+    : '';
+
+  document.getElementById('result-content').innerHTML = `
+    <p class="result-meta">${eventLabel} × ${relationLabel}（${ageLabel}）</p>
+
+    <div class="result-amount-block">
+      <span class="result-amount-label">💴 相場金額</span>
+      <span class="result-amount">${amount}</span>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">📜 表書き</div>
+      <div class="noshi-list">${noshiHTML || '<span class="muted">——</span>'}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">
+        ${billIcon} 新札ルール：<span style="color:${billColor};font-weight:700">${bill.label}</span>
+      </div>
+      <p class="result-sub-text">${bill.reason}</p>
+    </div>
+
+    ${tipsHTML ? `
+    <div class="result-section">
+      <div class="result-section-title">💡 マナーポイント</div>
+      <ul class="tips-list">${tipsHTML}</ul>
+    </div>` : ''}
+
+    ${regionNote ? `
+    <div class="region-note">
+      <span class="region-note-icon">🗾</span>
+      <span>${regionNote}</span>
+    </div>` : ''}
+  `;
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  judge(); // 初期値で即表示
+});
+</script>
+
+<style>
+  .page-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: 0.875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .tool-header {
+    display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .tool-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+  .tool-title { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; margin: 0 0 0.25rem; word-break: break-word; }
+  .tool-sub { margin: 0; color: var(--gray-400); font-size: 0.9rem; }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 680px) { .main-layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 1.25rem; }
+
+  /* Event tabs */
+  .event-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.875rem; }
+  .event-tab {
+    flex: 1;
+    padding: 0.5rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .event-tab.active {
+    border-color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 15%, transparent);
+    color: var(--accent-regular);
+  }
+
+  /* Event list */
+  .event-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.25rem; }
+  .event-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--gray-800);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+  }
+  .event-item:has(input:checked) {
+    border-color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 10%, transparent);
+    color: var(--accent-regular);
+  }
+  .event-item input { display: none; }
+
+  /* Field */
+  .field-group { margin-bottom: 1.1rem; }
+  .field-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--gray-300); margin-bottom: 0.4rem; }
+
+  .select-wrap { position: relative; }
+  .select-input {
+    width: 100%; box-sizing: border-box;
+    padding: 0.6rem 2rem 0.6rem 0.875rem;
+    font-size: 0.9rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 0.625rem;
+    background: var(--gray-950);
+    color: var(--gray-0);
+    font-family: inherit;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .select-input:focus { outline: none; border-color: var(--accent-regular); }
+  .select-wrap::after {
+    content: '▾'; position: absolute; right: 0.75rem; top: 50%;
+    transform: translateY(-50%); pointer-events: none; color: var(--gray-400);
+  }
+
+  /* Age pills */
+  .age-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .age-pill {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 2rem;
+    cursor: pointer; font-size: 0.875rem; font-weight: 600;
+    transition: all 0.15s; user-select: none;
+  }
+  .age-pill:has(input:checked) {
+    border-color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 15%, transparent);
+    color: var(--accent-regular);
+  }
+  .age-pill input { display: none; }
+
+  /* Judge button */
+  .judge-btn {
+    width: 100%; padding: 0.875rem;
+    background: var(--accent-regular); color: #fff;
+    font-size: 1rem; font-weight: 700;
+    border: none; border-radius: 0.75rem;
+    cursor: pointer; font-family: inherit;
+    transition: opacity 0.2s; box-sizing: border-box;
+    margin-top: 0.5rem;
+  }
+  .judge-btn:hover { opacity: 0.88; }
+
+  /* Result */
+  .result-placeholder { color: var(--gray-500); font-size: 0.9rem; text-align: center; padding: 2rem 0; }
+  .result-meta { font-size: 0.8rem; color: var(--gray-400); margin: 0 0 1.25rem; }
+
+  .result-amount-block {
+    display: flex; flex-direction: column; gap: 0.25rem;
+    background: color-mix(in srgb, var(--accent-regular) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-regular) 30%, transparent);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .result-amount-label { font-size: 0.78rem; font-weight: 600; color: var(--gray-400); }
+  .result-amount { font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 800; color: var(--accent-regular); line-height: 1.2; }
+
+  .result-section { margin-bottom: 1.1rem; }
+  .result-section-title { font-size: 0.875rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .result-sub-text { font-size: 0.82rem; color: var(--gray-300); line-height: 1.7; margin: 0; }
+
+  .noshi-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .noshi-chip {
+    display: inline-block; padding: 0.3rem 0.8rem;
+    background: var(--gray-950);
+    border: 1px solid var(--gray-700);
+    border-radius: 2rem; font-size: 0.85rem; color: var(--gray-100);
+  }
+
+  .tips-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .tips-list li { font-size: 0.82rem; color: var(--gray-300); line-height: 1.65; }
+
+  .muted { color: var(--gray-600); }
+
+  .region-note {
+    display: flex; gap: 0.5rem; align-items: flex-start;
+    background: color-mix(in srgb, #f59e0b 12%, transparent);
+    border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+    border-radius: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.82rem;
+    color: var(--gray-200);
+    line-height: 1.65;
+    margin-top: 0.75rem;
+  }
+  .region-note-icon { flex-shrink: 0; }
+</style>

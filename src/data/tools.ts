@@ -69,7 +69,7 @@ export const tools: Tool[] = [
 		id: 7, slug: 'koden-amount',
 		name: '香典・ご祝儀金額判定',
 		description: '関係性・年齢・地域を選ぶと相場と新札ルール、表書きまで提案。',
-		emoji: '🎎', category: 'practical', status: 'coming-soon',
+		emoji: '🎎', category: 'practical', status: 'available',
 	},
 	{
 		id: 8, slug: 'email-tone-checker',
