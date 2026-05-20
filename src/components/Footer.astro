@@ -1,0 +1,87 @@
+---
+const currentYear = new Date().getFullYear();
+---
+
+<footer>
+	<div class="group">
+		<p>Made with <span class="heart">♡</span> & 抹茶 using <a href="https://astro.build/">Astro</a></p>
+		<p>&copy; {currentYear} yumi-Labs</p>
+	</div>
+	<p class="socials">
+		<a href="https://twitter.com/me">Twitter</a>
+		<a href="https://github.com/me">GitHub</a>
+		<a href="https://zenn.dev/">Zenn</a>
+	</p>
+</footer>
+
+<style>
+	footer {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		margin-top: auto;
+		padding: 3rem 2rem;
+		text-align: center;
+		color: var(--gray-400);
+		font-size: var(--text-sm);
+		border-top: 2px dashed var(--accent-light);
+	}
+
+	.heart {
+		color: var(--accent-regular);
+		display: inline-block;
+		animation: heartbeat 1.8s ease-in-out infinite;
+	}
+
+	@keyframes heartbeat {
+		0%, 100% { transform: scale(1); }
+		15% { transform: scale(1.25); }
+		30% { transform: scale(1); }
+		45% { transform: scale(1.15); }
+	}
+
+	footer a {
+		color: var(--accent-regular);
+		text-decoration: none;
+		font-weight: 600;
+		transition: color var(--theme-transition);
+	}
+
+	footer a:hover,
+	footer a:focus {
+		color: var(--accent-dark);
+		text-decoration: underline;
+	}
+
+	.group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.socials {
+		display: flex;
+		justify-content: center;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	@media (min-width: 50em) {
+		footer {
+			flex-direction: row;
+			justify-content: space-between;
+			align-items: center;
+			padding: 2rem 5rem;
+		}
+
+		.group {
+			flex-direction: row;
+			gap: 1rem;
+			flex-wrap: wrap;
+		}
+
+		.socials {
+			justify-content: flex-end;
+		}
+	}
+</style>

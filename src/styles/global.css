@@ -1,0 +1,256 @@
+/* Global variables */
+:root {
+	/* Colors — Kawaii Palette */
+	--gray-0: #1a0533;
+	--gray-50: #2d1b4e;
+	--gray-100: #4a3568;
+	--gray-200: #6b5b8b;
+	--gray-300: #9b8bb0;
+	--gray-400: #bdb0cc;
+	--gray-500: #d4cbe0;
+	--gray-600: #e8e3f0;
+	--gray-700: #f2eef8;
+	--gray-800: #f8f5ff;
+	--gray-900: #fdf9ff;
+	--gray-999-basis: 340, 60%, 98%;
+	--gray-999_40: hsla(340, 60%, 97%, 0.75);
+	--gray-999: #fffaf8;
+
+	--accent-light: #ffb3cc;
+	--accent-regular: #ff6b9d;
+	--accent-dark: #c94477;
+	--accent-overlay: hsla(340, 100%, 70%, 0.22);
+	--accent-subtle-overlay: hsla(340, 100%, 70%, 0.12);
+	--accent-text-over: #ffffff;
+
+	--mint: #00c9a7;
+	--mint-light: #b8f0e6;
+	--yellow: #ffd93d;
+	--coral: #ff6b6b;
+	--purple-soft: #c77dff;
+
+	--link-color: var(--accent-dark);
+
+	/* Gradients */
+	--gradient-stop-1: #ffb3cc;
+	--gradient-stop-2: #ff6b9d;
+	--gradient-stop-3: #c94477;
+	--gradient-subtle: linear-gradient(150deg, #fff0f6 0%, #fffaf8 100%);
+	--gradient-accent: linear-gradient(
+		135deg,
+		var(--gradient-stop-1),
+		var(--gradient-stop-2),
+		var(--gradient-stop-3)
+	);
+	--gradient-accent-orange: linear-gradient(135deg, #ffd93d 0%, #ff6b9d 50%, #c77dff 100%);
+	--gradient-stroke: linear-gradient(180deg, #ffb3cc, #ff6b9d);
+
+	/* Shadows */
+	--shadow-sm:
+		0px 4px 12px rgba(255, 107, 157, 0.12),
+		0px 1px 4px rgba(255, 107, 157, 0.08);
+	--shadow-md:
+		0px 8px 28px rgba(255, 107, 157, 0.18),
+		0px 2px 8px rgba(255, 107, 157, 0.1);
+	--shadow-lg:
+		0px 16px 52px rgba(255, 107, 157, 0.22),
+		0px 4px 16px rgba(255, 107, 157, 0.14);
+
+	/* Text Sizes */
+	--text-sm: 0.875rem;
+	--text-base: 1rem;
+	--text-md: 1.125rem;
+	--text-lg: 1.25rem;
+	--text-xl: 1.625rem;
+	--text-2xl: 2.125rem;
+	--text-3xl: 2.625rem;
+	--text-4xl: 3.5rem;
+	--text-5xl: 4.5rem;
+
+	/* Fonts */
+	--font-system: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	--font-body: 'Zen Maru Gothic', var(--font-system);
+	--font-brand: 'Nunito', var(--font-system);
+
+	/* Transitions */
+	--theme-transition: 0.2s ease-in-out;
+}
+
+:root.theme-dark {
+	--gray-0: #ffe4ef;
+	--gray-50: #f5c8de;
+	--gray-100: #e0a8c5;
+	--gray-200: #c085a5;
+	--gray-300: #9d6285;
+	--gray-400: #7a4267;
+	--gray-500: #5a2a4d;
+	--gray-600: #3e1836;
+	--gray-700: #280d24;
+	--gray-800: #180616;
+	--gray-900: #0e030d;
+	--gray-999-basis: 310, 55%, 7%;
+	--gray-999: #0a020e;
+
+	--accent-light: #c94477;
+	--accent-regular: #ff6b9d;
+	--accent-dark: #ffb3cc;
+	--accent-overlay: hsla(340, 100%, 70%, 0.28);
+	--accent-subtle-overlay: hsla(340, 100%, 70%, 0.14);
+	--accent-text-over: #ffffff;
+
+	--link-color: var(--accent-dark);
+
+	--gradient-stop-1: #7b2fbe;
+	--gradient-subtle: linear-gradient(150deg, #1a0533 0%, #0a020e 100%);
+	--gradient-accent-orange: linear-gradient(135deg, #c77dff 0%, #ff6b9d 50%, #ffd93d 100%);
+	--gradient-stroke: linear-gradient(180deg, #5a2a4d, #280d24);
+
+	--shadow-sm:
+		0px 4px 12px rgba(199, 125, 255, 0.1),
+		0px 1px 4px rgba(199, 125, 255, 0.07);
+	--shadow-md:
+		0px 8px 28px rgba(199, 125, 255, 0.16),
+		0px 2px 8px rgba(199, 125, 255, 0.1);
+	--shadow-lg:
+		0px 16px 52px rgba(199, 125, 255, 0.2),
+		0px 4px 16px rgba(199, 125, 255, 0.12);
+}
+
+html,
+body {
+	min-height: 100%;
+	overflow-x: hidden;
+}
+
+body {
+	background-color: var(--gray-999);
+	color: var(--gray-200);
+	font-family: var(--font-body);
+	-webkit-font-smoothing: antialiased;
+	line-height: 1.6;
+}
+
+*,
+*::after,
+*::before {
+	box-sizing: border-box;
+	margin: 0;
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+}
+
+a {
+	color: var(--link-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+	line-height: 1.15;
+	font-family: var(--font-brand);
+	font-weight: 700;
+	color: var(--gray-100);
+}
+
+h1 {
+	font-size: var(--text-5xl);
+}
+
+h2 {
+	font-size: var(--text-4xl);
+}
+
+h3 {
+	font-size: var(--text-3xl);
+}
+
+h4 {
+	font-size: var(--text-2xl);
+}
+
+h5 {
+	font-size: var(--text-xl);
+}
+
+/* Utilities */
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
+}
+
+.wrapper {
+	width: 100%;
+	max-width: 83rem;
+	margin-inline: auto;
+	padding-inline: 1.5rem;
+}
+
+.stack {
+	display: flex;
+	flex-direction: column;
+}
+
+.gap-2 {
+	gap: 0.5rem;
+}
+.gap-4 {
+	gap: 1rem;
+}
+.gap-8 {
+	gap: 2rem;
+}
+.gap-10 {
+	gap: 2.5rem;
+}
+.gap-15 {
+	gap: 3.75rem;
+}
+.gap-20 {
+	gap: 5rem;
+}
+.gap-30 {
+	gap: 7.5rem;
+}
+.gap-48 {
+	gap: 12rem;
+}
+
+@media (min-width: 50em) {
+	.lg\:gap-2 {
+		gap: 0.5rem;
+	}
+	.lg\:gap-4 {
+		gap: 1rem;
+	}
+	.lg\:gap-8 {
+		gap: 2rem;
+	}
+	.lg\:gap-10 {
+		gap: 2.5rem;
+	}
+	.lg\:gap-15 {
+		gap: 3.75rem;
+	}
+	.lg\:gap-20 {
+		gap: 5rem;
+	}
+	.lg\:gap-30 {
+		gap: 7.5rem;
+	}
+	.lg\:gap-48 {
+		gap: 12rem;
+	}
+}

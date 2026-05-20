@@ -1,0 +1,64 @@
+---
+// Learn about using Astro layouts:
+// https://docs.astro.build/en/basics/layouts/
+
+import Footer from '../components/Footer.astro';
+// Component Imports
+import MainHead from '../components/MainHead.astro';
+import Nav from '../components/Nav.astro';
+
+interface Props {
+	title?: string | undefined;
+	description?: string | undefined;
+}
+
+const { title, description } = Astro.props;
+---
+
+<html lang="en">
+	<head>
+		<MainHead title={title} description={description} />
+	</head>
+	<body>
+		<div class="stack backgrounds">
+			<Nav />
+			<slot />
+			<Footer />
+		</div>
+
+		<script>
+			// Add “loaded” class once the document has completely loaded.
+			addEventListener('load', () => document.documentElement.classList.add('loaded'));
+		</script>
+
+		<style>
+			.backgrounds {
+				min-height: 100%;
+				isolation: isolate;
+				background-color: var(--gray-999);
+				background-image:
+					radial-gradient(circle at 15% 10%, hsla(340, 100%, 85%, 0.35) 0%, transparent 45%),
+					radial-gradient(circle at 85% 8%, hsla(175, 80%, 75%, 0.25) 0%, transparent 40%),
+					radial-gradient(circle at 50% 95%, hsla(280, 80%, 80%, 0.2) 0%, transparent 50%),
+					radial-gradient(circle at 5% 60%, hsla(50, 100%, 75%, 0.15) 0%, transparent 35%),
+					radial-gradient(circle at 95% 50%, hsla(340, 100%, 85%, 0.18) 0%, transparent 35%);
+			}
+
+			:root.theme-dark .backgrounds {
+				background-color: var(--gray-999);
+				background-image:
+					radial-gradient(circle at 15% 10%, hsla(280, 80%, 35%, 0.5) 0%, transparent 45%),
+					radial-gradient(circle at 85% 8%, hsla(175, 80%, 25%, 0.35) 0%, transparent 40%),
+					radial-gradient(circle at 50% 95%, hsla(310, 70%, 25%, 0.4) 0%, transparent 50%),
+					radial-gradient(circle at 5% 60%, hsla(340, 80%, 25%, 0.25) 0%, transparent 35%),
+					radial-gradient(circle at 95% 50%, hsla(260, 70%, 30%, 0.3) 0%, transparent 35%);
+			}
+
+			@media (forced-colors: active) {
+				.backgrounds {
+					background: none;
+				}
+			}
+		</style>
+	</body>
+</html>

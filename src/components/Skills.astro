@@ -1,0 +1,73 @@
+---
+---
+
+<section class="box skills">
+	<div class="stack gap-2 lg:gap-4">
+		<div class="skill-icon" style="--icon-color: #ff6b9d">✦</div>
+		<h2>クリエイティブ開発</h2>
+		<p>細部にこだわったWebエクスペリエンスを、アニメーションとインタラクションで彩ります。</p>
+	</div>
+	<div class="stack gap-2 lg:gap-4">
+		<div class="skill-icon" style="--icon-color: #00c9a7">✿</div>
+		<h2>UI / UX デザイン</h2>
+		<p>使いやすさと美しさを両立した、日本の美意識を取り入れたインターフェース設計。</p>
+	</div>
+	<div class="stack gap-2 lg:gap-4">
+		<div class="skill-icon" style="--icon-color: #c77dff">☆</div>
+		<h2>オープンソース</h2>
+		<p>コミュニティへの貢献を大切に、ツールやライブラリをビルドしてシェアしています。</p>
+	</div>
+</section>
+
+<style>
+	.box {
+		border: 2px solid var(--accent-light);
+		border-radius: 1.5rem;
+		padding: 1.5rem;
+		background: var(--gradient-subtle);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.skill-icon {
+		font-size: 2rem;
+		color: var(--icon-color, var(--accent-regular));
+		line-height: 1;
+	}
+
+	.skills {
+		display: flex;
+		flex-direction: column;
+		gap: 3rem;
+	}
+
+	.skills h2 {
+		font-size: var(--text-lg);
+		font-weight: 700;
+		background: var(--gradient-accent);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.skills p {
+		color: var(--gray-300);
+		line-height: 1.7;
+	}
+
+	@media (min-width: 50em) {
+		.box {
+			border-radius: 2rem;
+			padding: 2.5rem;
+		}
+
+		.skills {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 4rem;
+		}
+
+		.skills h2 {
+			font-size: var(--text-2xl);
+		}
+	}
+</style>

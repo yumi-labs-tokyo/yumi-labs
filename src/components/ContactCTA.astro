@@ -1,0 +1,77 @@
+---
+import CallToAction from './CallToAction.astro';
+---
+
+<aside>
+	<div class="deco deco-left">✦</div>
+	<div class="deco deco-right">✿</div>
+	<h2>一緒に何か作りましょう ♡</h2>
+	<p>プロジェクトのご相談や、ただお話したいだけでも大歓迎です！</p>
+	<CallToAction href="mailto:me@example.com">
+		メッセージを送る ✉
+	</CallToAction>
+</aside>
+
+<style>
+	aside {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+		border-top: 2px dashed var(--accent-light);
+		border-bottom: 2px dashed var(--accent-light);
+		padding: 5rem 1.5rem;
+		background: var(--gradient-subtle);
+		overflow: hidden;
+	}
+
+	.deco {
+		position: absolute;
+		font-size: 5rem;
+		opacity: 0.12;
+		color: var(--accent-regular);
+		pointer-events: none;
+		line-height: 1;
+	}
+
+	.deco-left {
+		top: 1rem;
+		left: 2rem;
+		transform: rotate(-15deg);
+	}
+
+	.deco-right {
+		bottom: 1rem;
+		right: 2rem;
+		transform: rotate(15deg);
+	}
+
+	h2 {
+		font-size: var(--text-xl);
+		text-align: center;
+		background: var(--gradient-accent);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	p {
+		color: var(--gray-300);
+		text-align: center;
+		font-size: var(--text-md);
+	}
+
+	@media (min-width: 50em) {
+		aside {
+			flex-direction: column;
+			align-items: center;
+			padding: 7rem 5rem;
+			gap: 2.5rem;
+		}
+
+		h2 {
+			font-size: var(--text-3xl);
+		}
+	}
+</style>

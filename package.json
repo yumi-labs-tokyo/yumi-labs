@@ -1,0 +1,22 @@
+{
+  "name": "yumi-labs",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "deploy": "astro build && wrangler pages deploy dist/ --project-name=yumi-labs",
+    "deploy:preview": "astro build && wrangler pages deploy dist/ --project-name=yumi-labs --branch=preview"
+  },
+  "dependencies": {
+    "astro": "^6.3.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.93.0"
+  }
+}
