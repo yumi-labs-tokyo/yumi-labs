@@ -75,7 +75,7 @@ export const tools: Tool[] = [
 		id: 8, slug: 'email-tone-checker',
 		name: '取引先メール温度感チェッカー',
 		description: '貼り付けるだけで「怒ってる/急いでる/様子見」を判定。',
-		emoji: '📧', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '📧', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 9, slug: 'furusato-simulator',

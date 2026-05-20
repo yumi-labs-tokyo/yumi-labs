@@ -1,0 +1,428 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="取引先メール温度感チェッカー — yumi-Labs"
+  description="ビジネスメールを貼り付けるだけで「怒ってる/急いでる/様子見」をAIが即判定。隠れた本音も分析。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">📧</span>
+      <div>
+        <h1 class="tool-title">取引先メール温度感チェッカー</h1>
+        <p class="tool-sub">貼り付けるだけで本音・緊急度・隠れたサインをAIが読み解く</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">📨 メール本文を貼り付け</h2>
+
+        <textarea
+          id="email-input"
+          class="email-textarea"
+          placeholder="取引先から受け取ったメール本文をここに貼り付けてください。件名・本文・署名などすべてでOKです。"
+          rows="12"
+        ></textarea>
+
+        <div class="sample-bar">
+          <span class="sample-label">サンプル：</span>
+          <button class="sample-btn" onclick="loadSample('angry')">😤 怒り系</button>
+          <button class="sample-btn" onclick="loadSample('urgent')">🔥 急ぎ系</button>
+          <button class="sample-btn" onclick="loadSample('watching')">🧐 様子見系</button>
+        </div>
+
+        <button class="analyze-btn" id="analyze-btn" onclick="analyze()">
+          <span id="btn-text">🔍 温度感を分析する</span>
+          <span id="btn-loader" class="loader" hidden></span>
+        </button>
+
+        <p class="privacy-note">※ 入力内容はサーバーに保存されません</p>
+      </section>
+
+      <!-- RESULT -->
+      <div class="result-col">
+        <div id="error-banner" class="error-banner" hidden></div>
+        <div id="result-area" hidden>
+
+          <!-- VERDICT -->
+          <div class="verdict-card" id="verdict-card">
+            <div class="verdict-badge" id="verdict-badge"></div>
+            <div class="verdict-title" id="verdict-title"></div>
+          </div>
+
+          <!-- SCORE METERS -->
+          <section class="card score-card">
+            <h3 class="section-title">📊 スコア</h3>
+            <div class="meters">
+              <div class="meter-row">
+                <span class="meter-label">😤 怒り・不満</span>
+                <div class="meter-bar-wrap">
+                  <div class="meter-bar anger-bar" id="bar-anger"></div>
+                </div>
+                <span class="meter-val" id="val-anger"></span>
+              </div>
+              <div class="meter-row">
+                <span class="meter-label">⚡ 緊急・焦り</span>
+                <div class="meter-bar-wrap">
+                  <div class="meter-bar urgent-bar" id="bar-urgent"></div>
+                </div>
+                <span class="meter-val" id="val-urgent"></span>
+              </div>
+              <div class="meter-row">
+                <span class="meter-label">😊 満足・好意</span>
+                <div class="meter-bar-wrap">
+                  <div class="meter-bar positive-bar" id="bar-positive"></div>
+                </div>
+                <span class="meter-val" id="val-positive"></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- SIGNALS -->
+          <section class="card signals-card">
+            <h3 class="section-title">🔎 本音シグナル</h3>
+            <div id="signals-list" class="signals-list"></div>
+          </section>
+
+          <!-- SUMMARY + ADVICE -->
+          <section class="card summary-card">
+            <div class="summary-block">
+              <div class="summary-label">📝 総合分析</div>
+              <p id="summary-text" class="summary-text"></p>
+            </div>
+            <div class="advice-block">
+              <div class="advice-label">💬 返信・対応のコツ</div>
+              <p id="advice-text" class="advice-text"></p>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+// ─── サンプルメール ───────────────────────────────────────────
+const SAMPLES = {
+  angry: `お世話になっております。株式会社〇〇の田中でございます。
+
+先日ご依頼いたしました件について、その後いかがでしょうか。
+こちらとしては先週末までにご回答いただけるものと認識しておりましたが、
+まだご連絡をいただいておりません。
+
+弊社としても社内で進捗を報告する必要がございますため、
+本日中にご状況をお知らせいただけますでしょうか。
+
+お忙しいところ恐縮ですが、何卒よろしくお願いいたします。`,
+
+  urgent: `お世話になっております。
+
+大変急で恐縮なのですが、明日の午前中にご確認いただきたい事項がございます。
+
+先ほど上長より確認が入りまして、今週中に弊社側で決裁を取る必要が生じました。
+つきましては本日17時までにご返答いただけますと大変助かります。
+
+何卒、ご対応のほどよろしくお願いいたします。`,
+
+  watching: `お世話になっております。
+
+先日はお時間をいただきありがとうございました。
+ご提案内容については、社内で検討を進めているところでございます。
+
+また改めてご連絡させていただければと思いますが、
+他社様のご提案状況なども参考にしながら判断してまいりたいと考えております。
+
+引き続きよろしくお願いいたします。`,
+};
+
+function loadSample(key) {
+  document.getElementById('email-input').value = SAMPLES[key];
+}
+
+// ─── 分析 ─────────────────────────────────────────────────────
+async function analyze() {
+  const emailText = document.getElementById('email-input').value.trim();
+
+  document.getElementById('error-banner').hidden = true;
+  if (!emailText) {
+    showError('メール本文を入力してください。');
+    return;
+  }
+  if (emailText.length < 20) {
+    showError('もう少し長い文章を入力してください。');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch('/api/email-tone', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ emailText }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError(data.error || '分析に失敗しました'); return; }
+    renderResult(data);
+  } catch {
+    showError('通信エラーが発生しました。');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── 描画 ─────────────────────────────────────────────────────
+const VERDICT_CONFIG = {
+  angry:    { emoji:'😤', label:'怒ってる',  bg:'#ef4444', text:'#fff' },
+  urgent:   { emoji:'🔥', label:'急いでる',  bg:'#f97316', text:'#fff' },
+  watching: { emoji:'🧐', label:'様子見',    bg:'#8b5cf6', text:'#fff' },
+  neutral:  { emoji:'😐', label:'普通',      bg:'#64748b', text:'#fff' },
+  positive: { emoji:'😊', label:'好意的',    bg:'#22c55e', text:'#fff' },
+};
+
+function renderResult(d) {
+  const cfg = VERDICT_CONFIG[d.verdict] || VERDICT_CONFIG.neutral;
+
+  // Verdict
+  const card = document.getElementById('verdict-card');
+  card.style.background = cfg.bg;
+  card.style.color = cfg.text;
+  document.getElementById('verdict-badge').textContent = `${cfg.emoji} ${cfg.label}`;
+  document.getElementById('verdict-title').textContent = d.title || '';
+
+  // Bars
+  setBar('bar-anger',   'val-anger',   d.score?.anger      ?? 0);
+  setBar('bar-urgent',  'val-urgent',  d.score?.urgency     ?? 0);
+  setBar('bar-positive','val-positive',d.score?.satisfaction ?? 0);
+
+  // Signals
+  const list = document.getElementById('signals-list');
+  list.innerHTML = '';
+  (d.signals || []).forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'signal-item';
+    el.innerHTML = `
+      <div class="signal-quote">「${escHtml(s.quote)}」</div>
+      <div class="signal-meaning">→ ${escHtml(s.meaning)}</div>
+    `;
+    list.appendChild(el);
+  });
+
+  // Summary / Advice
+  document.getElementById('summary-text').textContent = d.summary || '';
+  document.getElementById('advice-text').textContent  = d.advice  || '';
+
+  // Show
+  document.getElementById('result-area').hidden = false;
+  document.getElementById('result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setBar(barId, valId, score) {
+  const pct = Math.min(100, Math.max(0, score));
+  document.getElementById(barId).style.width = pct + '%';
+  document.getElementById(valId).textContent = pct;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+function setLoading(on) {
+  document.getElementById('analyze-btn').disabled = on;
+  document.getElementById('btn-text').hidden = on;
+  document.getElementById('btn-loader').hidden = !on;
+}
+</script>
+
+<style>
+  .page-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: 0.875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .tool-header {
+    display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .tool-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+  .tool-title { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; margin: 0 0 0.25rem; word-break: break-word; }
+  .tool-sub { margin: 0; color: var(--gray-400); font-size: 0.9rem; }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 700px) { .main-layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 1rem; }
+  .section-title { font-size: 0.875rem; font-weight: 700; margin: 0 0 0.875rem; }
+
+  /* Input */
+  .email-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    border: 2px solid var(--gray-700);
+    border-radius: 0.75rem;
+    background: var(--gray-950);
+    color: var(--gray-0);
+    font-family: inherit;
+    resize: vertical;
+    min-height: 220px;
+    transition: border-color 0.2s;
+  }
+  .email-textarea:focus { outline: none; border-color: var(--accent-regular); }
+
+  .sample-bar {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 0.4rem; margin: 0.75rem 0;
+  }
+  .sample-label { font-size: 0.78rem; color: var(--gray-500); flex-shrink: 0; }
+  .sample-btn {
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--gray-700);
+    border-radius: 2rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .sample-btn:hover { border-color: var(--accent-regular); color: var(--accent-regular); }
+
+  .analyze-btn {
+    width: 100%; padding: 0.875rem;
+    background: var(--accent-regular); color: #fff;
+    font-size: 1rem; font-weight: 700;
+    border: none; border-radius: 0.75rem;
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: opacity 0.2s; box-sizing: border-box;
+  }
+  .analyze-btn:hover { opacity: 0.88; }
+  .analyze-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .privacy-note { font-size: 0.72rem; color: var(--gray-600); text-align: center; margin: 0.5rem 0 0; }
+
+  .loader {
+    width: 1.1rem; height: 1.1rem;
+    border: 3px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-banner {
+    background: color-mix(in srgb, #ef4444 15%, transparent);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Result column */
+  .result-col { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Verdict card */
+  .verdict-card {
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    text-align: center;
+    transition: background 0.3s;
+  }
+  .verdict-badge { font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 800; }
+  .verdict-title { font-size: 1rem; font-weight: 600; opacity: 0.9; }
+
+  /* Score meters */
+  .meters { display: flex; flex-direction: column; gap: 0.75rem; }
+  .meter-row { display: flex; align-items: center; gap: 0.625rem; }
+  .meter-label { font-size: 0.78rem; color: var(--gray-300); width: 90px; flex-shrink: 0; }
+  .meter-bar-wrap {
+    flex: 1; height: 10px;
+    background: var(--gray-800);
+    border-radius: 5px; overflow: hidden;
+  }
+  .meter-bar {
+    height: 100%; width: 0%;
+    border-radius: 5px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  }
+  .anger-bar   { background: linear-gradient(90deg, #f97316, #ef4444); }
+  .urgent-bar  { background: linear-gradient(90deg, #f59e0b, #f97316); }
+  .positive-bar{ background: linear-gradient(90deg, #34d399, #22c55e); }
+  .meter-val { font-size: 0.78rem; color: var(--gray-400); width: 24px; text-align: right; flex-shrink: 0; }
+
+  /* Signals */
+  .signals-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .signal-item {
+    padding: 0.7rem 0.875rem;
+    background: var(--gray-950);
+    border: 1px solid var(--gray-800);
+    border-radius: 0.625rem;
+    border-left: 3px solid var(--accent-regular);
+  }
+  .signal-quote {
+    font-size: 0.82rem; color: var(--gray-100);
+    font-style: italic; margin-bottom: 0.3rem;
+    word-break: break-word;
+  }
+  .signal-meaning { font-size: 0.8rem; color: var(--accent-regular); font-weight: 600; }
+
+  /* Summary */
+  .summary-block { margin-bottom: 1rem; }
+  .summary-label, .advice-label {
+    font-size: 0.78rem; font-weight: 700;
+    color: var(--gray-400); margin-bottom: 0.35rem;
+  }
+  .summary-text { font-size: 0.875rem; color: var(--gray-100); line-height: 1.7; margin: 0; }
+  .advice-block {
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--gray-800);
+  }
+  .advice-text {
+    font-size: 0.875rem; color: var(--accent-regular);
+    font-weight: 600; line-height: 1.6; margin: 0;
+  }
+</style>
