@@ -172,6 +172,11 @@ function init() {
   document.querySelectorAll('.doc-radio').forEach(r => r.addEventListener('change', updatePreview));
 
   updatePreview();
+
+  // リサイズ時に再スケール
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(scalePreview);
+  });
 }
 
 // ---- Gather form values ----
@@ -248,7 +253,26 @@ function buildDocHTML(v, scale) {
 // ---- Update preview ----
 function updatePreview() {
   const v = getValues();
-  document.getElementById('doc-preview').innerHTML = buildDocHTML(v, 0.56);
+  const preview = document.getElementById('doc-preview');
+  preview.innerHTML = buildDocHTML(v, 1);
+  scalePreview();
+}
+
+function scalePreview() {
+  const preview = document.getElementById('doc-preview');
+  const scroll = preview.parentElement;
+  const inner = preview.firstElementChild;
+  if (!inner) return;
+
+  const availW = scroll.clientWidth - 4;
+  const docW = 540; // buildDocHTML scale=1 の固定幅
+  const scale = Math.min(1, availW / docW);
+
+  inner.style.transformOrigin = 'top left';
+  inner.style.transform = `scale(${scale})`;
+  // transform は layout に影響しないので、コンテナ高さを手動で合わせる
+  const docH = inner.scrollHeight;
+  preview.style.height = Math.ceil(docH * scale) + 'px';
 }
 
 // ---- PDF download ----
@@ -497,11 +521,8 @@ if (document.readyState === 'loading') {
     background: #fff;
     border: 1px solid #e0d8c8;
     border-radius: 0.5rem;
-    min-height: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
+    position: relative;
   }
 
   /* Hidden full-size target */
