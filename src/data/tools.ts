@@ -33,7 +33,7 @@ export const tools: Tool[] = [
 		id: 1, slug: 'meeting-timestamp',
 		name: '議事録タイムスタンプ整形',
 		description: '録音時間と発言メモを「00:12:34 - 〇〇発言」形式に自動整形。',
-		emoji: '📋', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '📋', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 2, slug: 'resignation-script',

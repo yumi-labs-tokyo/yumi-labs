@@ -1,0 +1,639 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+	title="議事録タイムスタンプ整形 — yumi-Labs"
+	description="走り書きメモを貼るだけで、タイムスタンプ付き議事録に自動整形。Markdown・Slack・メール形式でそのまま共有できます。"
+>
+	<div class="tool-wrapper wrapper">
+
+		<nav class="breadcrumb">
+			<a href="/">← ツール一覧</a>
+		</nav>
+
+		<!-- Header -->
+		<header class="tool-header">
+			<div class="tool-icon-lg">📋</div>
+			<div>
+				<h1 class="tool-title">議事録タイムスタンプ整形</h1>
+				<p class="tool-subtitle">走り書きメモから、整った議事録へ。AI が自動で構造化します。</p>
+				<p class="privacy-note">※ 入力内容は外部に保存されません</p>
+			</div>
+		</header>
+
+		<!-- Error banner -->
+		<div id="error-banner" class="error-banner" hidden>
+			<span id="error-text"></span>
+		</div>
+
+		<!-- Input section -->
+		<section id="input-section" class="card">
+			<div class="card-header">
+				<h2>会議の情報</h2>
+				<button id="sample-btn" class="link-btn">サンプルを入れる</button>
+			</div>
+
+			<div class="form-grid">
+				<label class="field-group span-2">
+					<span class="field-label">会議名</span>
+					<input id="f-title" class="field" placeholder="例: 5月度 予算検討会議" />
+				</label>
+				<label class="field-group">
+					<span class="field-label">日付</span>
+					<input id="f-date" type="date" class="field" />
+				</label>
+				<label class="field-group">
+					<span class="field-label">場所</span>
+					<input id="f-location" class="field" placeholder="例: 第3会議室 / Zoom" />
+				</label>
+				<label class="field-group">
+					<span class="field-label">開始時刻</span>
+					<input id="f-start" type="time" class="field" value="14:00" />
+				</label>
+				<label class="field-group">
+					<span class="field-label">終了時刻</span>
+					<input id="f-end" type="time" class="field" value="15:00" />
+				</label>
+				<label class="field-group span-2">
+					<span class="field-label">参加者（カンマ区切り）</span>
+					<input id="f-participants" class="field" placeholder="田中, 山田, 佐藤" />
+				</label>
+			</div>
+
+			<div class="divider"></div>
+
+			<h2>走り書きメモ</h2>
+			<textarea
+				id="f-notes"
+				class="field notes-area"
+				placeholder="時系列で・箇条書きで・自由に。&#10;14:05 田中さん 予算の話&#10;山田さん反対&#10;A案で決定&#10;…のようなメモでOK"
+			></textarea>
+
+			<div class="divider"></div>
+
+			<h2>整形オプション</h2>
+			<div class="options">
+				<label class="check-row">
+					<input id="opt-timestamp" type="checkbox" checked />
+					<span>タイムスタンプを自動で推定する</span>
+				</label>
+				<label class="check-row">
+					<input id="opt-actions" type="checkbox" checked />
+					<span>決定事項・アクションアイテムを自動抽出する</span>
+				</label>
+				<label class="check-row">
+					<input id="opt-formal" type="checkbox" checked />
+					<span>敬体（です・ます）に統一する</span>
+				</label>
+			</div>
+
+			<button id="format-btn" class="primary-btn">整形する →</button>
+		</section>
+
+		<!-- Result section -->
+		<section id="result-section" hidden>
+			<!-- Export bar -->
+			<div class="card export-bar">
+				<div class="export-bar-row">
+					<h3>書き出す</h3>
+					<button id="reset-btn" class="link-btn">← 新しい議事録を作る</button>
+				</div>
+				<div class="export-btns">
+					<button class="ghost-btn" data-export="markdown">📄 Markdown</button>
+					<button class="ghost-btn" data-export="slack">💬 Slack</button>
+					<button class="ghost-btn" data-export="email">✉️ メール本文</button>
+				</div>
+			</div>
+
+			<!-- Preview -->
+			<article id="preview" class="card preview-card">
+				<div class="preview-label">議事録</div>
+				<h1 id="prev-title" class="prev-title"></h1>
+				<dl id="prev-meta" class="prev-meta"></dl>
+				<div class="divider"></div>
+				<div id="prev-summary-wrap" hidden>
+					<div class="preview-label">要約</div>
+					<p id="prev-summary" class="prev-summary"></p>
+				</div>
+				<div id="prev-agendas"></div>
+				<div id="prev-actions-wrap" hidden class="actions-box">
+					<h3>アクションアイテム</h3>
+					<ul id="prev-actions"></ul>
+				</div>
+			</article>
+		</section>
+
+	</div>
+</BaseLayout>
+
+<script>
+// ---- State ----
+let currentMinutes = null;
+
+// ---- DOM refs ----
+const inputSection = document.getElementById('input-section');
+const resultSection = document.getElementById('result-section');
+const formatBtn = document.getElementById('format-btn');
+const resetBtn = document.getElementById('reset-btn');
+const sampleBtn = document.getElementById('sample-btn');
+const errorBanner = document.getElementById('error-banner');
+const errorText = document.getElementById('error-text');
+
+// ---- Helpers ----
+function showError(msg) {
+	errorText.textContent = msg;
+	errorBanner.hidden = false;
+}
+function hideError() { errorBanner.hidden = true; }
+
+function setLoading(on) {
+	formatBtn.disabled = on;
+	formatBtn.textContent = on ? '整形中…' : '整形する →';
+}
+
+function getMeta() {
+	return {
+		title: document.getElementById('f-title').value,
+		date: document.getElementById('f-date').value,
+		startTime: document.getElementById('f-start').value,
+		endTime: document.getElementById('f-end').value,
+		location: document.getElementById('f-location').value,
+		participants: document.getElementById('f-participants').value
+			.split(/[,、，\s]+/).map(s => s.trim()).filter(Boolean),
+	};
+}
+
+// ---- Sample ----
+sampleBtn.addEventListener('click', () => {
+	const today = new Date().toISOString().slice(0, 10);
+	document.getElementById('f-title').value = '5月度 予算検討会議';
+	document.getElementById('f-date').value = today;
+	document.getElementById('f-start').value = '14:00';
+	document.getElementById('f-end').value = '15:00';
+	document.getElementById('f-location').value = '第3会議室';
+	document.getElementById('f-participants').value = '田中, 山田, 佐藤';
+	document.getElementById('f-notes').value =
+`14:05 田中 来月の予算案を提示
+山田 コストが高すぎ反対
+佐藤 折衷案でB案を提案
+14:25くらい A案で決定
+田中 次回までに詳細資料準備 27日まで
+山田 関係部署に共有
+雑談 ランチの店`;
+});
+
+// ---- Format ----
+formatBtn.addEventListener('click', async () => {
+	const rawNotes = document.getElementById('f-notes').value.trim();
+	if (!rawNotes) { showError('メモを入力してください'); return; }
+	hideError();
+	setLoading(true);
+	try {
+		const res = await fetch('/api/format', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				meta: getMeta(),
+				rawNotes,
+				options: {
+					autoTimestamp: document.getElementById('opt-timestamp').checked,
+					extractActions: document.getElementById('opt-actions').checked,
+					formalTone: document.getElementById('opt-formal').checked,
+				},
+			}),
+		});
+		const data = await res.json();
+		if (!res.ok) throw new Error(data.error || `エラー: ${res.status}`);
+		currentMinutes = data;
+		renderPreview(data);
+		inputSection.hidden = true;
+		resultSection.hidden = false;
+		document.getElementById('preview').scrollIntoView({ behavior: 'smooth' });
+	} catch (e) {
+		showError(e.message);
+	} finally {
+		setLoading(false);
+	}
+});
+
+// ---- Reset ----
+resetBtn.addEventListener('click', () => {
+	inputSection.hidden = false;
+	resultSection.hidden = true;
+	currentMinutes = null;
+	hideError();
+});
+
+// ---- Render preview ----
+function renderPreview(m) {
+	document.getElementById('prev-title').textContent = m.meta.title || '（無題の会議）';
+
+	const metaDl = document.getElementById('prev-meta');
+	metaDl.innerHTML = `
+		<div><dt>日時</dt><dd>${m.meta.date} ${m.meta.startTime}〜${m.meta.endTime}</dd></div>
+		${m.meta.location ? `<div><dt>場所</dt><dd>${m.meta.location}</dd></div>` : ''}
+		${m.meta.participants?.length ? `<div class="span-2"><dt>参加者</dt><dd>${m.meta.participants.join('、')}</dd></div>` : ''}
+	`;
+
+	const summaryWrap = document.getElementById('prev-summary-wrap');
+	if (m.summary) {
+		document.getElementById('prev-summary').textContent = m.summary;
+		summaryWrap.hidden = false;
+	} else {
+		summaryWrap.hidden = true;
+	}
+
+	const agendasEl = document.getElementById('prev-agendas');
+	agendasEl.innerHTML = (m.agendas || []).map((ag, i) => `
+		<section class="agenda-section">
+			<div class="agenda-header">
+				<span class="agenda-num">${String(i + 1).padStart(2, '0')}</span>
+				<div>
+					<h3 class="agenda-title">${ag.title}</h3>
+					<div class="timestamp">${ag.timeRange}</div>
+				</div>
+			</div>
+			<ul class="items-list">
+				${(ag.items || []).map(item => `
+					<li class="item-row">
+						<span class="timestamp item-ts">${item.timestamp}</span>
+						<div class="item-body">
+							<div class="item-meta">
+								<strong>${item.speaker}</strong>
+								${item.type === 'decision' ? '<span class="badge badge-decision">決定</span>' : ''}
+								${item.type === 'action' ? '<span class="badge badge-action">宿題</span>' : ''}
+							</div>
+							<p class="item-content">${item.content}</p>
+						</div>
+					</li>
+				`).join('')}
+			</ul>
+		</section>
+	`).join('');
+
+	const actionsWrap = document.getElementById('prev-actions-wrap');
+	const actionsList = document.getElementById('prev-actions');
+	if (m.actionItems?.length) {
+		actionsList.innerHTML = m.actionItems.map(a => `
+			<li class="action-item">
+				<input type="checkbox" />
+				<div><strong>${a.assignee}</strong> ${a.task} <span class="due">期日: ${a.dueDate}</span></div>
+			</li>
+		`).join('');
+		actionsWrap.hidden = false;
+	} else {
+		actionsWrap.hidden = true;
+	}
+}
+
+// ---- Export ----
+function toMarkdown(m) {
+	const lines = [`# ${m.meta.title || '議事録'}`, '',
+		`- **日時**: ${m.meta.date} ${m.meta.startTime}〜${m.meta.endTime}`,
+		m.meta.location ? `- **場所**: ${m.meta.location}` : '',
+		m.meta.participants?.length ? `- **参加者**: ${m.meta.participants.join('、')}` : '',
+		'',
+		...(m.summary ? ['## 要約', '', m.summary, ''] : []),
+	];
+	(m.agendas || []).forEach((ag, i) => {
+		lines.push(`## ${i + 1}. ${ag.title}`);
+		if (ag.timeRange) lines.push(`*${ag.timeRange}*`);
+		lines.push('');
+		(ag.items || []).forEach(item => {
+			const badge = item.type === 'decision' ? '【決定】' : item.type === 'action' ? '【宿題】' : '';
+			lines.push(`- \`${item.timestamp}\` **${item.speaker}** ${badge}${item.content}`);
+		});
+		lines.push('');
+	});
+	if (m.actionItems?.length) {
+		lines.push('## アクションアイテム', '');
+		m.actionItems.forEach(a => lines.push(`- [ ] **${a.assignee}**: ${a.task}（期日: ${a.dueDate}）`));
+	}
+	return lines.filter(l => l !== '').join('\n');
+}
+
+function toSlack(m) {
+	const lines = [
+		`*${m.meta.title || '議事録'}*`,
+		`${m.meta.date} ${m.meta.startTime}〜${m.meta.endTime}${m.meta.location ? ` @ ${m.meta.location}` : ''}`,
+		m.meta.participants?.length ? `参加者: ${m.meta.participants.join('、')}` : '',
+		'',
+		...(m.summary ? [`*要約*\n${m.summary}`, ''] : []),
+	];
+	(m.agendas || []).forEach((ag, i) => {
+		lines.push(`*${i + 1}. ${ag.title}*`);
+		(ag.items || []).forEach(item => {
+			const badge = item.type === 'decision' ? ':white_check_mark: 決定: ' : item.type === 'action' ? ':pencil: 宿題: ' : '';
+			lines.push(`• \`${item.timestamp}\` ${item.speaker}｜${badge}${item.content}`);
+		});
+		lines.push('');
+	});
+	if (m.actionItems?.length) {
+		lines.push('*:memo: アクションアイテム*');
+		m.actionItems.forEach(a => lines.push(`• :white_square_button: *${a.assignee}*: ${a.task}（期日: ${a.dueDate}）`));
+	}
+	return lines.filter(l => l !== null).join('\n');
+}
+
+function toEmail(m) {
+	const lines = [
+		`件名: 【議事録】${m.meta.title || '会議'} (${m.meta.date})`,
+		'',
+		'お疲れさまです。',
+		`${m.meta.date}（${m.meta.startTime}〜${m.meta.endTime}）に開催しました「${m.meta.title || '会議'}」の議事録をお送りします。`,
+		'',
+		'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+		`■ 会議名: ${m.meta.title || '（無題）'}`,
+		`■ 日時: ${m.meta.date} ${m.meta.startTime}〜${m.meta.endTime}`,
+		m.meta.location ? `■ 場所: ${m.meta.location}` : '',
+		m.meta.participants?.length ? `■ 参加者: ${m.meta.participants.join('、')}` : '',
+		'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+		'',
+		...(m.summary ? ['【要約】', m.summary, ''] : []),
+	];
+	(m.agendas || []).forEach((ag, i) => {
+		lines.push(`【議題${i + 1}】${ag.title}`);
+		(ag.items || []).forEach(item => {
+			const prefix = item.type === 'decision' ? '▶ 決定: ' : item.type === 'action' ? '▶ 宿題: ' : '　';
+			lines.push(`${prefix}${item.content}（${item.speaker}）`);
+		});
+		lines.push('');
+	});
+	if (m.actionItems?.length) {
+		lines.push('【アクションアイテム】');
+		m.actionItems.forEach(a => lines.push(`□ ${a.assignee}: ${a.task}（期日: ${a.dueDate}）`));
+		lines.push('');
+	}
+	lines.push('以上、ご確認のほどよろしくお願いいたします。');
+	return lines.filter(l => l !== '').join('\n');
+}
+
+document.querySelectorAll('[data-export]').forEach(btn => {
+	btn.addEventListener('click', async () => {
+		if (!currentMinutes) return;
+		const fmt = btn.dataset.export;
+		const text = fmt === 'markdown' ? toMarkdown(currentMinutes) : fmt === 'slack' ? toSlack(currentMinutes) : toEmail(currentMinutes);
+		await navigator.clipboard.writeText(text);
+		const orig = btn.textContent;
+		btn.textContent = '✓ コピーしました';
+		setTimeout(() => btn.textContent = orig, 1500);
+	});
+});
+
+// ---- Init date ----
+document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+</script>
+
+<style>
+	.tool-wrapper {
+		padding-block: 2rem 5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		max-width: 56rem;
+	}
+
+	.breadcrumb a {
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+		text-decoration: none;
+		font-family: var(--font-brand);
+	}
+	.breadcrumb a:hover { color: var(--accent-dark); }
+
+	.tool-header {
+		display: flex;
+		align-items: flex-start;
+		gap: 1.25rem;
+	}
+	.tool-icon-lg {
+		font-size: 3rem;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+	.tool-title {
+		font-size: var(--text-3xl);
+		margin: 0 0 0.4rem;
+	}
+	.tool-subtitle {
+		color: var(--gray-300);
+		margin: 0 0 0.3rem;
+	}
+	.privacy-note {
+		font-size: var(--text-sm);
+		color: var(--accent-dark);
+		margin: 0;
+		font-family: var(--font-brand);
+	}
+
+	/* Error */
+	.error-banner {
+		background: #fff0f0;
+		border: 1.5px solid #ffb3b3;
+		border-radius: 0.75rem;
+		padding: 0.75rem 1.25rem;
+		color: #c94444;
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+	}
+
+	/* Card */
+	.card {
+		background: var(--gray-999);
+		border: 1.5px solid var(--gray-700);
+		border-radius: 1.5rem;
+		padding: 2rem;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.card-header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		margin-bottom: 1.5rem;
+	}
+	.card h2 {
+		font-size: var(--text-xl);
+		margin: 0 0 1rem;
+	}
+	.card-header h2 { margin: 0; }
+
+	.link-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+		text-decoration: underline;
+		font-family: var(--font-brand);
+		padding: 0;
+	}
+	.link-btn:hover { color: var(--accent-dark); }
+
+	.divider {
+		height: 1px;
+		background: var(--gray-700);
+		margin: 1.5rem 0;
+	}
+
+	/* Form */
+	.form-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem 2rem;
+		margin-bottom: 0;
+	}
+	.field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+	.field-group.span-2 { grid-column: span 2; }
+	.field-label {
+		font-size: 0.7rem;
+		font-family: var(--font-brand);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--gray-300);
+		text-transform: uppercase;
+	}
+	.field {
+		background: transparent;
+		border: none;
+		border-bottom: 1.5px solid var(--gray-600);
+		padding: 0.4rem 0;
+		color: var(--gray-100);
+		font-family: var(--font-body);
+		font-size: var(--text-base);
+		outline: none;
+		transition: border-color var(--theme-transition);
+		width: 100%;
+	}
+	.field:focus { border-bottom-color: var(--accent-regular); }
+	.field::placeholder { color: var(--gray-400); }
+
+	.notes-area {
+		border: 1.5px solid var(--gray-600);
+		border-radius: 0.75rem;
+		padding: 0.75rem 1rem;
+		min-height: 200px;
+		resize: vertical;
+		line-height: 1.7;
+	}
+	.notes-area:focus { border-color: var(--accent-regular); }
+
+	.options { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+	.check-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		cursor: pointer;
+		font-size: var(--text-sm);
+		color: var(--gray-200);
+	}
+	.check-row input { accent-color: var(--accent-regular); width: 1rem; height: 1rem; }
+
+	.primary-btn {
+		background: var(--gradient-accent);
+		color: white;
+		border: none;
+		border-radius: 999rem;
+		padding: 0.75rem 2.5rem;
+		font-family: var(--font-brand);
+		font-weight: 700;
+		font-size: var(--text-base);
+		cursor: pointer;
+		transition: transform var(--theme-transition), box-shadow var(--theme-transition);
+		box-shadow: var(--shadow-sm);
+	}
+	.primary-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+	.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* Export bar */
+	.export-bar { padding: 1.25rem 1.75rem; }
+	.export-bar-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.75rem;
+	}
+	.export-bar-row h3 { font-size: var(--text-lg); margin: 0; }
+	.export-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+	.ghost-btn {
+		background: var(--gradient-subtle);
+		border: 1.5px solid var(--gray-600);
+		border-radius: 999rem;
+		padding: 0.4rem 1rem;
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		color: var(--gray-200);
+		cursor: pointer;
+		transition: all var(--theme-transition);
+	}
+	.ghost-btn:hover { border-color: var(--accent-light); color: var(--accent-dark); }
+
+	/* Preview */
+	.preview-card { padding: 2.5rem; }
+	.preview-label {
+		font-size: 0.7rem;
+		font-family: var(--font-brand);
+		letter-spacing: 0.15em;
+		color: var(--gray-300);
+		text-transform: uppercase;
+		margin-bottom: 0.5rem;
+	}
+	.prev-title { font-size: var(--text-2xl); margin: 0 0 1rem; }
+	.prev-meta {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.25rem 2rem;
+		font-size: var(--text-sm);
+		color: var(--gray-200);
+		margin: 0;
+	}
+	.prev-meta div { display: flex; gap: 0.5rem; }
+	.prev-meta dt { color: var(--gray-400); font-family: var(--font-brand); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 0.2rem; }
+	.prev-meta .span-2 { grid-column: span 2; }
+	.prev-summary { font-size: var(--text-md); line-height: 1.8; color: var(--gray-200); margin: 0 0 2rem; }
+
+	.agenda-section { margin-bottom: 2.5rem; }
+	.agenda-header { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+	.agenda-num { font-size: 2.5rem; font-weight: 800; color: var(--gray-600); line-height: 1; font-family: var(--font-brand); flex-shrink: 0; }
+	.agenda-title { font-size: var(--text-lg); margin: 0 0 0.2rem; }
+	.timestamp { font-family: monospace; font-size: 0.8rem; color: var(--gray-300); }
+
+	.items-list { list-style: none; padding: 0; margin: 0 0 0 3.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+	.item-row { display: flex; gap: 1rem; align-items: flex-start; }
+	.item-ts { width: 4rem; flex-shrink: 0; padding-top: 0.2rem; }
+	.item-body { flex: 1; }
+	.item-meta { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+	.item-content { margin: 0; color: var(--gray-200); line-height: 1.6; }
+
+	.badge {
+		font-size: 0.65rem;
+		font-weight: 800;
+		font-family: var(--font-brand);
+		padding: 0.1rem 0.5rem;
+		border-radius: 999rem;
+	}
+	.badge-decision { background: var(--accent-regular); color: white; }
+	.badge-action { background: #a17a3e; color: white; }
+
+	.actions-box {
+		margin-top: 2rem;
+		background: var(--accent-subtle-overlay);
+		border: 1.5px solid var(--accent-light);
+		border-radius: 1rem;
+		padding: 1.5rem;
+	}
+	.actions-box h3 { font-size: var(--text-lg); margin: 0 0 1rem; }
+	.actions-box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+	.action-item { display: flex; align-items: flex-start; gap: 0.75rem; font-size: var(--text-sm); }
+	.action-item input { accent-color: var(--accent-regular); margin-top: 0.2rem; }
+	.due { color: var(--gray-300); font-size: 0.75rem; margin-left: 0.5rem; }
+
+	@media (max-width: 50em) {
+		.form-grid { grid-template-columns: 1fr; }
+		.field-group.span-2 { grid-column: span 1; }
+		.items-list { margin-left: 0; }
+		.prev-meta { grid-template-columns: 1fr; }
+	}
+</style>
