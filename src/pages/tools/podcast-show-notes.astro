@@ -1,0 +1,356 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+---
+<Layout
+  title="ポッドキャストショーノート生成 | yumi-Labs"
+  description="文字起こしを貼るだけで章立て＋タイムスタンプ＋SNS投稿文を自動生成。"
+>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-6">
+      <div class="text-2xl font-bold text-gray-900">ポッドキャストショーノート自動生成</div>
+      <p class="text-gray-500 mt-1 text-sm">文字起こしを貼るだけで、章立て・タイムスタンプ・SNS投稿文をまとめて生成します。</p>
+    </div>
+
+    <!-- INPUT -->
+    <div class="bg-white border border-gray-200 rounded-xl p-5 mb-6 space-y-4">
+
+      <!-- オプション行 -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">番組名（任意）</label>
+          <input id="inp-title" type="text" maxlength="50" placeholder="〇〇ポッドキャスト"
+            class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">ホスト名（任意）</label>
+          <input id="inp-host" type="text" maxlength="30" placeholder="田中 太郎"
+            class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">収録時間（任意）</label>
+          <input id="inp-duration" type="text" maxlength="10" placeholder="45:00"
+            class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">プラットフォーム</label>
+          <select id="inp-platform" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+            <option value="">選択なし</option>
+            <option value="Spotify">Spotify</option>
+            <option value="Apple Podcasts">Apple Podcasts</option>
+            <option value="Voicy">Voicy</option>
+            <option value="stand.fm">stand.fm</option>
+            <option value="YouTube">YouTube</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 文字起こし -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs text-gray-500">文字起こしテキスト <span class="text-red-400">*</span></label>
+          <span class="text-xs text-gray-400" id="char-count">0文字</span>
+        </div>
+        <textarea id="inp-transcript" rows="12"
+          placeholder="ここに文字起こしテキストを貼り付けてください。&#10;&#10;例：&#10;[00:00] こんにちは、〇〇ポッドキャストの田中です。&#10;[02:30] 今日はAIの活用法について話していきます..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y"></textarea>
+        <p class="text-xs text-gray-400 mt-1">※ 最大12,000文字まで処理します。長い場合は要所を含む部分を貼り付けてください。</p>
+      </div>
+
+      <button onclick="generate()" id="btn-generate"
+        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
+        <span>🎙️ ショーノートを生成</span>
+      </button>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="hidden text-center py-12">
+      <div class="inline-flex items-center gap-3 text-purple-600">
+        <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <span class="text-sm font-medium">AIが文字起こしを分析中です…（30秒ほどかかる場合があります）</span>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm mb-4"></div>
+
+    <!-- RESULTS -->
+    <div id="results" class="hidden space-y-4">
+
+      <!-- タイトル & 概要 -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="text-sm font-bold text-gray-800">🎙️ エピソードタイトル</div>
+          <button onclick="copyText('res-title')" class="text-xs text-purple-500 hover:underline flex-shrink-0">コピー</button>
+        </div>
+        <div id="res-title" class="text-base font-semibold text-gray-900 bg-purple-50 rounded-lg px-4 py-3 leading-relaxed"></div>
+        <div class="text-sm font-bold text-gray-800 mt-4 mb-2">📝 概要</div>
+        <div id="res-summary" class="text-sm text-gray-700 leading-relaxed"></div>
+      </div>
+
+      <!-- 章立て -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-bold text-gray-800">📋 章立て・タイムスタンプ</div>
+          <button onclick="copyText('res-chapters')" class="text-xs text-purple-500 hover:underline">コピー</button>
+        </div>
+        <div id="res-chapters" class="space-y-3"></div>
+      </div>
+
+      <!-- ハイライト -->
+      <div id="res-highlights-wrap" class="bg-white border border-gray-200 rounded-xl p-5">
+        <div class="text-sm font-bold text-gray-800 mb-3">⭐ 聴きどころ・ハイライト</div>
+        <ul id="res-highlights" class="space-y-2"></ul>
+      </div>
+
+      <!-- リソース -->
+      <div id="res-resources-wrap" class="hidden bg-white border border-gray-200 rounded-xl p-5">
+        <div class="text-sm font-bold text-gray-800 mb-3">🔗 言及リソース</div>
+        <ul id="res-resources" class="space-y-1"></ul>
+      </div>
+
+      <!-- ゲスト紹介 -->
+      <div id="res-guest-wrap" class="hidden bg-white border border-gray-200 rounded-xl p-5">
+        <div class="text-sm font-bold text-gray-800 mb-2">👤 ゲスト紹介文</div>
+        <div id="res-guest" class="text-sm text-gray-700 leading-relaxed"></div>
+      </div>
+
+      <!-- SNS投稿文 -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5">
+        <div class="text-sm font-bold text-gray-800 mb-4">📣 SNS投稿文</div>
+
+        <!-- タブ -->
+        <div class="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+          <button onclick="switchSnsTab('twitter')" id="sns-tab-twitter"
+            class="px-3 py-1 rounded-md text-xs font-medium bg-white text-gray-800 shadow-sm transition-colors">𝕏 Twitter</button>
+          <button onclick="switchSnsTab('instagram')" id="sns-tab-instagram"
+            class="px-3 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">📸 Instagram</button>
+          <button onclick="switchSnsTab('note')" id="sns-tab-note"
+            class="px-3 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">📓 note</button>
+        </div>
+
+        <div id="sns-twitter" class="sns-panel">
+          <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono" id="res-sns-twitter"></div>
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-xs text-gray-400" id="twitter-count"></span>
+            <button onclick="copyText('res-sns-twitter')" class="text-xs text-purple-500 hover:underline">コピー</button>
+          </div>
+        </div>
+        <div id="sns-instagram" class="sns-panel hidden">
+          <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono" id="res-sns-instagram"></div>
+          <button onclick="copyText('res-sns-instagram')" class="text-xs text-purple-500 hover:underline mt-2 block ml-auto">コピー</button>
+        </div>
+        <div id="sns-note" class="sns-panel hidden">
+          <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono" id="res-sns-note"></div>
+          <button onclick="copyText('res-sns-note')" class="text-xs text-purple-500 hover:underline mt-2 block ml-auto">コピー</button>
+        </div>
+      </div>
+
+      <!-- タグ -->
+      <div id="res-tags-wrap" class="bg-white border border-gray-200 rounded-xl p-5">
+        <div class="text-sm font-bold text-gray-800 mb-3">🏷️ タグ / キーワード</div>
+        <div id="res-tags" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- 全文コピー -->
+      <div class="text-center">
+        <button onclick="copyAll()"
+          class="bg-gray-700 hover:bg-gray-800 text-white font-semibold px-8 py-2.5 rounded-xl text-sm transition-colors">
+          📄 ショーノート全文をコピー
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    let generatedData = null;
+
+    // 文字数カウント
+    document.getElementById('inp-transcript').addEventListener('input', e => {
+      const len = [...e.target.value].length;
+      const el = document.getElementById('char-count');
+      el.textContent = `${len.toLocaleString()}文字`;
+      el.className = len > 12000 ? 'text-xs text-red-500' : 'text-xs text-gray-400';
+    });
+
+    // ===== GENERATE =====
+    async function generate() {
+      const transcript = document.getElementById('inp-transcript').value.trim();
+      if (!transcript) { showError('文字起こしを入力してください'); return; }
+      if ([...transcript].length < 50) { showError('文字起こしが短すぎます（50文字以上）'); return; }
+
+      hideError();
+      document.getElementById('results').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('btn-generate').disabled = true;
+
+      try {
+        const res = await fetch('/api/podcast-show-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript,
+            podcastTitle: document.getElementById('inp-title').value.trim(),
+            hostName: document.getElementById('inp-host').value.trim(),
+            totalDuration: document.getElementById('inp-duration').value.trim(),
+            platform: document.getElementById('inp-platform').value,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) { showError(data.error || '生成に失敗しました'); return; }
+
+        generatedData = data;
+        renderResults(data);
+        document.getElementById('results').classList.remove('hidden');
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError('通信エラーが発生しました: ' + err.message);
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('btn-generate').disabled = false;
+      }
+    }
+
+    // ===== RENDER =====
+    function escH(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderResults(d) {
+      // タイトル・概要
+      document.getElementById('res-title').textContent = d.episodeTitle || '';
+      document.getElementById('res-summary').textContent = d.summary || '';
+
+      // 章立て
+      const chapters = d.chapters || [];
+      document.getElementById('res-chapters').innerHTML = chapters.map(ch => `
+        <div class="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+          <div class="flex-shrink-0 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-md h-fit">${escH(ch.timestamp || '-')}</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-gray-800">${ch.index}. ${escH(ch.title || '')}</div>
+            <div class="text-xs text-gray-500 mt-0.5 leading-relaxed">${escH(ch.description || '')}</div>
+            ${ch.keywords && ch.keywords.length ? `<div class="flex flex-wrap gap-1 mt-1">${ch.keywords.map(k => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${escH(k)}</span>`).join('')}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      // ハイライト
+      const highlights = d.highlights || [];
+      document.getElementById('res-highlights').innerHTML = highlights.map(h =>
+        `<li class="flex items-start gap-2 text-sm text-gray-700"><span class="text-yellow-500 flex-shrink-0 mt-0.5">★</span><span>${escH(h)}</span></li>`
+      ).join('');
+
+      // リソース
+      const resources = (d.resources || []).filter(r => r && r.trim());
+      if (resources.length > 0) {
+        document.getElementById('res-resources-wrap').classList.remove('hidden');
+        document.getElementById('res-resources').innerHTML = resources.map(r =>
+          `<li class="flex items-start gap-2 text-sm text-gray-700"><span class="text-blue-400 flex-shrink-0">→</span><span>${escH(r)}</span></li>`
+        ).join('');
+      } else {
+        document.getElementById('res-resources-wrap').classList.add('hidden');
+      }
+
+      // ゲスト紹介
+      if (d.guestIntro && d.guestIntro.trim()) {
+        document.getElementById('res-guest-wrap').classList.remove('hidden');
+        document.getElementById('res-guest').textContent = d.guestIntro;
+      } else {
+        document.getElementById('res-guest-wrap').classList.add('hidden');
+      }
+
+      // SNS
+      const twitter = d.snsTwitter || '';
+      document.getElementById('res-sns-twitter').textContent = twitter;
+      document.getElementById('twitter-count').textContent = `${[...twitter].length} / 140文字`;
+
+      document.getElementById('res-sns-instagram').textContent = d.snsInstagram || '';
+      document.getElementById('res-sns-note').textContent = d.snsNote || '';
+
+      // タグ
+      const tags = d.tags || [];
+      document.getElementById('res-tags').innerHTML = tags.map(t =>
+        `<span class="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full">${escH(t)}</span>`
+      ).join('');
+    }
+
+    // ===== SNS TABS =====
+    function switchSnsTab(tab) {
+      ['twitter', 'instagram', 'note'].forEach(t => {
+        document.getElementById('sns-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('sns-tab-' + t);
+        btn.className = t === tab
+          ? 'px-3 py-1 rounded-md text-xs font-medium bg-white text-gray-800 shadow-sm transition-colors'
+          : 'px-3 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors';
+      });
+    }
+
+    // ===== COPY =====
+    function copyText(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        const msg = document.createElement('span');
+        msg.textContent = 'コピーしました！';
+        msg.className = 'text-xs text-green-600 ml-2';
+        el.parentElement.appendChild(msg);
+        setTimeout(() => msg.remove(), 1500);
+      });
+    }
+
+    function copyAll() {
+      if (!generatedData) return;
+      const d = generatedData;
+      const chapters = (d.chapters || []).map(ch =>
+        `[${ch.timestamp || '-'}] ${ch.index}. ${ch.title}\n  ${ch.description}`
+      ).join('\n');
+
+      const text = [
+        `【エピソードタイトル】`,
+        d.episodeTitle,
+        '',
+        `【概要】`,
+        d.summary,
+        '',
+        `【章立て・タイムスタンプ】`,
+        chapters,
+        '',
+        `【聴きどころ】`,
+        (d.highlights || []).map(h => `・${h}`).join('\n'),
+        d.resources && d.resources.filter(r=>r).length ? `\n【リソース】\n${d.resources.filter(r=>r).map(r=>`・${r}`).join('\n')}` : '',
+        '',
+        `【Twitter/X投稿文】`,
+        d.snsTwitter,
+        '',
+        `【Instagram投稿文】`,
+        d.snsInstagram,
+        '',
+        `【noteリード文】`,
+        d.snsNote,
+        '',
+        `【タグ】`,
+        (d.tags || []).join(' '),
+      ].filter(s => s !== undefined).join('\n');
+
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('[onclick="copyAll()"]');
+        const orig = btn.textContent;
+        btn.textContent = '✅ コピーしました！';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
+    }
+
+    // ===== ERROR =====
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = '⚠️ ' + msg;
+      el.classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('error-msg').classList.add('hidden');
+    }
+  </script>
+</Layout>

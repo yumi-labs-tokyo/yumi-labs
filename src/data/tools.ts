@@ -167,7 +167,7 @@ export const tools: Tool[] = [
 		id: 23, slug: 'podcast-show-notes',
 		name: 'ポッドキャストショーノート生成',
 		description: '文字起こしを貼ると章立て＋タイムスタンプ＋SNS投稿文を出力。',
-		emoji: '🎙️', category: 'creator', status: 'coming-soon',
+		emoji: '🎙️', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 24, slug: 'youtube-thumbnail-preview',
