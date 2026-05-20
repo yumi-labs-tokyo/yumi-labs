@@ -1,0 +1,567 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ファンレター下書きアシスタント | yumi Labs">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">💝</div>
+      <div class="text-3xl font-bold text-white mb-2">ファンレター下書きアシスタント</div>
+      <div class="text-gray-400 text-sm">推しの属性別マナー違反チェック＋AI改善で、想いが伝わるファンレターに</div>
+    </div>
+
+    <!-- Step 1: Category -->
+    <div class="mb-6">
+      <div class="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-3">推しの属性を選んでください</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button onclick="selectCategory('actor')" id="cat-actor"
+          class="cat-btn p-4 rounded-xl border-2 border-white/20 text-center transition-all hover:border-pink-400/60 group">
+          <div class="text-2xl mb-1">🎭</div>
+          <div class="font-bold text-white text-sm">俳優</div>
+          <div class="text-xs text-gray-500 mt-1">映画・ドラマ・舞台</div>
+        </button>
+        <button onclick="selectCategory('voice_actor')" id="cat-voice_actor"
+          class="cat-btn p-4 rounded-xl border-2 border-white/20 text-center transition-all hover:border-pink-400/60 group">
+          <div class="text-2xl mb-1">🎙️</div>
+          <div class="font-bold text-white text-sm">声優</div>
+          <div class="text-xs text-gray-500 mt-1">アニメ・ゲーム</div>
+        </button>
+        <button onclick="selectCategory('vtuber')" id="cat-vtuber"
+          class="cat-btn p-4 rounded-xl border-2 border-white/20 text-center transition-all hover:border-pink-400/60 group">
+          <div class="text-2xl mb-1">🖥️</div>
+          <div class="font-bold text-white text-sm">VTuber</div>
+          <div class="text-xs text-gray-500 mt-1">配信・バーチャル</div>
+        </button>
+        <button onclick="selectCategory('idol')" id="cat-idol"
+          class="cat-btn p-4 rounded-xl border-2 border-white/20 text-center transition-all hover:border-pink-400/60 group">
+          <div class="text-2xl mb-1">⭐</div>
+          <div class="font-bold text-white text-sm">アイドル</div>
+          <div class="text-xs text-gray-500 mt-1">グループ・ソロ</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Names + Template -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-6">
+      <div class="flex flex-col sm:flex-row gap-4 mb-4">
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">宛先名（任意）</label>
+          <input id="recipientName" type="text" placeholder="例: 山田太郎"
+            class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">あなたの名前／ペンネーム（任意）</label>
+          <input id="senderName" type="text" placeholder="例: 佐藤花子"
+            class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-pink-400">
+        </div>
+        <div class="flex items-end">
+          <button onclick="insertTemplate()"
+            class="w-full sm:w-auto px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-all border border-white/20 whitespace-nowrap">
+            📋 テンプレを挿入
+          </button>
+        </div>
+      </div>
+      <div id="categoryHint" class="hidden text-xs text-pink-300 bg-pink-500/10 border border-pink-500/20 rounded-lg px-3 py-2">
+      </div>
+    </div>
+
+    <!-- Step 3: Draft + NG Check (2 columns) -->
+    <div class="flex flex-col lg:flex-row gap-5 mb-6">
+      <!-- Draft textarea -->
+      <div class="flex-1">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold text-white">✏️ ファンレターの下書き</div>
+          <div id="charCount" class="text-xs text-gray-500">0 文字</div>
+        </div>
+        <textarea id="draftText" rows="18"
+          placeholder="ここにファンレターの下書きを入力してください。&#10;&#10;カテゴリを選んでから「テンプレを挿入」ボタンを押すと、雛形が入力されます。"
+          class="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-pink-400 resize-none leading-relaxed"
+          oninput="onDraftInput()"></textarea>
+      </div>
+
+      <!-- NG Check Panel -->
+      <div class="lg:w-80 flex-shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold text-white">🔍 NGワードチェック</div>
+          <div id="ngBadge" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">0 件</div>
+        </div>
+        <div id="ngPanel"
+          class="bg-white/5 border border-white/10 rounded-xl p-4 h-full min-h-64 lg:max-h-[440px] overflow-y-auto">
+          <div id="ngEmpty" class="text-center text-gray-500 text-sm py-8">
+            <div class="text-3xl mb-2">✅</div>
+            <div>問題は検出されていません</div>
+            <div class="text-xs mt-1 text-gray-600">入力すると自動でチェックします</div>
+          </div>
+          <div id="ngList" class="hidden space-y-3"></div>
+        </div>
+        <div class="mt-3 text-xs text-gray-600 leading-relaxed">
+          ※ チェックはあくまで参考です。AIによる文章改善もご活用ください。
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Improve Button -->
+    <div class="text-center mb-6">
+      <button onclick="improveWithAI()" id="improveBtn"
+        class="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+        ✨ AIで改善する
+      </button>
+      <div class="text-xs text-gray-500 mt-2">Claude APIを使用して文章を改善します（約10〜20秒）</div>
+    </div>
+
+    <!-- AI Result Section (hidden initially) -->
+    <div id="resultSection" class="hidden">
+      <div class="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6 mb-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="font-bold text-white">✨ AI改善後のファンレター</div>
+          <button onclick="copyImproved()"
+            class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all">
+            📋 コピー
+          </button>
+        </div>
+        <div id="improvedDraft"
+          class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 rounded-xl p-4 border border-white/10">
+        </div>
+      </div>
+
+      <!-- Changes -->
+      <div id="changesSection" class="mb-5">
+        <div class="text-sm font-semibold text-white mb-3">📝 改善箇所</div>
+        <div id="changesList" class="space-y-2"></div>
+      </div>
+
+      <!-- Tips -->
+      <div id="tipsSection">
+        <div class="text-sm font-semibold text-white mb-3">💡 このカテゴリのファンレターのコツ</div>
+        <div id="tipsList" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div id="errorMsg" class="hidden mt-4 p-4 bg-red-500/20 border border-red-500/40 rounded-xl text-red-300 text-sm"></div>
+  </div>
+
+  <script is:inline>
+    // ─── State ───────────────────────────────────────────────
+    let currentCategory = '';
+    let ngTimer = null;
+
+    // ─── NG Word Database ─────────────────────────────────────
+    const NG_DB = {
+      universal: [
+        {
+          keywords: ['付き合って', '交際して', '恋人になって', '彼氏になって', '彼女になって', '結婚して', '私のものになって'],
+          level: 'danger',
+          reason: '恋愛的なアプローチはマナー違反です',
+          suggestion: '「応援しています」「これからも頑張ってください」など、応援の気持ちを伝えましょう',
+        },
+        {
+          keywords: ['住所', '自宅', '家に来て', '会いに行きます', '待ってます', '出待ち', '待ち伏せ', '家まで行きます'],
+          level: 'danger',
+          reason: '個人的な接触・場所を示唆する表現は相手に不安を与えます',
+          suggestion: 'イベントやライブでお会いできることを楽しみに、と表現しましょう',
+        },
+        {
+          keywords: ['死にたい', '死んでしまいそう', '死にそう', '生きていけない', '消えたい', '消えてしまいたい'],
+          level: 'danger',
+          reason: '追い詰められた表現は相手に重い精神的負担を与えます',
+          suggestion: '「元気をもらっています」「あなたの活動が生きがいです」と前向きに表現しましょう',
+        },
+        {
+          keywords: ['あなただけが', 'あなたしかいない', 'あなたがいないと生きていけない', 'あなたのために全てを'],
+          level: 'danger',
+          reason: '過度な依存の表現は相手に大きなプレッシャーを与えます',
+          suggestion: '「大きな支えになっています」「励みになっています」と表現しましょう',
+        },
+        {
+          keywords: ['必ずしてください', 'してくれないと', '絶対にやってください', 'してくれなければ'],
+          level: 'warning',
+          reason: '命令・要求口調は相手に負担を与えます',
+          suggestion: '「〜していただけたら嬉しいです」など柔らかい表現に変えましょう',
+        },
+        {
+          keywords: ['古参だから', 'ファン歴が長いので特別', '昔からのファンだから'],
+          level: 'warning',
+          reason: 'ファン歴の長さを特別待遇の根拠にする表現は望ましくありません',
+          suggestion: 'ファン歴は共有してよいですが、特別扱いを求める意味では使わないようにしましょう',
+        },
+        {
+          keywords: ['全財産', 'お金を全部', '借金してでも', 'すべてを捧げ'],
+          level: 'warning',
+          reason: '過度な金銭的自己犠牲を強調することは相手に心理的負担を与えます',
+          suggestion: '「いつも応援しています」とシンプルに伝えましょう',
+        },
+        {
+          keywords: ['嫌いな人がいる', 'アンチが', 'バッシングして'],
+          level: 'warning',
+          reason: 'ネガティブな話題・第三者批判はファンレターに馴染みません',
+          suggestion: '相手の素晴らしい点にフォーカスした内容にしましょう',
+        },
+      ],
+      actor: [
+        {
+          keywords: ['太った', 'やせた', '老けた', '顔が変わった', '以前より顔が'],
+          level: 'danger',
+          reason: '外見への言及（特に変化・否定）は相手を深く傷つけます',
+          suggestion: '外見ではなく演技・作品・表現力への感想を伝えましょう',
+        },
+        {
+          keywords: ['昔の方が', '若い頃の方が', '以前の方がよかった', '全盛期が'],
+          level: 'danger',
+          reason: '過去と現在を比較し現在を否定する表現は失礼です',
+          suggestion: '今の活動への感謝と今後への期待を具体的に伝えましょう',
+        },
+        {
+          keywords: ['より上手い', 'より下手', '他の俳優より', 'ほかの俳優より', 'よりずっと'],
+          level: 'danger',
+          reason: '他の俳優との比較は本人にも比較された方にも失礼です',
+          suggestion: 'その方自身の魅力・演技に焦点を当てた言葉を選びましょう',
+        },
+        {
+          keywords: ['彼女は', '彼氏は', 'お付き合い', 'ご結婚はいつ', 'プライベートで'],
+          level: 'warning',
+          reason: 'プライベートな恋愛・生活への詮索はマナー違反です',
+          suggestion: 'お仕事・作品に関することに絞って伝えましょう',
+        },
+      ],
+      voice_actor: [
+        {
+          keywords: ['と結婚したい', 'キャラクターとして好き', 'キャラとして愛して', 'として付き合いたい'],
+          level: 'warning',
+          reason: 'キャラクターと声優（演者）を混同した表現は誤解を招きます',
+          suggestion: '「〇〇（キャラ）を演じてくださった〇〇さんへ」など演者への敬意を明示しましょう',
+        },
+        {
+          keywords: ['声だけが好き', '声以外は', '顔は関係ない', '見た目は'],
+          level: 'warning',
+          reason: '声優を「声の担当」だけと捉える表現は演者として失礼です',
+          suggestion: '演技力・表現力・役への解釈の深さを具体的に褒めましょう',
+        },
+        {
+          keywords: ['もっとやってほしい', 'の続編に出てほしい', '絶対にまたやって'],
+          level: 'warning',
+          reason: '役を要求・命令する表現は相手の活動を縛る可能性があります',
+          suggestion: '「また〇〇の声を聴けることを楽しみにしています」と柔らかく表現しましょう',
+        },
+      ],
+      vtuber: [
+        {
+          keywords: ['中の人', '中身', '素顔', '本名', '前世', '転生', '実際の', '本当の姿', '現実では', 'ガワ'],
+          level: 'danger',
+          reason: 'VTuberの中の人・素顔・本名への言及は絶対NGです',
+          suggestion: 'VTuberとしてのキャラクター・配信活動のみに言及しましょう',
+        },
+        {
+          keywords: ['引退しないで', '絶対にやめないで', '永遠に続けて', '引退したら困る', '活動を止めないで'],
+          level: 'warning',
+          reason: '引退・終了をプレッシャーとして押し付ける表現は相手を苦しめます',
+          suggestion: '「これからも応援しています」「長く活動してくれると嬉しいです」と表現しましょう',
+        },
+        {
+          keywords: ['コラボしないで', '男性と絡むな', '女性と絡むな', '男性禁止', '絡んでほしくない'],
+          level: 'danger',
+          reason: 'VTuberの活動・人間関係を管理・制限しようとする表現はマナー違反です',
+          suggestion: '現在の配信への感謝と今後への応援のみ伝えましょう',
+        },
+        {
+          keywords: ['一番のファン', '私が一番応援', '誰より好き'],
+          level: 'warning',
+          reason: '他のリスナー・ファンとの競争意識を示す表現は不快に感じる方もいます',
+          suggestion: '自分がどれだけ楽しんでいるかを素直に伝えましょう',
+        },
+      ],
+      idol: [
+        {
+          keywords: ['結婚して', '私のものになって', '彼氏になって', 'ファンをやめたら', '独占したい'],
+          level: 'danger',
+          reason: 'アイドルへの恋愛的アプローチはマナー違反です',
+          suggestion: '「輝く姿に元気をもらっています」「これからも応援しています」と表現しましょう',
+        },
+        {
+          keywords: ['より好き', 'より可愛い', 'センターより', '他のメンバーより', 'より上手', 'より輝いてる'],
+          level: 'danger',
+          reason: 'メンバー間の比較は本人にも他のメンバーにも失礼です',
+          suggestion: 'その方だけの個性・魅力・頑張りを具体的に伝えましょう',
+        },
+        {
+          keywords: ['運営が悪い', '事務所が', 'プロデューサーが', '運営に文句', '事務所のせい', '運営批判'],
+          level: 'danger',
+          reason: '運営・事務所への批判をファンレターに書くのは適切ではありません',
+          suggestion: '本人の頑張りや魅力に焦点を当てた内容にしましょう',
+        },
+        {
+          keywords: ['卒業しないで', '絶対に卒業しないで', 'グループを離れないで', 'ずっとここにいて'],
+          level: 'warning',
+          reason: '卒業を強く引き止める表現はプレッシャーになります',
+          suggestion: '「どんな道に進んでも応援しています」と温かく表現しましょう',
+        },
+        {
+          keywords: ['全財産', 'すべてを使いました', '借金してでも', 'お金を全部使って'],
+          level: 'warning',
+          reason: '過度な金銭的自己犠牲を強調することは相手に心理的負担を与えます',
+          suggestion: '「いつも応援しています」とシンプルに伝えましょう',
+        },
+      ],
+    };
+
+    // ─── Templates ────────────────────────────────────────────
+    const TEMPLATES = {
+      actor: `○○様
+
+突然のお手紙、失礼いたします。△△と申します。
+
+○○様の演技を拝見してから、ずっとファンになっておりました。特に「□□」でのご演技は、今でも心に強く残っています。○○様の演じる□□は、セリフの一言一言に重みがあり、思わず引き込まれてしまいました。
+
+これからも○○様の素晴らしいご演技を楽しみにしております。どうかお体に気をつけて、益々ご活躍されることを心よりお祈り申し上げます。
+
+△△より`,
+      voice_actor: `○○様
+
+いつも素晴らしいお仕事をありがとうございます。△△と申します。
+
+「□□」での□□役、本当に感動しました。○○様の声による□□のセリフは、キャラクターの感情がそのまま伝わってきて、何度聴いても心が揺れます。○○様のご演技があってこそ、□□というキャラクターをこんなにも好きになれたと感じています。
+
+これからもたくさんの作品でお声を聞かせていただけることを楽しみにしております。どうかお体に気をつけてお過ごしください。
+
+△△より`,
+      vtuber: `○○さん
+
+いつも配信を楽しみにしています！△△と申します。
+
+先日の□□配信では、○○さんのおかげで本当に楽しい時間を過ごせました。特に□□のシーンは大笑いしてしまって、つらかった一日の疲れが一気に吹き飛んだ気がしました。
+
+これからも○○さんの配信を楽しみにしています。無理しすぎず、元気で配信を続けてくださいね。応援しています！
+
+△△より`,
+      idol: `○○さん
+
+いつも素敵なステージをありがとうございます。△△と申します。
+
+○○さんのパフォーマンスを見るたびに、一生懸命に輝こうとする姿に元気をもらっています。特に□□の公演での○○さんは、本当に輝いていて、思わず涙が出てしまいました。
+
+これからもずっと応援しています。どうかお体を大切に、素敵な○○さんでいてください。
+
+△△より`,
+    };
+
+    // ─── Category hints ───────────────────────────────────────
+    const CATEGORY_HINTS = {
+      actor: '🎭 俳優へのファンレター：演技・作品への感想を具体的に。外見や他俳優との比較は避けましょう。',
+      voice_actor: '🎙️ 声優へのファンレター：演者としての表現力を褒めましょう。キャラクターと演者の混同に注意。',
+      vtuber: '🖥️ VTuberへのファンレター：中の人・素顔・本名には絶対触れないでください。配信・キャラクターについてのみ言及を。',
+      idol: '⭐ アイドルへのファンレター：メンバー比較・運営批判・恋愛的表現はNGです。パフォーマンスへの感謝を伝えましょう。',
+    };
+
+    // ─── Category selection ───────────────────────────────────
+    function selectCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.remove('border-pink-500', 'bg-pink-500/20');
+        btn.classList.add('border-white/20');
+      });
+      const btn = document.getElementById('cat-' + cat);
+      if (btn) {
+        btn.classList.add('border-pink-500', 'bg-pink-500/20');
+        btn.classList.remove('border-white/20');
+      }
+      const hint = document.getElementById('categoryHint');
+      hint.textContent = CATEGORY_HINTS[cat] || '';
+      hint.classList.remove('hidden');
+      runNGCheck();
+    }
+
+    // ─── Template insertion ───────────────────────────────────
+    function insertTemplate() {
+      if (!currentCategory) {
+        alert('まず推しの属性を選んでください');
+        return;
+      }
+      const t = TEMPLATES[currentCategory] || '';
+      const recipient = document.getElementById('recipientName').value.trim();
+      const sender   = document.getElementById('senderName').value.trim();
+      let text = t;
+      if (recipient) text = text.replace(/○○/g, recipient);
+      if (sender)    text = text.replace(/△△/g, sender);
+      document.getElementById('draftText').value = text;
+      onDraftInput();
+    }
+
+    // ─── Draft input handler ──────────────────────────────────
+    function onDraftInput() {
+      const text = document.getElementById('draftText').value;
+      document.getElementById('charCount').textContent = `${text.length.toLocaleString()} 文字`;
+      clearTimeout(ngTimer);
+      ngTimer = setTimeout(runNGCheck, 300);
+    }
+
+    // ─── NG Check ────────────────────────────────────────────
+    function runNGCheck() {
+      const text = document.getElementById('draftText').value;
+      const issues = detectNG(text, currentCategory);
+      renderNGResults(issues);
+    }
+
+    function detectNG(text, category) {
+      const issues = [];
+      const seenReasons = new Set();
+      const dbs = [NG_DB.universal];
+      if (category && NG_DB[category]) dbs.push(NG_DB[category]);
+
+      dbs.forEach(db => {
+        db.forEach(item => {
+          const found = item.keywords.filter(kw => text.includes(kw));
+          if (found.length > 0 && !seenReasons.has(item.reason)) {
+            seenReasons.add(item.reason);
+            issues.push({
+              keyword: found[0],
+              level: item.level,
+              reason: item.reason,
+              suggestion: item.suggestion,
+            });
+          }
+        });
+      });
+
+      return issues;
+    }
+
+    function renderNGResults(issues) {
+      const badge  = document.getElementById('ngBadge');
+      const empty  = document.getElementById('ngEmpty');
+      const list   = document.getElementById('ngList');
+
+      badge.textContent = `${issues.length} 件`;
+      badge.className = issues.length === 0
+        ? 'text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400'
+        : issues.some(i => i.level === 'danger')
+          ? 'text-xs px-2 py-0.5 rounded-full bg-red-500/30 text-red-300'
+          : 'text-xs px-2 py-0.5 rounded-full bg-yellow-500/30 text-yellow-300';
+
+      if (issues.length === 0) {
+        empty.classList.remove('hidden');
+        list.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+      }
+
+      empty.classList.add('hidden');
+      list.classList.remove('hidden');
+      list.innerHTML = issues.map(issue => {
+        const isDanger = issue.level === 'danger';
+        return `
+          <div class="p-3 rounded-lg border ${isDanger ? 'bg-red-500/10 border-red-500/30' : 'bg-yellow-500/10 border-yellow-500/30'}">
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="text-sm">${isDanger ? '🚨' : '⚠️'}</span>
+              <span class="text-xs font-bold ${isDanger ? 'text-red-300' : 'text-yellow-300'}">
+                ${isDanger ? '要修正' : '注意'}
+              </span>
+              <span class="text-xs ${isDanger ? 'text-red-400' : 'text-yellow-400'} ml-auto">「${escapeHtml(issue.keyword)}」</span>
+            </div>
+            <div class="text-xs text-gray-300 mb-1.5">${escapeHtml(issue.reason)}</div>
+            <div class="text-xs text-gray-400 border-t ${isDanger ? 'border-red-500/20' : 'border-yellow-500/20'} pt-1.5">
+              💡 ${escapeHtml(issue.suggestion)}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ─── AI Improve ───────────────────────────────────────────
+    async function improveWithAI() {
+      const draft = document.getElementById('draftText').value.trim();
+      if (!draft) { alert('下書きを入力してください'); return; }
+      if (!currentCategory) { alert('推しの属性を選んでください'); return; }
+
+      const btn = document.getElementById('improveBtn');
+      const errEl = document.getElementById('errorMsg');
+      btn.disabled = true;
+      btn.textContent = '⏳ AI改善中...';
+      errEl.classList.add('hidden');
+      document.getElementById('resultSection').classList.add('hidden');
+
+      try {
+        const resp = await fetch('/api/fan-letter', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            category: currentCategory,
+            draft,
+            recipientName: document.getElementById('recipientName').value.trim(),
+            senderName:    document.getElementById('senderName').value.trim(),
+          }),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || data.error) {
+          errEl.textContent = data.error || '改善に失敗しました。もう一度お試しください。';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        renderResult(data);
+        document.getElementById('resultSection').classList.remove('hidden');
+        document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (e) {
+        errEl.textContent = 'ネットワークエラーが発生しました。';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ AIで改善する';
+      }
+    }
+
+    function renderResult(data) {
+      document.getElementById('improvedDraft').textContent = data.improvedDraft || '';
+
+      const changesEl = document.getElementById('changesList');
+      const changesSec = document.getElementById('changesSection');
+      if (data.changes && data.changes.length > 0) {
+        changesSec.classList.remove('hidden');
+        changesEl.innerHTML = data.changes.map(c => `
+          <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-sm">
+            <div class="flex flex-col sm:flex-row gap-2 mb-2">
+              <div class="flex-1 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5 text-red-300 text-xs">
+                ✗ ${escapeHtml(c.original)}
+              </div>
+              <div class="text-gray-500 self-center hidden sm:block">→</div>
+              <div class="flex-1 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-1.5 text-green-300 text-xs">
+                ✓ ${escapeHtml(c.improved)}
+              </div>
+            </div>
+            <div class="text-xs text-gray-400">${escapeHtml(c.reason)}</div>
+          </div>`).join('');
+      } else {
+        changesSec.classList.add('hidden');
+      }
+
+      const tipsEl = document.getElementById('tipsList');
+      const tipsSec = document.getElementById('tipsSection');
+      if (data.tips && data.tips.length > 0) {
+        tipsSec.classList.remove('hidden');
+        tipsEl.innerHTML = data.tips.map(t => `
+          <div class="flex gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-300">
+            <span class="text-pink-400 flex-shrink-0">✦</span>
+            <span>${escapeHtml(t)}</span>
+          </div>`).join('');
+      } else {
+        tipsSec.classList.add('hidden');
+      }
+    }
+
+    function copyImproved() {
+      const text = document.getElementById('improvedDraft').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = '✅ コピー完了';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</BaseLayout>

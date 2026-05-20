@@ -185,7 +185,7 @@ export const tools: Tool[] = [
 		id: 26, slug: 'fan-letter',
 		name: 'ファンレター下書きアシスト',
 		description: '推しの属性別にマナー違反ワードチェック付き下書き。',
-		emoji: '💝', category: 'creator', status: 'coming-soon',
+		emoji: '💝', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 27, slug: 'insta-9grid',
