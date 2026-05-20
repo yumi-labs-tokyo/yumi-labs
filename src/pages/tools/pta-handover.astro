@@ -1,0 +1,527 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="PTA役員引き継ぎ書テンプレ生成 — yumi-Labs"
+  description="役職・行事を選ぶと年間スケジュール・注意点・引き継ぎチェックリストをAIが生成。Wordファイルとしてダウンロード可能。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🏫</span>
+      <div>
+        <h1 class="tool-title">PTA役員引き継ぎ書テンプレ生成</h1>
+        <p class="tool-sub">役職と行事を選ぶだけで、年間スケジュール・引き継ぎチェックリスト・注意点をAIが自動生成。Wordで保存できます。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">📋 引き継ぎ情報を入力</h2>
+
+        <div class="form-grid">
+          <!-- 役職 -->
+          <div class="field-block">
+            <label class="field-label" for="role">役職 <span class="req">必須</span></label>
+            <div class="select-wrap">
+              <select class="select-input" id="role">
+                <option value="">選択してください</option>
+                <optgroup label="役員">
+                  <option value="会長">会長</option>
+                  <option value="副会長">副会長</option>
+                  <option value="書記">書記</option>
+                  <option value="会計">会計</option>
+                  <option value="監査">監査</option>
+                </optgroup>
+                <optgroup label="委員">
+                  <option value="学年委員長">学年委員長</option>
+                  <option value="学年委員">学年委員</option>
+                  <option value="広報委員長">広報委員長</option>
+                  <option value="広報委員">広報委員</option>
+                  <option value="ベルマーク委員">ベルマーク委員</option>
+                  <option value="校外安全委員">校外安全委員</option>
+                  <option value="厚生委員">厚生委員</option>
+                  <option value="文化委員">文化委員</option>
+                  <option value="研修委員">研修委員</option>
+                  <option value="環境美化委員">環境美化委員</option>
+                  <option value="図書委員・読み聞かせ担当">図書委員・読み聞かせ担当</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <!-- 学年 -->
+          <div class="field-block">
+            <label class="field-label" for="grade">対象学年（任意）</label>
+            <div class="select-wrap">
+              <select class="select-input" id="grade">
+                <option value="">指定なし</option>
+                <option value="全学年">全学年</option>
+                <option value="1年生">1年生</option>
+                <option value="2年生">2年生</option>
+                <option value="3年生">3年生</option>
+                <option value="4年生">4年生</option>
+                <option value="5年生">5年生</option>
+                <option value="6年生">6年生</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 行事チェックボックス -->
+        <div class="field-block">
+          <label class="field-label">関連する主な行事（複数選択可）</label>
+          <div class="events-grid">
+            <label class="ev-check"><input type="checkbox" value="定期総会" /> 定期総会</label>
+            <label class="ev-check"><input type="checkbox" value="運動会・体育祭" /> 運動会・体育祭</label>
+            <label class="ev-check"><input type="checkbox" value="文化祭・学習発表会" /> 文化祭・学習発表会</label>
+            <label class="ev-check"><input type="checkbox" value="入学式・卒業式" /> 入学式・卒業式</label>
+            <label class="ev-check"><input type="checkbox" value="バザー" /> バザー</label>
+            <label class="ev-check"><input type="checkbox" value="廃品回収・集団資源回収" /> 廃品回収・資源回収</label>
+            <label class="ev-check"><input type="checkbox" value="読み聞かせ活動" /> 読み聞かせ活動</label>
+            <label class="ev-check"><input type="checkbox" value="登下校見守り活動" /> 登下校見守り活動</label>
+            <label class="ev-check"><input type="checkbox" value="花植え・環境整備" /> 花植え・環境整備</label>
+            <label class="ev-check"><input type="checkbox" value="親子レクリエーション" /> 親子レクリエーション</label>
+            <label class="ev-check"><input type="checkbox" value="視察・研修旅行" /> 視察・研修旅行</label>
+            <label class="ev-check"><input type="checkbox" value="クリーン活動・美化活動" /> クリーン活動</label>
+            <label class="ev-check"><input type="checkbox" value="広報誌の発行" /> 広報誌の発行</label>
+            <label class="ev-check"><input type="checkbox" value="ベルマーク集計作業" /> ベルマーク集計</label>
+            <label class="ev-check"><input type="checkbox" value="家庭訪問・懇談会の補助" /> 懇談会の補助</label>
+          </div>
+        </div>
+
+        <!-- 学校名・特記事項 -->
+        <div class="form-grid">
+          <div class="field-block">
+            <label class="field-label" for="school-name">学校名（任意）</label>
+            <input type="text" class="text-input" id="school-name" placeholder="〇〇小学校" maxlength="30" />
+          </div>
+          <div class="field-block">
+            <label class="field-label" for="notes">特記事項・前任者メモ（任意）</label>
+            <input type="text" class="text-input" id="notes" placeholder="例：A社への発注は毎年5月中旬、連絡先は引き継ぎフォルダ内" maxlength="200" />
+          </div>
+        </div>
+
+        <button class="btn-primary" id="generate-btn" onclick="generate()">
+          🏫 引き継ぎ書を生成する
+        </button>
+        <div id="loading" class="loading-box" style="display:none">
+          <div class="spinner"></div>
+          <span>AIが引き継ぎ書を作成中... しばらくお待ちください</span>
+        </div>
+        <div id="error-box" class="error-box" style="display:none"></div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result-section" style="display:none">
+
+        <!-- ダウンロードバー -->
+        <div class="dl-bar">
+          <div id="doc-title" class="doc-title-text"></div>
+          <div class="dl-actions">
+            <button class="btn-word" onclick="downloadWord()">📄 Word（.doc）でダウンロード</button>
+            <button class="btn-copy-all" onclick="copyAll()">📋 全文コピー</button>
+          </div>
+        </div>
+
+        <!-- 役職概要 -->
+        <div class="card result-card">
+          <h3 class="res-title">📌 役職の概要</h3>
+          <p id="role-overview" class="overview-text"></p>
+          <div class="duties-wrap">
+            <div class="duties-label">主な業務</div>
+            <ul id="key-duties" class="duties-list"></ul>
+          </div>
+        </div>
+
+        <!-- 月別スケジュール -->
+        <div class="card result-card">
+          <h3 class="res-title">📅 年間スケジュール（4月〜3月）</h3>
+          <div class="schedule-table-wrap">
+            <table class="schedule-table" id="schedule-table">
+              <thead>
+                <tr>
+                  <th class="th-month">月</th>
+                  <th class="th-tasks">主な業務・タスク</th>
+                  <th class="th-notes">備考</th>
+                </tr>
+              </thead>
+              <tbody id="schedule-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 行事別注意事項 -->
+        <div class="card result-card" id="event-notes-card" style="display:none">
+          <h3 class="res-title">🎌 行事別 担当業務・注意事項</h3>
+          <div id="event-notes-list"></div>
+        </div>
+
+        <!-- 引き継ぎチェックリスト -->
+        <div class="card result-card">
+          <h3 class="res-title">✅ 引き継ぎチェックリスト</h3>
+          <div class="checklist-section">
+            <div class="cl-label">📄 書類・データ</div>
+            <ul id="cl-docs" class="cl-list"></ul>
+          </div>
+          <div class="checklist-section">
+            <div class="cl-label">📦 物品・備品</div>
+            <ul id="cl-items" class="cl-list"></ul>
+          </div>
+          <div class="checklist-section">
+            <div class="cl-label">💻 デジタル・アカウント</div>
+            <ul id="cl-digital" class="cl-list"></ul>
+          </div>
+        </div>
+
+        <!-- アドバイス・注意点 -->
+        <div class="card result-card">
+          <h3 class="res-title">💡 新任者へのアドバイス</h3>
+          <ul id="tips-list" class="tips-list"></ul>
+          <div class="caution-box">
+            <div class="caution-title">⚠️ 毎年トラブルになりやすい注意点</div>
+            <ul id="cautions-list" class="cautions-list"></ul>
+          </div>
+        </div>
+
+        <!-- 連絡先テンプレ -->
+        <div class="card result-card">
+          <h3 class="res-title">📞 連絡先一覧（記入欄）</h3>
+          <div id="contacts-template" class="contacts-template"></div>
+        </div>
+
+        <!-- フリーメモ欄 -->
+        <div class="card result-card">
+          <h3 class="res-title">📝 引き継ぎメモ（自由記入欄）</h3>
+          <textarea id="free-note" class="free-note" placeholder="前任者から後任者へのメッセージや補足事項を記入してください..." rows="5"></textarea>
+        </div>
+
+      </section>
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 20px; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; }
+    .field-block { margin-bottom: 20px; }
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .req { background: #ef4444; color: #fff; font-size: 0.7rem; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+    .select-wrap { position: relative; }
+    .select-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; color: var(--text); appearance: none; cursor: pointer; }
+    .select-input:focus { outline: none; border-color: var(--accent); }
+    .text-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; color: var(--text); box-sizing: border-box; }
+    .text-input:focus { outline: none; border-color: var(--accent); }
+
+    /* Events */
+    .events-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .ev-check { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; transition: all 0.15s; }
+    .ev-check:hover { border-color: #4f46e5; }
+    .ev-check input[type="checkbox"] { accent-color: #4f46e5; width: 15px; height: 15px; }
+
+    /* Button */
+    .btn-primary { width: 100%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .loading-box { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 10px; background: var(--surface); margin-top: 14px; font-size: 0.95rem; color: var(--muted); }
+    .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; color: #b91c1c; font-size: 0.9rem; margin-top: 12px; }
+
+    /* DL bar */
+    .dl-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; }
+    .doc-title-text { font-size: 1rem; font-weight: 800; }
+    .dl-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-word { background: #2563eb; color: #fff; border: none; border-radius: 9px; padding: 10px 18px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+    .btn-word:hover { opacity: 0.9; }
+    .btn-copy-all { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 16px; font-size: 0.88rem; cursor: pointer; color: var(--text); }
+
+    /* Result cards */
+    .result-card { margin-bottom: 0; }
+    .res-title { font-size: 1rem; font-weight: 800; margin: 0 0 14px; }
+    .overview-text { font-size: 0.9rem; line-height: 1.8; color: var(--text); margin: 0 0 16px; }
+    .duties-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .duties-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+    .duties-list li { font-size: 0.9rem; line-height: 1.6; }
+
+    /* Schedule */
+    .schedule-table-wrap { overflow-x: auto; }
+    .schedule-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .schedule-table th { background: #4f46e5; color: #fff; padding: 8px 12px; text-align: left; font-size: 0.8rem; }
+    .schedule-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .schedule-table tr:hover td { background: var(--surface); }
+    .th-month { width: 60px; }
+    .th-tasks { width: 55%; }
+    .th-notes { }
+    .month-cell { font-weight: 800; color: #4f46e5; font-size: 1rem; }
+    .tasks-cell { }
+    .task-item { display: flex; align-items: flex-start; gap: 5px; margin-bottom: 3px; font-size: 0.85rem; }
+    .task-item::before { content: '•'; color: #4f46e5; flex-shrink: 0; }
+    .notes-cell { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+    .busy-badge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 4px; padding: 1px 6px; font-size: 0.7rem; font-weight: 700; margin-left: 4px; }
+
+    /* Event notes */
+    .event-note-item { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #4f46e5; }
+    .en-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .en-name { font-size: 0.95rem; font-weight: 800; }
+    .en-timing { font-size: 0.78rem; background: #ede9fe; color: #5b21b6; border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+    .en-prep { font-size: 0.75rem; color: var(--muted); }
+    .en-sub-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); margin: 8px 0 4px; }
+    .en-list { margin: 0; padding-left: 18px; font-size: 0.85rem; line-height: 1.7; }
+    .en-caution li { color: #b91c1c; }
+
+    /* Checklist */
+    .checklist-section { margin-bottom: 18px; }
+    .cl-label { font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .cl-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .cl-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.88rem; background: var(--surface); border-radius: 8px; padding: 8px 12px; }
+    .cl-list li::before { content: '☐'; font-size: 1rem; flex-shrink: 0; }
+
+    /* Tips */
+    .tips-list { margin: 0 0 16px; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .tips-list li { font-size: 0.88rem; line-height: 1.7; background: #ede9fe; border-radius: 8px; padding: 10px 14px; }
+    .caution-box { background: #fff7ed; border: 1px solid #fb923c; border-radius: 10px; padding: 14px 16px; }
+    .caution-title { font-size: 0.85rem; font-weight: 700; color: #c2410c; margin-bottom: 8px; }
+    .cautions-list { margin: 0; padding-left: 18px; font-size: 0.85rem; line-height: 1.8; color: #9a3412; }
+
+    /* Contacts */
+    .contacts-template { font-size: 0.85rem; line-height: 2; color: var(--text); background: var(--surface); border-radius: 8px; padding: 14px; white-space: pre-wrap; }
+
+    /* Free note */
+    .free-note { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 0.9rem; color: var(--text); font-family: inherit; resize: vertical; box-sizing: border-box; }
+    .free-note:focus { outline: none; border-color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .events-grid { grid-template-columns: 1fr 1fr; }
+      .dl-bar { flex-direction: column; align-items: flex-start; }
+      .tool-title { font-size: 1.4rem; }
+    }
+  </style>
+
+  <script is:inline>
+    let _result = null;
+    let _meta = {};
+    const MONTHS = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月'];
+    const BUSY_MONTHS = [4, 5, 9, 3]; // 忙しい月
+
+    async function generate() {
+      const role = document.getElementById('role').value;
+      if (!role) { showError('役職を選択してください。'); return; }
+      clearError();
+
+      const events = [...document.querySelectorAll('.ev-check input:checked')].map(el => el.value);
+      const grade      = document.getElementById('grade').value;
+      const schoolName = document.getElementById('school-name').value.trim();
+      const notes      = document.getElementById('notes').value.trim();
+
+      _meta = { role, events, grade, schoolName, notes };
+
+      document.getElementById('generate-btn').disabled = true;
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('result-section').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/pta-handover', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ role, events, grade, schoolName, notes }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '生成に失敗しました');
+        _result = data;
+        renderResult(data);
+        document.getElementById('result-section').style.display = 'block';
+        document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('generate-btn').disabled = false;
+      }
+    }
+
+    function renderResult(d) {
+      const titleStr = [
+        _meta.schoolName || '',
+        _meta.grade || '',
+        `PTA ${_meta.role} 引き継ぎ書`,
+        `（${new Date().getFullYear()}年度）`,
+      ].filter(Boolean).join(' ');
+      document.getElementById('doc-title').textContent = titleStr;
+
+      // 役職概要
+      document.getElementById('role-overview').textContent = d.roleOverview || '';
+      document.getElementById('key-duties').innerHTML = (d.keyDuties || [])
+        .map(t => `<li>${escHtml(t)}</li>`).join('');
+
+      // 月別スケジュール
+      const tbody = document.getElementById('schedule-tbody');
+      tbody.innerHTML = (d.monthlySchedule || []).map(m => {
+        const busy = BUSY_MONTHS.includes(m.month) ? `<span class="busy-badge">多忙</span>` : '';
+        const tasks = (m.tasks || []).map(t => `<div class="task-item">${escHtml(t)}</div>`).join('') || '<span style="color:var(--muted);font-size:.8rem">特になし</span>';
+        return `<tr>
+          <td class="month-cell">${m.month}月${busy}</td>
+          <td class="tasks-cell">${tasks}</td>
+          <td class="notes-cell">${escHtml(m.notes || '')}</td>
+        </tr>`;
+      }).join('');
+
+      // 行事別注意事項
+      const enCard = document.getElementById('event-notes-card');
+      const enList = document.getElementById('event-notes-list');
+      if (d.eventNotes && d.eventNotes.length > 0) {
+        enList.innerHTML = d.eventNotes.map(e => `
+          <div class="event-note-item">
+            <div class="en-header">
+              <span class="en-name">${escHtml(e.event)}</span>
+              <span class="en-timing">🗓 ${escHtml(e.timing || '')}</span>
+              ${e.prepWeeks ? `<span class="en-prep">${e.prepWeeks}週間前から準備</span>` : ''}
+            </div>
+            ${e.duties && e.duties.length ? `<div class="en-sub-title">担当業務</div><ul class="en-list">${e.duties.map(t=>`<li>${escHtml(t)}</li>`).join('')}</ul>` : ''}
+            ${e.cautions && e.cautions.length ? `<div class="en-sub-title">⚠️ 注意事項</div><ul class="en-list en-caution">${e.cautions.map(t=>`<li>${escHtml(t)}</li>`).join('')}</ul>` : ''}
+          </div>`).join('');
+        enCard.style.display = 'block';
+      } else {
+        enCard.style.display = 'none';
+      }
+
+      // チェックリスト
+      document.getElementById('cl-docs').innerHTML    = (d.handoverDocs    || []).map(t=>`<li>${escHtml(t)}</li>`).join('');
+      document.getElementById('cl-items').innerHTML   = (d.handoverItems   || []).map(t=>`<li>${escHtml(t)}</li>`).join('');
+      document.getElementById('cl-digital').innerHTML = (d.handoverDigital || []).map(t=>`<li>${escHtml(t)}</li>`).join('');
+
+      // アドバイス・注意
+      document.getElementById('tips-list').innerHTML     = (d.importantTips || []).map(t=>`<li>${escHtml(t)}</li>`).join('');
+      document.getElementById('cautions-list').innerHTML = (d.cautions || []).map(t=>`<li>${escHtml(t)}</li>`).join('');
+
+      // 連絡先テンプレ
+      document.getElementById('contacts-template').textContent = d.contactsTemplate || '';
+    }
+
+    function downloadWord() {
+      if (!_result) return;
+      const d = _result;
+      const title = document.getElementById('doc-title').textContent;
+      const freeNote = document.getElementById('free-note').value;
+
+      const monthRows = (d.monthlySchedule || []).map(m => {
+        const busy = BUSY_MONTHS.includes(m.month) ? ' ★多忙' : '';
+        const tasks = (m.tasks || []).join('／') || '特になし';
+        return `<tr><td style="font-weight:bold;color:#4f46e5">${m.month}月${busy}</td><td>${wEsc(tasks)}</td><td>${wEsc(m.notes||'')}</td></tr>`;
+      }).join('');
+
+      const eventHtml = (d.eventNotes || []).map(e => `
+        <h3>${wEsc(e.event)}（${wEsc(e.timing||'')}）${e.prepWeeks?`　${e.prepWeeks}週間前から準備`:''}</h3>
+        ${e.duties&&e.duties.length?`<p><b>担当業務</b></p><ul>${e.duties.map(t=>`<li>${wEsc(t)}</li>`).join('')}</ul>`:''}
+        ${e.cautions&&e.cautions.length?`<p><b>⚠️ 注意事項</b></p><ul>${e.cautions.map(t=>`<li style="color:#b91c1c">${wEsc(t)}</li>`).join('')}</ul>`:''}
+      `).join('<hr/>');
+
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:w="urn:schemas-microsoft-com:office:word"
+        xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8"><title>${wEsc(title)}</title>
+      <style>
+        body{font-family:"MS Gothic","游ゴシック",sans-serif;font-size:10.5pt;margin:20mm;}
+        h1{font-size:16pt;border-bottom:3px solid #4f46e5;padding-bottom:6px;color:#312e81;}
+        h2{font-size:13pt;border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:20px;color:#1e1b4b;}
+        h3{font-size:11pt;color:#4f46e5;}
+        table{border-collapse:collapse;width:100%;margin-bottom:16px;}
+        th{background:#4f46e5;color:#fff;padding:6px 10px;font-size:10pt;text-align:left;}
+        td{padding:6px 10px;border:1px solid #ccc;font-size:10pt;vertical-align:top;}
+        ul{margin:4px 0;padding-left:20px;}
+        li{margin-bottom:3px;}
+        .section{margin-bottom:20px;}
+        .tip-item{background:#ede9fe;padding:6px 10px;margin-bottom:4px;border-radius:4px;}
+        .caution-item{color:#b91c1c;margin-bottom:3px;}
+        .free{border:1px dashed #999;padding:10px;min-height:60px;color:#555;}
+        .check-item{list-style:none;padding:4px 0;}
+        .check-item::before{content:"☐ ";}
+      </style></head><body>
+      <h1>${wEsc(title)}</h1>
+      <p>作成日：${new Date().toLocaleDateString('ja-JP')} ／ 役職：${wEsc(_meta.role)}${_meta.grade?` ／ ${wEsc(_meta.grade)}`:''}${_meta.schoolName?` ／ ${wEsc(_meta.schoolName)}`:''}</p>
+
+      <h2>📌 役職の概要</h2>
+      <p>${wEsc(d.roleOverview||'')}</p>
+      <b>主な業務</b>
+      <ul>${(d.keyDuties||[]).map(t=>`<li>${wEsc(t)}</li>`).join('')}</ul>
+
+      <h2>📅 年間スケジュール</h2>
+      <table><thead><tr><th>月</th><th>主な業務・タスク</th><th>備考</th></tr></thead>
+      <tbody>${monthRows}</tbody></table>
+
+      ${d.eventNotes&&d.eventNotes.length?`<h2>🎌 行事別 担当業務・注意事項</h2>${eventHtml}`:''}
+
+      <h2>✅ 引き継ぎチェックリスト</h2>
+      <b>📄 書類・データ</b>
+      <ul>${(d.handoverDocs||[]).map(t=>`<li class="check-item">${wEsc(t)}</li>`).join('')}</ul>
+      <b>📦 物品・備品</b>
+      <ul>${(d.handoverItems||[]).map(t=>`<li class="check-item">${wEsc(t)}</li>`).join('')}</ul>
+      <b>💻 デジタル・アカウント</b>
+      <ul>${(d.handoverDigital||[]).map(t=>`<li class="check-item">${wEsc(t)}</li>`).join('')}</ul>
+
+      <h2>💡 新任者へのアドバイス</h2>
+      ${(d.importantTips||[]).map(t=>`<div class="tip-item">・${wEsc(t)}</div>`).join('')}
+      <b>⚠️ 毎年トラブルになりやすい注意点</b>
+      <ul>${(d.cautions||[]).map(t=>`<li class="caution-item">${wEsc(t)}</li>`).join('')}</ul>
+
+      <h2>📞 連絡先一覧</h2>
+      <pre style="background:#f5f5f5;padding:10px;font-size:9pt">${wEsc(d.contactsTemplate||'')}</pre>
+
+      <h2>📝 引き継ぎメモ（自由記入欄）</h2>
+      <div class="free">${freeNote ? wEsc(freeNote) : '（記入欄）'}</div>
+      </body></html>`;
+
+      const blob = new Blob(['﻿', html], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PTA_${_meta.role}_引き継ぎ書_${new Date().getFullYear()}年度.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function copyAll() {
+      if (!_result) return;
+      const d = _result;
+      const lines = [
+        document.getElementById('doc-title').textContent,
+        '', '■ 役職の概要', d.roleOverview || '',
+        '', '■ 主な業務', ...(d.keyDuties || []).map(t => '・' + t),
+        '', '■ 年間スケジュール',
+        ...(d.monthlySchedule || []).map(m => `${m.month}月：${(m.tasks || []).join('、') || 'なし'}${m.notes ? ' ※' + m.notes : ''}`),
+        '', '■ 引き継ぎチェックリスト（書類）', ...(d.handoverDocs || []).map(t => '☐ ' + t),
+        '', '■ 引き継ぎチェックリスト（物品）', ...(d.handoverItems || []).map(t => '☐ ' + t),
+        '', '■ 引き継ぎチェックリスト（デジタル）', ...(d.handoverDigital || []).map(t => '☐ ' + t),
+        '', '■ 新任者へのアドバイス', ...(d.importantTips || []).map(t => '・' + t),
+        '', '■ 注意事項', ...(d.cautions || []).map(t => '・' + t),
+      ];
+      navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        const btn = document.querySelector('.btn-copy-all');
+        const orig = btn.textContent;
+        btn.textContent = 'コピーしました！';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      });
+    }
+
+    function wEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function showError(msg) { const el = document.getElementById('error-box'); el.textContent = msg; el.style.display = 'block'; }
+    function clearError() { document.getElementById('error-box').style.display = 'none'; }
+  </script>
+</BaseLayout>

@@ -129,7 +129,7 @@ export const tools: Tool[] = [
 		id: 17, slug: 'pta-handover',
 		name: 'PTA役員引き継ぎ書生成',
 		description: '役職・行事を選ぶと年間スケジュールと注意点をPDF化。',
-		emoji: '🏫', category: 'practical', status: 'coming-soon',
+		emoji: '🏫', category: 'practical', status: 'available',
 	},
 	{
 		id: 18, slug: 'hangover-timer',
