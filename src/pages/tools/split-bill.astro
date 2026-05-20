@@ -326,14 +326,18 @@ calculate();
 </script>
 
 <style>
-  .page-wrap { padding-block: 2rem 5rem; }
+  .page-wrap {
+    padding-block: 2rem 5rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
 
   .breadcrumb a { font-size: var(--text-sm); color: var(--gray-300); text-decoration: none; font-family: var(--font-brand); }
   .breadcrumb a:hover { color: var(--accent-dark); }
 
-  .tool-header { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0 2rem; }
-  .tool-icon { font-size: 2.8rem; line-height: 1; }
-  .tool-title { font-size: var(--text-2xl); margin: 0 0 0.25rem; }
+  .tool-header { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0 2rem; flex-wrap: wrap; }
+  .tool-icon { font-size: 2.8rem; line-height: 1; flex-shrink: 0; }
+  .tool-title { font-size: var(--text-2xl); margin: 0 0 0.25rem; word-break: break-word; }
   .tool-sub { color: var(--gray-300); margin: 0; font-size: var(--text-base); }
 
   .layout {
@@ -341,6 +345,7 @@ calculate();
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
     align-items: start;
+    min-width: 0;
   }
   @media (max-width: 56em) {
     .layout { grid-template-columns: 1fr; }
@@ -353,31 +358,36 @@ calculate();
     padding: 1.5rem;
     box-shadow: var(--shadow-sm);
     margin-bottom: 1.25rem;
+    min-width: 0;
+    box-sizing: border-box;
   }
   .card:last-child { margin-bottom: 0; }
 
   .card-title { font-size: var(--text-lg); margin: 0 0 1rem; font-family: var(--font-brand); }
-  .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 0.5rem; }
   .card-title-row .card-title { margin: 0; }
 
   /* 総額 */
-  .amount-row { display: flex; align-items: center; gap: 0.5rem; }
+  .amount-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .amount-input {
     flex: 1;
-    font-size: 2rem;
+    min-width: 0;
+    width: 100%;
+    font-size: clamp(1.25rem, 5vw, 2rem);
     font-weight: 800;
     font-family: var(--font-brand);
     color: var(--gray-100);
     background: var(--accent-subtle-overlay);
     border: 2px solid var(--accent-light);
     border-radius: 0.75rem;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     outline: none;
     text-align: right;
     transition: border-color var(--theme-transition);
+    box-sizing: border-box;
   }
   .amount-input:focus { border-color: var(--accent-regular); }
-  .unit { font-size: 1.25rem; font-weight: 700; color: var(--gray-300); font-family: var(--font-brand); }
+  .unit { font-size: 1.25rem; font-weight: 700; color: var(--gray-300); font-family: var(--font-brand); flex-shrink: 0; }
 
   /* 追加ボタン */
   .add-btn {
