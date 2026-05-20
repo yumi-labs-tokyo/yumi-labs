@@ -1,0 +1,486 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="中古マンション資産価値推定（ざっくり版） — yumi-Labs"
+  description="築年数・駅徒歩・面積を入れるだけで中古マンションの資産価値を推定。地域別相場から減価率を計算し、将来価値シミュレーションも表示。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🏢</span>
+      <div>
+        <h1 class="tool-title">中古マンション資産価値推定</h1>
+        <p class="tool-sub">エリア・築年数・駅徒歩・面積を入れると、地域相場から減価率を計算してざっくり推定します。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">🔢 物件情報を入力</h2>
+
+        <!-- エリア -->
+        <div class="field-block">
+          <label class="field-label" for="region">エリア（地域）</label>
+          <div class="select-wrap">
+            <select class="select-input" id="region" onchange="calculate()">
+              <optgroup label="東京都">
+                <option value="tokyo_center">東京都心5区（千代田・中央・港・新宿・渋谷）</option>
+                <option value="tokyo_ward" selected>東京23区（都心以外）</option>
+                <option value="tokyo_west">東京都市部（多摩・武蔵野等）</option>
+              </optgroup>
+              <optgroup label="首都圏">
+                <option value="kanagawa_main">神奈川（横浜・川崎）</option>
+                <option value="kanagawa_other">神奈川（その他）</option>
+                <option value="saitama">埼玉</option>
+                <option value="chiba">千葉</option>
+              </optgroup>
+              <optgroup label="関西">
+                <option value="osaka_center">大阪（梅田・難波・天王寺周辺）</option>
+                <option value="osaka_other">大阪（その他）</option>
+                <option value="kyoto">京都</option>
+                <option value="hyogo">兵庫（神戸等）</option>
+              </optgroup>
+              <optgroup label="その他主要都市">
+                <option value="nagoya">名古屋</option>
+                <option value="fukuoka">福岡</option>
+                <option value="sapporo">札幌</option>
+                <option value="sendai">仙台</option>
+                <option value="hiroshima">広島</option>
+                <option value="other_major">その他政令市</option>
+                <option value="other">その他地方都市</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <!-- スライダー群 -->
+        <div class="sliders-grid">
+          <div class="slider-block">
+            <div class="slider-header">
+              <label class="field-label">面積</label>
+              <div class="num-unit"><input type="number" class="num-input" id="area-num" value="65" min="10" max="300" oninput="syncRange('area'); calculate()" /><span class="unit">㎡</span></div>
+            </div>
+            <input type="range" class="slider" id="area-range" min="10" max="200" value="65" oninput="syncNum('area'); calculate()" />
+            <div class="slider-minmax"><span>10㎡</span><span>200㎡</span></div>
+          </div>
+
+          <div class="slider-block">
+            <div class="slider-header">
+              <label class="field-label">築年数</label>
+              <div class="num-unit"><input type="number" class="num-input" id="age-num" value="15" min="0" max="60" oninput="syncRange('age'); calculate()" /><span class="unit">年</span></div>
+            </div>
+            <input type="range" class="slider" id="age-range" min="0" max="60" value="15" oninput="syncNum('age'); calculate()" />
+            <div class="slider-minmax"><span>築0年（新築）</span><span>60年</span></div>
+          </div>
+
+          <div class="slider-block">
+            <div class="slider-header">
+              <label class="field-label">最寄り駅 徒歩</label>
+              <div class="num-unit"><input type="number" class="num-input" id="walk-num" value="7" min="1" max="30" oninput="syncRange('walk'); calculate()" /><span class="unit">分</span></div>
+            </div>
+            <input type="range" class="slider" id="walk-range" min="1" max="30" value="7" oninput="syncNum('walk'); calculate()" />
+            <div class="slider-minmax"><span>1分</span><span>30分以上</span></div>
+          </div>
+        </div>
+
+        <!-- 購入検討価格（任意） -->
+        <div class="field-block" style="margin-top:20px">
+          <label class="field-label">購入検討価格（任意） — 入力すると割安・割高を判定します</label>
+          <div class="price-input-row">
+            <input type="number" class="text-input" id="ask-price" placeholder="例：4500" min="100" max="99999" oninput="calculate()" />
+            <span class="price-unit">万円</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULT -->
+      <section class="result-section" id="result-section">
+
+        <!-- Hero: 推定価値 -->
+        <div class="hero-card">
+          <div class="hero-label">推定現在価値（ざっくり目安）</div>
+          <div class="hero-price" id="hero-price">－</div>
+          <div class="hero-range" id="hero-range"></div>
+          <div class="hero-sqm" id="hero-sqm"></div>
+        </div>
+
+        <!-- 購入価格比較 -->
+        <div id="ask-compare" class="ask-compare" style="display:none"></div>
+
+        <!-- 減価内訳 -->
+        <div class="card breakdown-card">
+          <h3 class="section-title">📊 推定根拠・減価内訳</h3>
+          <div id="breakdown-rows" class="breakdown-rows"></div>
+          <div class="depreciation-bar-wrap">
+            <div class="dep-bar-label">新築時比 残存価値率</div>
+            <div class="dep-bar-track">
+              <div class="dep-bar-fill" id="dep-bar-fill"></div>
+            </div>
+            <div class="dep-bar-pct" id="dep-bar-pct"></div>
+          </div>
+        </div>
+
+        <!-- 将来価値 -->
+        <div class="card future-card">
+          <h3 class="section-title">📈 将来価値シミュレーション</h3>
+          <p class="future-note">現在の築年数から追加で経年した場合の推定（エリア相場は現状維持と仮定）</p>
+          <div id="future-table-wrap"></div>
+          <div id="future-bars" class="future-bars"></div>
+        </div>
+
+        <!-- 投資判断 -->
+        <div class="card judgment-card" id="judgment-card">
+          <h3 class="section-title">💡 資産性チェック</h3>
+          <div id="judgment-content"></div>
+        </div>
+
+        <p class="disclaimer">
+          ※ このツールは2024年の国土交通省・不動産流通センターのデータを参考に作成した独自ロジックによる目安です。実際の査定価格とは異なります。売却・購入の際は不動産会社の査定を必ずご確認ください。
+        </p>
+      </section>
+
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 20px; }
+    .section-title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+
+    /* Input */
+    .field-block { margin-bottom: 20px; }
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .select-wrap { position: relative; }
+    .select-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; color: var(--text); appearance: none; cursor: pointer; }
+    .select-input:focus { outline: none; border-color: var(--accent); }
+
+    .sliders-grid { display: flex; flex-direction: column; gap: 20px; }
+    .slider-block { background: var(--surface); border-radius: 12px; padding: 16px; }
+    .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .num-unit { display: flex; align-items: center; gap: 6px; }
+    .num-input { width: 72px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 1rem; font-weight: 700; color: var(--text); text-align: right; }
+    .unit { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    .slider { width: 100%; accent-color: #3b82f6; height: 4px; cursor: pointer; }
+    .slider-minmax { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+    .price-input-row { display: flex; align-items: center; gap: 8px; }
+    .text-input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.95rem; color: var(--text); width: 160px; }
+    .price-unit { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+
+    /* Hero */
+    .hero-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%);
+      border-radius: 20px;
+      padding: 28px 32px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .hero-label { font-size: 0.82rem; font-weight: 700; opacity: 0.8; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .hero-price { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .hero-range { font-size: 0.9rem; opacity: 0.85; margin-bottom: 4px; }
+    .hero-sqm { font-size: 0.85rem; opacity: 0.7; }
+
+    /* Ask compare */
+    .ask-compare {
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ask-bargain { background: #dcfce7; border: 1px solid #86efac; color: #15803d; }
+    .ask-fair    { background: #fef9c3; border: 1px solid #fde047; color: #854d0e; }
+    .ask-high    { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
+
+    /* Breakdown */
+    .breakdown-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .br-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+    .br-label { color: var(--muted); }
+    .br-val { font-weight: 700; }
+    .br-val.positive { color: #3b82f6; }
+    .br-val.negative { color: #ef4444; }
+    .br-val.plus { color: #10b981; }
+    .br-row.total { border-top: 2px solid var(--border); padding-top: 10px; margin-top: 4px; }
+    .br-row.total .br-label { font-weight: 700; color: var(--text); }
+    .br-row.total .br-val { font-size: 1.1rem; color: #1d4ed8; }
+
+    .dep-bar-wrap { background: var(--surface); border-radius: 10px; padding: 14px; }
+    .dep-bar-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .dep-bar-track { background: #e2e8f0; border-radius: 8px; height: 18px; overflow: hidden; }
+    .dep-bar-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius: 8px; transition: width 0.4s; }
+    .dep-bar-pct { font-size: 0.88rem; font-weight: 700; color: #1d4ed8; margin-top: 6px; text-align: right; }
+
+    /* Future */
+    .future-note { font-size: 0.8rem; color: var(--muted); margin: -10px 0 16px; }
+    .future-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .future-table th { background: var(--surface); padding: 8px 12px; text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .future-table td { padding: 8px 12px; text-align: center; border-bottom: 1px solid var(--border); }
+    .future-table tr:last-child td { border-bottom: none; }
+    .future-table .now-col { font-weight: 800; color: #1d4ed8; }
+
+    .future-bars { display: flex; align-items: flex-end; gap: 8px; height: 80px; margin-top: 16px; }
+    .fb-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .fb-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.4s; min-height: 4px; }
+    .fb-lbl { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+
+    /* Judgment */
+    .judgment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .jg-item { background: var(--surface); border-radius: 10px; padding: 12px; text-align: center; }
+    .jg-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    .jg-name { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+    .jg-val { font-size: 0.88rem; font-weight: 700; }
+    .val-good { color: #10b981; }
+    .val-ok   { color: #f59e0b; }
+    .val-warn { color: #ef4444; }
+
+    .judgment-text { font-size: 0.88rem; line-height: 1.8; padding: 14px; background: var(--surface); border-radius: 10px; }
+
+    .disclaimer { font-size: 0.75rem; color: var(--muted); padding: 14px; background: var(--surface); border-radius: 10px; line-height: 1.8; margin-top: 4px; }
+
+    .result-section { display: flex; flex-direction: column; gap: 16px; }
+
+    @media (max-width: 600px) {
+      .hero-price { font-size: 2.2rem; }
+      .judgment-grid { grid-template-columns: 1fr 1fr; }
+      .tool-title { font-size: 1.4rem; }
+    }
+  </style>
+
+  <script is:inline>
+    // Regional base price (万円/m²) — approximation of equivalent new-build market price
+    const REGIONS = {
+      tokyo_center:    { label: '東京都心5区',          base: 170 },
+      tokyo_ward:      { label: '東京23区（都心以外）',  base: 105 },
+      tokyo_west:      { label: '東京都市部',            base:  65 },
+      kanagawa_main:   { label: '神奈川（横浜・川崎）',  base:  78 },
+      kanagawa_other:  { label: '神奈川（その他）',       base:  50 },
+      saitama:         { label: '埼玉',                   base:  48 },
+      chiba:           { label: '千葉',                   base:  45 },
+      osaka_center:    { label: '大阪（梅田・難波周辺）', base:  82 },
+      osaka_other:     { label: '大阪（その他）',          base:  50 },
+      kyoto:           { label: '京都',                   base:  58 },
+      hyogo:           { label: '兵庫（神戸等）',          base:  52 },
+      nagoya:          { label: '名古屋',                  base:  58 },
+      fukuoka:         { label: '福岡',                    base:  52 },
+      sapporo:         { label: '札幌',                    base:  36 },
+      sendai:          { label: '仙台',                    base:  38 },
+      hiroshima:       { label: '広島',                    base:  36 },
+      other_major:     { label: 'その他政令市',             base:  30 },
+      other:           { label: 'その他地方都市',           base:  22 },
+    };
+
+    // Age depreciation rate (残存価値率 relative to new-build equivalent)
+    function ageFactor(years) {
+      if (years <= 0)  return 1.00;
+      if (years <= 5)  return 1.00 - years * 0.030;           // 〜85% @5yr
+      if (years <= 10) return 0.85 - (years - 5)  * 0.025;   // 〜72% @10yr
+      if (years <= 20) return 0.725 - (years - 10) * 0.018;  // 〜54% @20yr
+      if (years <= 30) return 0.545 - (years - 20) * 0.013;  // 〜41% @30yr
+      if (years <= 40) return 0.415 - (years - 30) * 0.009;  // 〜32% @40yr
+      return Math.max(0.28, 0.325 - (years - 40) * 0.005);    // floor ~28%
+    }
+
+    // Station walk factor (relative adjustment)
+    function walkFactor(minutes) {
+      if (minutes <= 1)  return 1.15;
+      if (minutes <= 3)  return 1.10;
+      if (minutes <= 5)  return 1.05;
+      if (minutes <= 7)  return 1.00;
+      if (minutes <= 10) return 0.94;
+      if (minutes <= 15) return 0.87;
+      if (minutes <= 20) return 0.80;
+      return 0.73;
+    }
+
+    // Area efficiency factor (price per m² adjustment)
+    function areaFactor(sqm) {
+      if (sqm < 25)  return 1.12;
+      if (sqm < 40)  return 1.05;
+      if (sqm < 60)  return 1.00;
+      if (sqm < 80)  return 0.97;
+      if (sqm < 120) return 0.94;
+      return 0.90;
+    }
+
+    function fmt(val) {
+      return Math.round(val).toLocaleString('ja-JP');
+    }
+    function pct(v) {
+      return (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+    }
+
+    function syncNum(id) {
+      const r = document.getElementById(id + '-range');
+      const n = document.getElementById(id + '-num');
+      if (r && n) n.value = r.value;
+    }
+    function syncRange(id) {
+      const r = document.getElementById(id + '-range');
+      const n = document.getElementById(id + '-num');
+      if (r && n) r.value = n.value;
+    }
+
+    function calculate() {
+      const regionKey = document.getElementById('region').value;
+      const area  = Math.max(10, parseFloat(document.getElementById('area-num').value) || 65);
+      const age   = Math.max(0,  parseFloat(document.getElementById('age-num').value)  || 15);
+      const walk  = Math.max(1,  parseFloat(document.getElementById('walk-num').value)  || 7);
+      const askRaw = document.getElementById('ask-price').value.trim();
+
+      const region = REGIONS[regionKey] || REGIONS.tokyo_ward;
+
+      const af = ageFactor(age);
+      const wf = walkFactor(walk);
+      const sf = areaFactor(area);
+
+      // New-build equivalent for this unit
+      const newPrice = region.base * area * sf; // 万円
+
+      // Current estimated price
+      const midPrice = newPrice * af * (wf / 1.0); // wf is relative to 7min baseline
+      // Actually walkFactor already returns absolute factor, so:
+      // Let me recalculate: use 7min as baseline (factor=1.00), adjust from there
+      // wf already handles absolute relationship, so this is correct
+
+      const lowPrice  = midPrice * 0.85;
+      const highPrice = midPrice * 1.15;
+
+      // ㎡単価
+      const sqmPrice = midPrice / area;
+
+      // Depreciation components
+      const ageDepPct  = (af - 1.0);                    // age contribution (relative to new)
+      const walkAdjPct = (wf - 1.0);                    // walk contribution
+      const areaAdjPct = (sf - 1.0);                    // area contribution
+      const totalFactor = af * wf * sf;
+
+      // Update hero
+      document.getElementById('hero-price').textContent = `約 ${fmt(midPrice)} 万円`;
+      document.getElementById('hero-range').textContent = `参考幅：${fmt(lowPrice)} 〜 ${fmt(highPrice)} 万円`;
+      document.getElementById('hero-sqm').textContent   = `㎡単価 約 ${sqmPrice.toFixed(1)} 万円/㎡`;
+
+      // Ask price comparison
+      const askEl = document.getElementById('ask-compare');
+      if (askRaw && parseFloat(askRaw) > 0) {
+        const ask = parseFloat(askRaw);
+        const ratio = ask / midPrice;
+        askEl.style.display = 'flex';
+        if (ratio < 0.90) {
+          askEl.className = 'ask-compare ask-bargain';
+          askEl.innerHTML = `✅ 割安の可能性あり — 推定相場より <strong>${((1-ratio)*100).toFixed(0)}%（約${fmt(midPrice-ask)}万円）安い</strong>`;
+        } else if (ratio <= 1.10) {
+          askEl.className = 'ask-compare ask-fair';
+          askEl.innerHTML = `🟡 相場に近い水準 — 推定中央値との差は <strong>${ratio >= 1 ? '+' : ''}${((ratio-1)*100).toFixed(0)}%（約${fmt(Math.abs(ask-midPrice))}万円）</strong>`;
+        } else {
+          askEl.className = 'ask-compare ask-high';
+          askEl.innerHTML = `⚠️ 相場より高い可能性 — 推定相場より <strong>${((ratio-1)*100).toFixed(0)}%（約${fmt(ask-midPrice)}万円）高い</strong>`;
+        }
+      } else {
+        askEl.style.display = 'none';
+      }
+
+      // Breakdown
+      const bRows = [
+        { label:`新築時・同条件の想定価格（${region.label}／${area}㎡）`, val: `${fmt(newPrice)} 万円`, cls: 'positive' },
+        { label:`築${age}年による減価（${(af*100).toFixed(1)}%残存）`, val: `${pct(ageDepPct)}（${fmt(newPrice*ageDepPct)} 万円）`, cls: 'negative' },
+        { label:`駅徒歩${walk}分の補正`, val: `${pct(wf-1)}`, cls: wf >= 1 ? 'plus' : 'negative' },
+        { label:`面積効率（${area}㎡）の補正`, val: `${pct(sf-1)}`, cls: sf >= 1 ? 'plus' : 'negative' },
+      ];
+      const brEl = document.getElementById('breakdown-rows');
+      brEl.innerHTML = bRows.map(r =>
+        `<div class="br-row">
+          <span class="br-label">${r.label}</span>
+          <span class="br-val ${r.cls}">${r.val}</span>
+        </div>`
+      ).join('') + `
+        <div class="br-row total">
+          <span class="br-label">推定現在価値（中央値）</span>
+          <span class="br-val">約 ${fmt(midPrice)} 万円</span>
+        </div>`;
+
+      // Depreciation bar
+      const residualPct = Math.min(100, Math.max(0, totalFactor * 100));
+      document.getElementById('dep-bar-fill').style.width = residualPct.toFixed(1) + '%';
+      document.getElementById('dep-bar-pct').textContent = `新築時比 ${residualPct.toFixed(1)}% の価値（エリア・距離・面積込み）`;
+
+      // Future value table
+      const futureYears = [0, 5, 10, 15, 20];
+      const rows = futureYears.map(y => {
+        const futureAge = age + y;
+        const futureAf = ageFactor(futureAge);
+        const futurePrice = newPrice * futureAf * wf * sf;
+        const futureRatio = futurePrice / midPrice;
+        return { y, price: futurePrice, ratio: futureRatio };
+      });
+
+      const tableHtml = `<table class="future-table">
+        <thead><tr>
+          ${futureYears.map((y, i) => `<th${i===0?' class="now-col"':''}>${y===0?'現在':`${y}年後<br><small>（築${age+y}年）</small>`}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          <tr>${rows.map((r,i) => `<td${i===0?' class="now-col"':''}>${fmt(r.price)} 万円</td>`).join('')}</tr>
+          <tr>${rows.map((r,i) => `<td${i===0?' class="now-col"':''}>${i===0?'基準':(r.ratio*100).toFixed(0)+'%'}</td>`).join('')}</tr>
+        </tbody>
+      </table>`;
+      document.getElementById('future-table-wrap').innerHTML = tableHtml;
+
+      // Future bars
+      const maxPrice = rows[0].price;
+      const fbEl = document.getElementById('future-bars');
+      const barColors = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'];
+      fbEl.innerHTML = rows.map((r, i) => {
+        const hPct = Math.max(8, (r.price / maxPrice) * 100);
+        return `<div class="fb-col">
+          <div class="fb-bar" style="height:${hPct}%;background:${barColors[i]}"></div>
+          <div class="fb-lbl">${i===0?'現在':'+'+futureYears[i]+'年'}</div>
+        </div>`;
+      }).join('');
+
+      // Judgment
+      const ageRating  = age <= 10 ? { icon:'🟢', val:'良好', cls:'val-good' } : age <= 20 ? { icon:'🟡', val:'普通', cls:'val-ok' } : { icon:'🔴', val:'要確認', cls:'val-warn' };
+      const walkRating = walk <= 5 ? { icon:'🟢', val:'駅近', cls:'val-good' } : walk <= 10 ? { icon:'🟡', val:'標準', cls:'val-ok' } : { icon:'🔴', val:'遠め', cls:'val-warn' };
+      const assetRating = totalFactor > 0.85 ? { icon:'🟢', val:'高い', cls:'val-good' } : totalFactor > 0.6 ? { icon:'🟡', val:'中程度', cls:'val-ok' } : { icon:'🔴', val:'低め', cls:'val-warn' };
+
+      let advice = '';
+      if (totalFactor > 0.85) {
+        advice = `✅ 築年数が浅く・駅近の条件で、資産性は高い水準です。将来売却を視野に入れても安定した価値が維持しやすいエリアの条件が揃っています。`;
+      } else if (totalFactor > 0.65) {
+        advice = `🟡 資産性は中程度です。今後も緩やかな価値低下が見込まれますが、エリア需要や管理状態によっては横ばいも期待できます。管理組合・修繕積立金・大規模修繕履歴を必ず確認しましょう。`;
+      } else if (totalFactor > 0.45) {
+        advice = `⚠️ 築年数・駅距離の影響で、価値は大きく減価しています。購入する場合は価格に見合うか慎重に判断を。管理状態・耐震性（2000年基準以降か）の確認が特に重要です。`;
+      } else {
+        advice = `🔴 資産性は低い水準です。投資目的では慎重に。自己居住用でも、建物の耐震性・大規模修繕計画・管理費滞納状況などを徹底的に確認してください。`;
+      }
+
+      document.getElementById('judgment-content').innerHTML = `
+        <div class="judgment-grid">
+          <div class="jg-item"><div class="jg-icon">${ageRating.icon}</div><div class="jg-name">築年数</div><div class="jg-val ${ageRating.cls}">${ageRating.val}</div></div>
+          <div class="jg-item"><div class="jg-icon">${walkRating.icon}</div><div class="jg-name">駅距離</div><div class="jg-val ${walkRating.cls}">${walkRating.val}</div></div>
+          <div class="jg-item"><div class="jg-icon">${assetRating.icon}</div><div class="jg-name">資産性</div><div class="jg-val ${assetRating.cls}">${assetRating.val}</div></div>
+        </div>
+        <div class="judgment-text">${advice}</div>
+      `;
+    }
+
+    // Initial render
+    calculate();
+  </script>
+</BaseLayout>

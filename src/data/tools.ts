@@ -117,7 +117,7 @@ export const tools: Tool[] = [
 		id: 15, slug: 'condo-value',
 		name: '中古マンション資産価値推定',
 		description: '築年数・駅徒歩・面積を入れると地域平均から減価率を計算。',
-		emoji: '🏢', category: 'practical', status: 'coming-soon',
+		emoji: '🏢', category: 'practical', status: 'available',
 	},
 	{
 		id: 16, slug: 'moving-board',
