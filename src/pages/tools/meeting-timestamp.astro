@@ -103,6 +103,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 					<button class="ghost-btn" data-export="markdown">📄 Markdown</button>
 					<button class="ghost-btn" data-export="slack">💬 Slack</button>
 					<button class="ghost-btn" data-export="email">✉️ メール本文</button>
+					<button id="word-btn" class="ghost-btn">📝 Word (.docx)</button>
 				</div>
 			</div>
 
@@ -379,6 +380,35 @@ document.querySelectorAll('[data-export]').forEach(btn => {
 		btn.textContent = '✓ コピーしました';
 		setTimeout(() => btn.textContent = orig, 1500);
 	});
+});
+
+// ---- Word download ----
+document.getElementById('word-btn').addEventListener('click', async () => {
+	if (!currentMinutes) return;
+	const btn = document.getElementById('word-btn');
+	const orig = btn.textContent;
+	btn.textContent = '生成中…';
+	btn.disabled = true;
+	try {
+		const res = await fetch('/api/export/docx', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(currentMinutes),
+		});
+		if (!res.ok) throw new Error('生成に失敗しました');
+		const blob = await res.blob();
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `議事録_${currentMinutes.meta.title || 'untitled'}_${currentMinutes.meta.date}.docx`;
+		a.click();
+		URL.revokeObjectURL(url);
+	} catch (e) {
+		showError(e.message);
+	} finally {
+		btn.textContent = orig;
+		btn.disabled = false;
+	}
 });
 
 // ---- Init date ----

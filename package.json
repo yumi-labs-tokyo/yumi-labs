@@ -14,7 +14,8 @@
     "deploy:preview": "astro build && wrangler pages deploy dist/ --project-name=yumi-labs --branch=preview"
   },
   "dependencies": {
-    "astro": "^6.3.5"
+    "astro": "^6.3.5",
+    "docx": "^9.6.1"
   },
   "devDependencies": {
     "wrangler": "^4.93.0"
