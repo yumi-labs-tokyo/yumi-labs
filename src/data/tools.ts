@@ -141,7 +141,7 @@ export const tools: Tool[] = [
 		id: 19, slug: 'kaigo-check',
 		name: '介護保険「要介護度」セルフ判定',
 		description: '簡易チェックで認定の目安を表示。ケアマネ相談前の準備に。',
-		emoji: '👴', category: 'practical', status: 'coming-soon',
+		emoji: '👴', category: 'practical', badge: 'New', status: 'available',
 	},
 	{
 		id: 20, slug: 'family-tree',

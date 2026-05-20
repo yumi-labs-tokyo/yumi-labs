@@ -1,0 +1,506 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="介護保険「要介護度」セルフ判定 — yumi-Labs"
+  description="74項目の簡易チェックで要介護度の目安を表示。ケアマネジャー相談前の事前準備・家族間での状況共有に活用できます。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">👴</span>
+      <div>
+        <h1 class="tool-title">介護保険「要介護度」セルフ判定</h1>
+        <p class="tool-sub">74項目の簡易チェックで要介護度の目安を表示。ケアマネジャー相談・申請前の事前準備にご活用ください。</p>
+      </div>
+    </header>
+
+    <!-- 注意書き -->
+    <div class="disclaimer-top">
+      ⚠️ このツールは正式な介護認定調査ではありません。あくまでも目安であり、実際の認定は市区町村による認定調査・主治医意見書・介護認定審査会の総合判断で決まります。
+    </div>
+
+    <!-- 進捗バー（固定） -->
+    <div class="progress-bar-wrap" id="progress-bar-wrap">
+      <div class="progress-inner">
+        <span class="progress-label" id="progress-label">0 / 74 項目回答済み</span>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- セクションナビ -->
+    <div class="sec-nav" id="sec-nav">
+      <button class="sn-btn active" onclick="scrollToSec('sec1')">①身体機能</button>
+      <button class="sn-btn" onclick="scrollToSec('sec2')">②日常動作</button>
+      <button class="sn-btn" onclick="scrollToSec('sec3')">③認知機能</button>
+      <button class="sn-btn" onclick="scrollToSec('sec4')">④行動・精神</button>
+      <button class="sn-btn" onclick="scrollToSec('sec5')">⑤生活自立</button>
+      <button class="sn-btn" onclick="scrollToSec('sec6')">⑥医療ケア</button>
+    </div>
+
+    <!-- 質問フォーム -->
+    <form id="check-form">
+
+      <!-- SEC1: 身体機能・起居動作 -->
+      <section class="q-section" id="sec1">
+        <div class="sec-header sec-blue">
+          <span class="sec-num">①</span>
+          <div><div class="sec-title">身体機能・起居動作</div><div class="sec-desc">普段の状態でお答えください（20項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec1"></div>
+      </section>
+
+      <!-- SEC2: 日常生活動作 -->
+      <section class="q-section" id="sec2">
+        <div class="sec-header sec-green">
+          <span class="sec-num">②</span>
+          <div><div class="sec-title">日常生活動作（食事・入浴・排泄）</div><div class="sec-desc">介助の有無でお答えください（14項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec2"></div>
+      </section>
+
+      <!-- SEC3: 認知機能 -->
+      <section class="q-section" id="sec3">
+        <div class="sec-header sec-purple">
+          <span class="sec-num">③</span>
+          <div><div class="sec-title">認知機能</div><div class="sec-desc">記憶・理解・コミュニケーション（9項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec3"></div>
+      </section>
+
+      <!-- SEC4: 行動・精神症状 -->
+      <section class="q-section" id="sec4">
+        <div class="sec-header sec-orange">
+          <span class="sec-num">④</span>
+          <div><div class="sec-title">行動・精神症状</div><div class="sec-desc">過去1ヶ月の状況でお答えください（15項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec4"></div>
+      </section>
+
+      <!-- SEC5: 社会・生活の自立 -->
+      <section class="q-section" id="sec5">
+        <div class="sec-header sec-teal">
+          <span class="sec-num">⑤</span>
+          <div><div class="sec-title">生活自立・社会適応</div><div class="sec-desc">日常生活でできているかをお答えください（8項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec5"></div>
+      </section>
+
+      <!-- SEC6: 医療ケア -->
+      <section class="q-section" id="sec6">
+        <div class="sec-header sec-red">
+          <span class="sec-num">⑥</span>
+          <div><div class="sec-title">特別な医療ケア</div><div class="sec-desc">現在行っているケアにチェック（8項目）</div></div>
+        </div>
+        <div class="q-list" id="ql-sec6"></div>
+      </section>
+
+    </form>
+
+    <!-- 判定ボタン -->
+    <div class="judge-bar">
+      <button class="btn-judge" onclick="judge()">🔍 要介護度を判定する</button>
+    </div>
+
+    <!-- 結果 -->
+    <section id="result-section" style="display:none">
+      <div class="result-card" id="result-card">
+        <div class="result-label">判定結果（目安）</div>
+        <div class="result-level" id="result-level">—</div>
+        <div class="result-desc" id="result-desc"></div>
+        <div class="result-score" id="result-score"></div>
+      </div>
+
+      <div class="score-breakdown card">
+        <h3 class="sb-title">📊 分野別スコア</h3>
+        <div id="score-bars"></div>
+      </div>
+
+      <div class="next-steps card">
+        <h3 class="sb-title">📋 次のステップ</h3>
+        <div id="next-steps-content"></div>
+      </div>
+
+      <div class="disclaimer-bottom">
+        ※ 正式な要介護認定は、市区町村への申請 → 認定調査員による74項目調査 → 主治医意見書 → 介護認定審査会の審査を経て決定されます。このツールの結果は参考情報です。
+      </div>
+    </section>
+
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 80px; }
+    .breadcrumb { margin-bottom: 20px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.9rem; }
+
+    .disclaimer-top { background: #fff7ed; border: 1px solid #fb923c; border-radius: 10px; padding: 12px 16px; font-size: 0.82rem; line-height: 1.7; color: #7c2d12; margin-bottom: 16px; }
+
+    /* Progress */
+    .progress-bar-wrap { position: sticky; top: 0; z-index: 100; background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 8px 0; margin-bottom: 8px; }
+    .progress-inner { max-width: 860px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 12px; }
+    .progress-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); white-space: nowrap; min-width: 130px; }
+    .progress-track { flex: 1; height: 8px; background: var(--border); border-radius: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 6px; transition: width 0.3s; }
+
+    /* Section nav */
+    .sec-nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .sn-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--muted); transition: all .15s; }
+    .sn-btn:hover, .sn-btn.active { border-color: #6366f1; color: #6366f1; background: color-mix(in srgb, #6366f1 10%, transparent); }
+
+    /* Question sections */
+    .q-section { margin-bottom: 24px; }
+    .sec-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-radius: 14px 14px 0 0; color: #fff; }
+    .sec-blue   { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .sec-green  { background: linear-gradient(135deg, #10b981, #059669); }
+    .sec-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .sec-orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .sec-teal   { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    .sec-red    { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .sec-num { font-size: 1.8rem; font-weight: 900; opacity: 0.9; line-height: 1; }
+    .sec-title { font-size: 1rem; font-weight: 800; }
+    .sec-desc { font-size: 0.78rem; opacity: 0.85; margin-top: 2px; }
+
+    .q-list { background: var(--card-bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 14px 14px; }
+    .q-item { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .q-item:last-child { border-bottom: none; }
+    .q-text { font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+    .q-num { color: var(--muted); font-size: 0.75rem; font-weight: 700; margin-right: 6px; }
+
+    /* Options */
+    .q-options { display: flex; gap: 8px; flex-wrap: wrap; }
+    .q-opt { position: relative; }
+    .q-opt input { position: absolute; opacity: 0; }
+    .q-opt label {
+      display: block; background: var(--surface); border: 2px solid var(--border);
+      border-radius: 8px; padding: 7px 14px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; color: var(--text); transition: all .12s; white-space: nowrap;
+    }
+    .q-opt input:checked + label { background: #6366f1; border-color: #6366f1; color: #fff; }
+    .q-opt label:hover { border-color: #6366f1; }
+
+    /* Special: yesno */
+    .q-opt.yes input:checked + label { background: #ef4444; border-color: #ef4444; color: #fff; }
+    .q-opt.no input:checked + label  { background: #10b981; border-color: #10b981; color: #fff; }
+
+    /* Judge button */
+    .judge-bar { position: sticky; bottom: 16px; text-align: center; margin-top: 24px; z-index: 90; }
+    .btn-judge { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; border-radius: 50px; padding: 16px 40px; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 20px rgba(99,102,241,0.4); transition: all .2s; }
+    .btn-judge:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(99,102,241,0.5); }
+
+    /* Result */
+    #result-section { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .result-card { border-radius: 20px; padding: 30px; text-align: center; color: #fff; }
+    .result-label { font-size: 0.82rem; font-weight: 700; opacity: 0.85; margin-bottom: 10px; }
+    .result-level { font-size: 2.8rem; font-weight: 900; margin-bottom: 10px; }
+    .result-desc { font-size: 1rem; line-height: 1.7; opacity: 0.92; }
+    .result-score { font-size: 0.82rem; opacity: 0.7; margin-top: 10px; }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; }
+    .sb-title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+
+    /* Score bars */
+    .sb-row { margin-bottom: 14px; }
+    .sb-row-header { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; margin-bottom: 5px; }
+    .sb-label { color: var(--text); }
+    .sb-val { color: var(--muted); }
+    .sb-track { height: 10px; background: var(--border); border-radius: 6px; overflow: hidden; }
+    .sb-fill { height: 100%; border-radius: 6px; transition: width 0.5s; }
+
+    /* Next steps */
+    .ns-item { display: flex; gap: 12px; background: var(--surface); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .ns-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .ns-text { font-size: 0.88rem; line-height: 1.6; }
+    .ns-title { font-weight: 700; margin-bottom: 2px; }
+
+    .disclaimer-bottom { background: var(--surface); border-radius: 10px; padding: 12px 16px; font-size: 0.78rem; color: var(--muted); line-height: 1.7; }
+
+    @media (max-width: 600px) {
+      .tool-title { font-size: 1.4rem; }
+      .q-options { gap: 6px; }
+      .q-opt label { padding: 6px 10px; font-size: 0.78rem; }
+      .result-level { font-size: 2.2rem; }
+    }
+  </style>
+
+  <script is:inline>
+    // ── Question definitions ───────────────────────────────────────────
+    // type: 'ability'(できる/一部介助/全介助), 'freq'(ない/時々/よくある), 'yn'(該当しない/該当する)
+    // weight: score multiplier for highest option
+
+    const SECTIONS = {
+      sec1: { label: '身体機能・起居動作', color: '#3b82f6', max: 0 },
+      sec2: { label: '日常生活動作', color: '#10b981', max: 0 },
+      sec3: { label: '認知機能', color: '#8b5cf6', max: 0 },
+      sec4: { label: '行動・精神症状', color: '#f97316', max: 0 },
+      sec5: { label: '生活・社会適応', color: '#06b6d4', max: 0 },
+      sec6: { label: '特別な医療ケア', color: '#ef4444', max: 0 },
+    };
+
+    const QUESTIONS = [
+      // ─ SEC1: 身体機能・起居動作 (20q) ───────────────────────────────
+      { id:'q1',  sec:'sec1', text:'寝返り（自力で横を向ける）',           type:'ability', w:3 },
+      { id:'q2',  sec:'sec1', text:'起き上がり（自力でベッドから起き上がれる）', type:'ability', w:3 },
+      { id:'q3',  sec:'sec1', text:'座位保持（10分以上座っていられる）',   type:'ability', w:3 },
+      { id:'q4',  sec:'sec1', text:'両足での立位保持（1分以上）',          type:'ability', w:3 },
+      { id:'q5',  sec:'sec1', text:'片足での立位保持（瞬間的でも）',       type:'ability', w:2 },
+      { id:'q6',  sec:'sec1', text:'立ち上がり（椅子・ベッドから立てる）', type:'ability', w:3 },
+      { id:'q7',  sec:'sec1', text:'歩行（平地を10m以上歩ける）',         type:'ability', w:4 },
+      { id:'q8',  sec:'sec1', text:'移乗（ベッド↔車いす等の乗り移り）',   type:'ability', w:3 },
+      { id:'q9',  sec:'sec1', text:'移動（居室内を移動できる）',          type:'ability', w:3 },
+      { id:'q10', sec:'sec1', text:'洗身（入浴・シャワーで体を洗える）',  type:'ability', w:3 },
+      { id:'q11', sec:'sec1', text:'整容（洗顔・整髪・髭剃りができる）',  type:'ability', w:2 },
+      { id:'q12', sec:'sec1', text:'上衣の着脱（シャツ・上着の着替え）', type:'ability', w:2 },
+      { id:'q13', sec:'sec1', text:'下衣の着脱（ズボン・下着の着替え）', type:'ability', w:2 },
+      { id:'q14', sec:'sec1', text:'爪切り（手足の爪を自分で切れる）',   type:'ability', w:2 },
+      { id:'q15', sec:'sec1', text:'視力（眼鏡使用後、日常生活に支障ない）', type:'ability', w:1 },
+      { id:'q16', sec:'sec1', text:'聴力（補聴器使用後、意思疎通ができる）', type:'ability', w:1 },
+      { id:'q17', sec:'sec1', text:'上肢の麻痺・拘縮（腕・手指が動かしにくい部位がある）', type:'freq', w:3 },
+      { id:'q18', sec:'sec1', text:'下肢の麻痺・拘縮（足・股関節が動かしにくい部位がある）', type:'freq', w:3 },
+      { id:'q19', sec:'sec1', text:'関節痛・筋力低下による日常動作の制限', type:'freq', w:2 },
+      { id:'q20', sec:'sec1', text:'転倒リスク（過去1年間に転倒したことがある）', type:'freq', w:2 },
+
+      // ─ SEC2: 日常生活動作 (14q) ──────────────────────────────────────
+      { id:'q21', sec:'sec2', text:'嚥下（食べ物・飲み物を飲み込める）',   type:'ability', w:4 },
+      { id:'q22', sec:'sec2', text:'食事摂取（自分で食べられる）',         type:'ability', w:3 },
+      { id:'q23', sec:'sec2', text:'排尿のコントロール（尿もれ・頻尿がない）', type:'ability', w:4 },
+      { id:'q24', sec:'sec2', text:'排便のコントロール（便失禁がない）',   type:'ability', w:4 },
+      { id:'q25', sec:'sec2', text:'トイレへの移動・使用',                 type:'ability', w:4 },
+      { id:'q26', sec:'sec2', text:'口腔清潔（歯磨き・入れ歯の管理）',    type:'ability', w:2 },
+      { id:'q27', sec:'sec2', text:'入浴（湯舟への出入り含む）',           type:'ability', w:3 },
+      { id:'q28', sec:'sec2', text:'外出（自力または車いすで外出できる）', type:'ability', w:2 },
+      { id:'q29', sec:'sec2', text:'褥瘡（床ずれ）がある',                 type:'yn', w:5 },
+      { id:'q30', sec:'sec2', text:'経管栄養・胃ろうを使用している',       type:'yn', w:6 },
+      { id:'q31', sec:'sec2', text:'おむつを使用している',                  type:'yn', w:5 },
+      { id:'q32', sec:'sec2', text:'尿カテーテルを使用している',            type:'yn', w:5 },
+      { id:'q33', sec:'sec2', text:'睡眠（夜間に目が覚めて困ることがある）', type:'freq', w:2 },
+      { id:'q34', sec:'sec2', text:'疼痛（慢性的な痛みがある）',           type:'freq', w:2 },
+
+      // ─ SEC3: 認知機能 (9q) ───────────────────────────────────────────
+      { id:'q35', sec:'sec3', text:'意思の伝達（言葉や身振りで伝えられる）', type:'ability', w:4 },
+      { id:'q36', sec:'sec3', text:'毎日の日課の理解（今日が何をする日かわかる）', type:'ability', w:3 },
+      { id:'q37', sec:'sec3', text:'短期記憶（5分前のことを覚えている）', type:'ability', w:4 },
+      { id:'q38', sec:'sec3', text:'自分の名前をいえる',                   type:'ability', w:3 },
+      { id:'q39', sec:'sec3', text:'生年月日・年齢をいえる',               type:'ability', w:3 },
+      { id:'q40', sec:'sec3', text:'今の季節・年月日を理解できる',         type:'ability', w:3 },
+      { id:'q41', sec:'sec3', text:'今いる場所を理解できる',               type:'ability', w:3 },
+      { id:'q42', sec:'sec3', text:'家族や周囲の人を認識できる',           type:'ability', w:3 },
+      { id:'q43', sec:'sec3', text:'物事を判断し、適切に行動できる',       type:'ability', w:3 },
+
+      // ─ SEC4: 行動・精神症状 (15q) ────────────────────────────────────
+      { id:'q44', sec:'sec4', text:'徘徊（目的なく歩き回る）',             type:'freq', w:4 },
+      { id:'q45', sec:'sec4', text:'外出して自宅に戻れない（道に迷う）',   type:'freq', w:4 },
+      { id:'q46', sec:'sec4', text:'介護・入浴・食事などへの強い抵抗',    type:'freq', w:3 },
+      { id:'q47', sec:'sec4', text:'昼夜逆転（夜眠れず昼間ぼんやりしている）', type:'freq', w:3 },
+      { id:'q48', sec:'sec4', text:'大声・奇声・騒ぐ',                     type:'freq', w:3 },
+      { id:'q49', sec:'sec4', text:'同じ話・同じ質問を繰り返す',           type:'freq', w:3 },
+      { id:'q50', sec:'sec4', text:'「家に帰る」「仕事に行く」などの繰り返し言動', type:'freq', w:3 },
+      { id:'q51', sec:'sec4', text:'物を盗られた・被害にあっていると訴える', type:'freq', w:3 },
+      { id:'q52', sec:'sec4', text:'感情が急に不安定になる（急に泣く・怒る）', type:'freq', w:3 },
+      { id:'q53', sec:'sec4', text:'ひどい物忘れで日常生活に支障がある',   type:'freq', w:4 },
+      { id:'q54', sec:'sec4', text:'独り言・独り笑い',                     type:'freq', w:2 },
+      { id:'q55', sec:'sec4', text:'自分勝手・衝動的な行動（考えなしに行動する）', type:'freq', w:2 },
+      { id:'q56', sec:'sec4', text:'場にそぐわない行動（脱衣・食べ物でない物を口に入れる）', type:'freq', w:3 },
+      { id:'q57', sec:'sec4', text:'強い不安・うつ状態',                   type:'freq', w:3 },
+      { id:'q58', sec:'sec4', text:'幻視・幻聴（ないものが見える・聞こえる）', type:'freq', w:3 },
+
+      // ─ SEC5: 生活自立・社会適応 (8q) ────────────────────────────────
+      { id:'q59', sec:'sec5', text:'薬の自己管理（飲み忘れや誤飲がない）', type:'ability', w:3 },
+      { id:'q60', sec:'sec5', text:'金銭の管理（買い物・お釣りの計算ができる）', type:'ability', w:3 },
+      { id:'q61', sec:'sec5', text:'日常の意思決定（何を食べるか・いつ外出するかを決められる）', type:'ability', w:3 },
+      { id:'q62', sec:'sec5', text:'電話・スマートフォンを自分で操作できる', type:'ability', w:2 },
+      { id:'q63', sec:'sec5', text:'買い物（近所のスーパー等に自分で行ける）', type:'ability', w:2 },
+      { id:'q64', sec:'sec5', text:'簡単な調理（電子レンジや湯沸かし等）', type:'ability', w:2 },
+      { id:'q65', sec:'sec5', text:'外出頻度（週1回以上、外に出ている）',  type:'ability', w:2 },
+      { id:'q66', sec:'sec5', text:'集団への参加（デイサービス・地域活動などに適応できる）', type:'ability', w:2 },
+
+      // ─ SEC6: 特別な医療ケア (8q) ─────────────────────────────────────
+      { id:'q67', sec:'sec6', text:'透析（週複数回の通院透析）を行っている',       type:'yn', w:6 },
+      { id:'q68', sec:'sec6', text:'酸素療法（在宅酸素）を行っている',             type:'yn', w:5 },
+      { id:'q69', sec:'sec6', text:'点滴・中心静脈栄養を継続中',                   type:'yn', w:6 },
+      { id:'q70', sec:'sec6', text:'気管切開の処置が必要',                         type:'yn', w:7 },
+      { id:'q71', sec:'sec6', text:'人工呼吸器を使用している',                     type:'yn', w:8 },
+      { id:'q72', sec:'sec6', text:'ストーマ（人工肛門・人工膀胱）の処置が必要',   type:'yn', w:5 },
+      { id:'q73', sec:'sec6', text:'疼痛の専門的な看護ケアが必要',                 type:'yn', w:4 },
+      { id:'q74', sec:'sec6', text:'専門的なリハビリを週3回以上行っている',        type:'yn', w:3 },
+    ];
+
+    // ── Render questions ─────────────────────────────────────────────────
+    function buildOptions(q) {
+      if (q.type === 'ability') {
+        return [
+          { val:'0', label:'できる', cls:'' },
+          { val:'1', label:'一部介助が必要', cls:'' },
+          { val:'2', label:'全介助・できない', cls:'' },
+        ];
+      } else if (q.type === 'freq') {
+        return [
+          { val:'0', label:'ない', cls:'' },
+          { val:'1', label:'時々ある', cls:'' },
+          { val:'2', label:'よくある', cls:'' },
+        ];
+      } else { // yn
+        return [
+          { val:'0', label:'該当しない', cls:'no' },
+          { val:'1', label:'該当する', cls:'yes' },
+        ];
+      }
+    }
+
+    function renderQuestions() {
+      let numBySection = {};
+      Object.keys(SECTIONS).forEach(k => numBySection[k] = 0);
+
+      QUESTIONS.forEach((q, idx) => {
+        numBySection[q.sec] = (numBySection[q.sec] || 0) + 1;
+        const el = document.getElementById('ql-' + q.sec);
+        if (!el) return;
+
+        const opts = buildOptions(q).map(o =>
+          `<div class="q-opt${o.cls ? ' ' + o.cls : ''}">
+            <input type="radio" name="${q.id}" id="${q.id}_${o.val}" value="${o.val}" onchange="updateProgress()">
+            <label for="${q.id}_${o.val}">${o.label}</label>
+          </div>`
+        ).join('');
+
+        const div = document.createElement('div');
+        div.className = 'q-item';
+        div.innerHTML = `<div class="q-text"><span class="q-num">Q${idx+1}.</span>${q.text}</div><div class="q-options">${opts}</div>`;
+        el.appendChild(div);
+      });
+
+      // Calculate max scores per section
+      QUESTIONS.forEach(q => {
+        const maxVal = q.type === 'yn' ? 1 : 2;
+        SECTIONS[q.sec].max += maxVal * q.w;
+      });
+    }
+
+    // ── Progress ──────────────────────────────────────────────────────────
+    function updateProgress() {
+      const answered = QUESTIONS.filter(q => document.querySelector(`input[name="${q.id}"]:checked`)).length;
+      const pct = (answered / QUESTIONS.length) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-label').textContent = `${answered} / ${QUESTIONS.length} 項目回答済み`;
+    }
+
+    // ── Judge ─────────────────────────────────────────────────────────────
+    function judge() {
+      const unanswered = QUESTIONS.filter(q => !document.querySelector(`input[name="${q.id}"]:checked`));
+      if (unanswered.length > 0) {
+        alert(`未回答の質問が ${unanswered.length} 項目あります。\nすべて回答してから判定してください。`);
+        // Scroll to first unanswered
+        const first = unanswered[0];
+        document.querySelector(`input[name="${first.id}"]`)?.closest('.q-item')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // Calculate scores
+      let totalScore = 0;
+      const secScores = {};
+      Object.keys(SECTIONS).forEach(k => secScores[k] = 0);
+
+      QUESTIONS.forEach(q => {
+        const el = document.querySelector(`input[name="${q.id}"]:checked`);
+        if (!el) return;
+        const val = parseInt(el.value);
+        const score = val * q.w;
+        totalScore += score;
+        secScores[q.sec] += score;
+      });
+
+      // Check cognitive emphasis (if sec3+sec4 score > threshold, escalate level)
+      const cogScore = secScores.sec3 + secScores.sec4;
+      const physScore = secScores.sec1 + secScores.sec2;
+
+      // Total max
+      const totalMax = Object.values(SECTIONS).reduce((s, v) => s + v.max, 0);
+
+      // Map to care level
+      const level = getCareLevel(totalScore, cogScore, physScore, secScores.sec6);
+
+      displayResult(level, totalScore, totalMax, secScores);
+    }
+
+    function getCareLevel(total, cog, phys, medical) {
+      // Adjust if medical care is very high
+      const adjustedTotal = total + (medical > 20 ? 10 : 0);
+      const cogFlag = cog > 40; // significant cognitive issues
+
+      if (adjustedTotal <= 18) return { key:'自立', label:'非該当（自立）', desc:'現時点では介護保険の認定基準に該当しない可能性があります。', color:'#6b7280', bg:'#374151' };
+      if (adjustedTotal <= 38) return { key:'支援1', label:'要支援 1', desc:'日常生活のほとんどは自分でできますが、一部に支援が必要な状態です。介護予防サービスの利用が可能です。', color:'#065f46', bg:'#10b981' };
+      if (adjustedTotal <= 62 && !cogFlag) return { key:'支援2', label:'要支援 2', desc:'要支援1よりやや状態が重く、身体機能の低下が見られます。介護予防サービスを活用することで改善が期待できます。', color:'#064e3b', bg:'#059669' };
+      if (adjustedTotal <= 62 && cogFlag) return { key:'介護1', label:'要介護 1', desc:'要支援2相当の状態ですが、認知機能の低下が見られるため要介護1と判定される可能性があります。', color:'#1e40af', bg:'#2563eb' };
+      if (adjustedTotal <= 95) return { key:'介護1', label:'要介護 1', desc:'基本的な日常生活は部分的に行えますが、排泄・入浴などに一部介助が必要な状態です。', color:'#1e40af', bg:'#2563eb' };
+      if (adjustedTotal <= 130) return { key:'介護2', label:'要介護 2', desc:'日常生活動作のほとんどで介助が必要になってきた状態です。在宅介護サービスの活用が重要です。', color:'#7c2d12', bg:'#f97316' };
+      if (adjustedTotal <= 170) return { key:'介護3', label:'要介護 3', desc:'日常生活全般にわたって全介助が必要な状態です。排泄・入浴・衣服の着脱にも介助が必要です。', color:'#7f1d1d', bg:'#ef4444' };
+      if (adjustedTotal <= 210) return { key:'介護4', label:'要介護 4', desc:'日常生活動作のほぼすべてに全介助が必要で、認知機能の低下も見られます。', color:'#831843', bg:'#ec4899' };
+      return { key:'介護5', label:'要介護 5', desc:'介護なしでは日常生活がほぼ不可能な状態です。医療的ケアも含め、常時介護が必要です。', color:'#3b0764', bg:'#7c3aed' };
+    }
+
+    function displayResult(level, total, totalMax, secScores) {
+      const pct = Math.round(total / totalMax * 100);
+      const card = document.getElementById('result-card');
+      card.style.background = `linear-gradient(135deg, ${level.bg}, ${adjustColor(level.bg, -20)})`;
+      document.getElementById('result-level').textContent = level.label;
+      document.getElementById('result-desc').textContent = level.desc;
+      document.getElementById('result-score').textContent = `総合スコア: ${total} / ${totalMax}（${pct}%）`;
+
+      // Section bars
+      const barsHtml = Object.entries(SECTIONS).map(([key, sec]) => {
+        const score = secScores[key] || 0;
+        const p = Math.round(score / sec.max * 100);
+        return `<div class="sb-row">
+          <div class="sb-row-header"><span class="sb-label">${sec.label}</span><span class="sb-val">${score} / ${sec.max}</span></div>
+          <div class="sb-track"><div class="sb-fill" style="width:${p}%;background:${sec.color}"></div></div>
+        </div>`;
+      }).join('');
+      document.getElementById('score-bars').innerHTML = barsHtml;
+
+      // Next steps
+      const steps = getNextSteps(level.key);
+      document.getElementById('next-steps-content').innerHTML = steps.map(s =>
+        `<div class="ns-item"><div class="ns-icon">${s.icon}</div><div class="ns-text"><div class="ns-title">${s.title}</div>${s.desc}</div></div>`
+      ).join('');
+
+      document.getElementById('result-section').style.display = 'flex';
+      document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function getNextSteps(key) {
+      const common = [
+        { icon:'📋', title:'市区町村への申請', desc:'まず住民票のある市区町村の窓口（または地域包括支援センター）に「要介護認定申請書」を提出します。本人・家族・ケアマネでも申請可能です。' },
+        { icon:'👨‍⚕️', title:'主治医意見書の準備', desc:'申請後、市区町村から主治医への意見書依頼が行われます。かかりつけ医がいない場合は事前に受診しておきましょう。' },
+        { icon:'🏠', title:'認定調査員の訪問', desc:'市区町村から認定調査員が自宅等を訪問し、74項目の認定調査を行います。普段の状態を正直に伝えましょう。' },
+      ];
+      if (key === '自立') {
+        return [
+          { icon:'💚', title:'今後の予防が大切', desc:'現在は介護認定に非該当の可能性がありますが、地域の介護予防事業（体操教室・認知症予防等）への参加を検討しましょう。' },
+          ...common,
+        ];
+      }
+      return [
+        { icon:'📞', title:'地域包括支援センターに相談', desc:'まず地域包括支援センター（市区町村が設置）に相談するのが最初のステップです。無料で専門家が対応してくれます。' },
+        ...common,
+        { icon:'👩‍💼', title:'ケアマネジャーを探す', desc:'要介護1以上の認定が出たら、担当ケアマネジャー（介護支援専門員）を選びます。ケアプランの作成・サービス調整を無料で行ってくれます。' },
+      ];
+    }
+
+    function adjustColor(hex, amount) {
+      return hex; // simplified - return same color for gradient
+    }
+
+    function scrollToSec(id) {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    renderQuestions();
+    updateProgress();
+  </script>
+</BaseLayout>
