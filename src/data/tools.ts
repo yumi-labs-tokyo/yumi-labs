@@ -57,7 +57,7 @@ export const tools: Tool[] = [
 		id: 5, slug: 'mercari-listing',
 		name: 'メルカリ出品文最適化',
 		description: '商品情報を入れると検索に強いタイトル＋説明文＋ハッシュタグを生成。',
-		emoji: '🛍️', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '🛍️', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 6, slug: 'resignation-letter-pdf',
