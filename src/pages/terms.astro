@@ -1,0 +1,378 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="利用規約・運営者情報 — yumi-Labs"
+  description="yumi-Labsの利用規約、運営方針、免責事項、運営者情報についてのページです。"
+>
+  <div class="wrapper terms-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="terms-header">
+      <h1>利用規約・運営者情報</h1>
+      <p class="updated">最終更新日：2026年5月19日</p>
+    </header>
+
+    <div class="toc-card">
+      <p class="toc-title">目次</p>
+      <ol class="toc-list">
+        <li><a href="#about">Yumi-labsとは</a></li>
+        <li><a href="#policy">運営方針</a></li>
+        <li><a href="#tools">提供中のツール</a></li>
+        <li><a href="#operator">運営者情報・媒体資料</a></li>
+        <li><a href="#ads">広告について</a></li>
+        <li><a href="#disclaimer">免責事項</a></li>
+      </ol>
+    </div>
+
+    <article class="terms-body">
+
+      <!-- 1 -->
+      <section id="about" class="terms-section">
+        <h2><span class="num">01</span>Yumi-labsとは</h2>
+        <p>
+          yumi-Labs（以下「当サイト」）は、日常のちょっとした手間・面倒・調べ物を即座に解決するWebツールを
+          無料で提供するオンラインメディアです。
+        </p>
+        <p>
+          「検索して答えを探す」のではなく「ここに来れば完結する」をコンセプトに、
+          AIを活用したツールから純粋な計算ツールまで、実用性を最優先に設計しています。
+          エンジニアでなくても・スマホだけでも使えるシンプルさにこだわっています。
+        </p>
+        <p>
+          ツールはすべて無料です。会員登録・アプリのインストールも不要です。
+        </p>
+      </section>
+
+      <!-- 2 -->
+      <section id="policy" class="terms-section">
+        <h2><span class="num">02</span>運営方針</h2>
+        <p>当サイトは以下の方針で運営します。</p>
+        <ul class="policy-list">
+          <li>
+            <strong>プライバシーファースト</strong>
+            ユーザーが入力したテキストや個人情報をサーバーに保存・第三者に販売することは一切ありません。
+            AI機能を利用するツールでは入力内容をリアルタイムにAPIへ送信しますが、処理後は保持しません。
+          </li>
+          <li>
+            <strong>永続的な無料提供</strong>
+            提供中のツールは原則として無料を維持します。
+            将来有料プランを追加する場合も、基本機能は無料のまま継続します。
+          </li>
+          <li>
+            <strong>中立・非誘導</strong>
+            特定の商品・サービス・企業への誘導を目的としたコンテンツは作成しません。
+            返礼品の紹介などはあくまで参考情報であり、特定サービスとの提携関係はありません。
+          </li>
+          <li>
+            <strong>継続的な品質向上</strong>
+            ユーザーのフィードバックをもとにツールを改善し続けます。
+            バグ報告・改善提案はフッターのお問い合わせよりお寄せください。
+          </li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="tools" class="terms-section">
+        <h2><span class="num">03</span>提供中のツール</h2>
+        <p>当サイトが提供するツールは大きく2種類に分かれます。</p>
+
+        <div class="tool-type-grid">
+          <div class="tool-type-card">
+            <div class="tool-type-badge ai-badge">🤖 AI生成ツール</div>
+            <p>
+              Anthropic社のClaude APIを使用し、入力内容をもとにテキストを生成します。
+              生成結果はAIの出力であり、正確性を保証するものではありません。
+              重要な判断（医療・法律・税務など）には専門家にご相談ください。
+            </p>
+            <p class="tool-type-examples">
+              例：議事録タイムスタンプ整形、退職交渉スクリプト生成、メルカリ出品文最適化、
+              子どもの「なぜ?」回答アシスタント、取引先メール温度感チェッカー
+            </p>
+          </div>
+          <div class="tool-type-card">
+            <div class="tool-type-badge static-badge">⚡ ローカル計算ツール</div>
+            <p>
+              すべての処理をお使いのブラウザ内で完結します。
+              入力した情報がサーバーに送信されることはありません。
+              計算結果は参考値であり、実際の税額・法的効力等を保証するものではありません。
+            </p>
+            <p class="tool-type-examples">
+              例：飲み会割り勘計算、退職届PDFジェネレーター、香典・ご祝儀金額判定、
+              ふるさと納税シミュレーター
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="operator" class="terms-section">
+        <h2><span class="num">04</span>運営者情報・媒体資料</h2>
+        <table class="info-table">
+          <tr>
+            <th>サイト名</th>
+            <td>yumi-Labs</td>
+          </tr>
+          <tr>
+            <th>運営者</th>
+            <td>yumi（個人運営）</td>
+          </tr>
+          <tr>
+            <th>所在地</th>
+            <td>東京都</td>
+          </tr>
+          <tr>
+            <th>お問い合わせ</th>
+            <td>
+              サイト内の各ツールページ下部、またはSNSのDMよりご連絡ください。
+              企業からのお問い合わせ・コラボレーションの依頼もお気軽にどうぞ。
+            </td>
+          </tr>
+          <tr>
+            <th>媒体資料</th>
+            <td>
+              掲載・タイアップ・プロモーションをご検討の企業様向けに、
+              月間PV・ユーザー属性・掲載メニューをまとめた媒体資料をご用意できます。
+              お問い合わせの際に「媒体資料希望」とお伝えください。
+            </td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- 5 -->
+      <section id="ads" class="terms-section">
+        <h2><span class="num">05</span>広告について</h2>
+        <p>
+          現在（2026年5月時点）、当サイトには広告は掲載されていません。
+        </p>
+        <p>
+          将来的には、サイトの運営・維持コストを賄うため、以下の形式での広告掲載を検討する場合があります。
+        </p>
+        <ul>
+          <li><strong>Google AdSense</strong>などの第三者配信広告</li>
+          <li>ツール・サービスに関連した<strong>アフィリエイトリンク</strong></li>
+          <li>企業との<strong>タイアップ・スポンサー記事</strong>（明示表記あり）</li>
+        </ul>
+        <p>
+          広告を掲載する際は、コンテンツとの区別を明確にし、
+          ユーザー体験を著しく損なう形式（全画面広告・自動再生音声広告等）は採用しません。
+          アフィリエイト収入が発生する場合は、該当箇所に明記します。
+        </p>
+      </section>
+
+      <!-- 6 -->
+      <section id="disclaimer" class="terms-section">
+        <h2><span class="num">06</span>免責事項</h2>
+        <ul class="disclaimer-list">
+          <li>
+            <strong>計算結果・生成コンテンツの正確性</strong><br />
+            当サイトのツールが提供する計算結果・AI生成テキストは参考情報であり、
+            正確性・完全性・最新性を保証するものではありません。
+            税金・法律・医療・投資などに関する判断は、必ず専門家にご確認ください。
+          </li>
+          <li>
+            <strong>サービスの継続性</strong><br />
+            メンテナンス・障害・API仕様変更等により、予告なくサービスを一時停止または終了する場合があります。
+            これによって生じた損害について、当サイトは責任を負いません。
+          </li>
+          <li>
+            <strong>外部リンク・外部サービス</strong><br />
+            当サイトからリンクする外部サイト・外部サービスの内容について、当サイトは責任を負いません。
+            外部APIサービス（Claude API等）の利用規約は各社のものが適用されます。
+          </li>
+          <li>
+            <strong>著作権</strong><br />
+            当サイトのデザイン・テキスト・ソースコードの著作権は運営者に帰属します。
+            ツールの出力結果については、ユーザー自身が利用・転載できますが、
+            当サイトの関与を誇示するような形での利用はご遠慮ください。
+          </li>
+          <li>
+            <strong>準拠法・管轄裁判所</strong><br />
+            本規約の解釈・適用は日本法に準拠します。
+            紛争が生じた場合は、東京地方裁判所を第一審の専属的合意管轄裁判所とします。
+          </li>
+        </ul>
+      </section>
+
+    </article>
+
+    <footer class="terms-footer">
+      <p>最終更新日：2026年5月19日</p>
+      <a href="/" class="back-link">← ツール一覧に戻る</a>
+    </footer>
+  </div>
+</BaseLayout>
+
+<style>
+  .terms-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 1rem 5rem;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: .875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .terms-header { margin-bottom: 2rem; }
+  .terms-header h1 { font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 800; margin: 0 0 .5rem; }
+  .updated { font-size: .82rem; color: var(--gray-400); margin: 0; }
+
+  /* TOC */
+  .toc-card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: .875rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .toc-title { font-size: .78rem; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 .75rem; }
+  .toc-list { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: .4rem; }
+  .toc-list li { font-size: .875rem; }
+  .toc-list a { color: var(--accent-regular); text-decoration: none; }
+  .toc-list a:hover { text-decoration: underline; }
+
+  /* Section */
+  .terms-section {
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--gray-800);
+  }
+  .terms-section:last-child { border-bottom: none; }
+
+  .terms-section h2 {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 0 1.25rem;
+  }
+  .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem; height: 2rem;
+    background: var(--accent-regular);
+    color: #fff;
+    border-radius: .5rem;
+    font-size: .75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .terms-section p {
+    font-size: .9rem;
+    line-height: 1.85;
+    color: var(--gray-200);
+    margin: 0 0 1rem;
+  }
+  .terms-section p:last-child { margin-bottom: 0; }
+
+  /* Policy list */
+  .policy-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .875rem; }
+  .policy-list li {
+    padding: .875rem 1rem;
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-left: 3px solid var(--accent-regular);
+    border-radius: 0 .625rem .625rem 0;
+    font-size: .875rem;
+    color: var(--gray-200);
+    line-height: 1.7;
+  }
+  .policy-list strong { display: block; color: var(--gray-0); font-weight: 700; margin-bottom: .25rem; }
+
+  /* Tool type grid */
+  .tool-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .75rem; }
+  @media (max-width: 560px) { .tool-type-grid { grid-template-columns: 1fr; } }
+
+  .tool-type-card {
+    padding: 1rem 1.125rem;
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: .75rem;
+  }
+  .tool-type-badge {
+    display: inline-block;
+    padding: .2rem .7rem;
+    border-radius: 2rem;
+    font-size: .75rem;
+    font-weight: 700;
+    margin-bottom: .75rem;
+  }
+  .ai-badge {
+    background: color-mix(in srgb, var(--accent-regular) 15%, transparent);
+    color: var(--accent-regular);
+    border: 1px solid color-mix(in srgb, var(--accent-regular) 35%, transparent);
+  }
+  .static-badge {
+    background: color-mix(in srgb, #34d399 15%, transparent);
+    color: #34d399;
+    border: 1px solid color-mix(in srgb, #34d399 35%, transparent);
+  }
+  .tool-type-card p { font-size: .82rem; line-height: 1.7; color: var(--gray-300); margin: 0 0 .5rem; }
+  .tool-type-examples { color: var(--gray-500) !important; font-size: .76rem !important; }
+
+  /* Info table */
+  .info-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .info-table tr { border-bottom: 1px solid var(--gray-800); }
+  .info-table tr:last-child { border-bottom: none; }
+  .info-table th {
+    width: 120px;
+    padding: .875rem .75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-400);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  .info-table td {
+    padding: .875rem .75rem;
+    color: var(--gray-200);
+    line-height: 1.7;
+  }
+
+  /* Ads & disclaimer lists */
+  .terms-section ul:not(.policy-list):not(.disclaimer-list) {
+    padding-left: 1.25rem;
+    margin: .75rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+  }
+  .terms-section ul:not(.policy-list):not(.disclaimer-list) li {
+    font-size: .875rem;
+    color: var(--gray-200);
+    line-height: 1.7;
+  }
+
+  .disclaimer-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .875rem; }
+  .disclaimer-list li {
+    padding: .875rem 1rem;
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: .625rem;
+    font-size: .82rem;
+    color: var(--gray-300);
+    line-height: 1.75;
+  }
+  .disclaimer-list strong { color: var(--gray-0); }
+
+  /* Footer */
+  .terms-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding-top: 2rem;
+    border-top: 1px dashed var(--gray-700);
+    font-size: .82rem;
+    color: var(--gray-500);
+  }
+  .back-link { color: var(--accent-regular); text-decoration: none; }
+  .back-link:hover { text-decoration: underline; }
+</style>
