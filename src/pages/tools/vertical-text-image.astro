@@ -1,0 +1,487 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+---
+<Layout
+  title="縦書き縦長画像ジェネレーター | yumi-Labs"
+  description="ポエム・名言を入れると和文フォントで縦書き画像を生成。SNS投稿用の縦長PNG。"
+>
+  <div class="max-w-screen-xl mx-auto px-4 py-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">縦書き縦長画像ジェネレーター</h1>
+      <p class="text-gray-500 mt-1 text-sm">ポエム・名言・俳句を入力すると和文フォントで縦書き画像を自動生成。SNS投稿用PNGをダウンロード。</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[360px,1fr] gap-6">
+
+      <!-- ===== LEFT: コントロールパネル ===== -->
+      <div class="space-y-4">
+
+        <!-- テキスト入力 -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <label class="block font-semibold text-gray-800 mb-2">✍️ テキスト</label>
+          <textarea id="inp-text" rows="6" maxlength="300" placeholder="ここにポエム・名言・俳句を入力&#10;改行で段落区切りになります"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y font-serif"></textarea>
+          <div class="flex justify-between mt-1">
+            <span class="text-xs text-gray-400" id="char-count">0 / 300文字</span>
+            <button onclick="setSample()" class="text-xs text-indigo-500 hover:underline">サンプルを入れる</button>
+          </div>
+        </div>
+
+        <!-- 著者名 -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <label class="block font-semibold text-gray-800 mb-2">🖊️ 著者名（任意）</label>
+          <input id="inp-author" type="text" maxlength="20" placeholder="例：松尾芭蕉　　作"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <!-- スタイル設定 -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+          <h2 class="font-semibold text-gray-800">🎨 スタイル設定</h2>
+
+          <!-- 用紙サイズ -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">用紙サイズ</label>
+            <select id="opt-size" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="1080x1920">SNS縦長 (1080×1920)</option>
+              <option value="1080x1350">Twitter/X縦 (1080×1350)</option>
+              <option value="1080x1080">正方形 (1080×1080)</option>
+              <option value="800x1200">詩・俳句 (800×1200)</option>
+            </select>
+          </div>
+
+          <!-- 背景色 -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">背景</label>
+            <div class="flex flex-wrap gap-2 mb-2" id="bg-presets">
+              <button data-bg="#ffffff" title="白紙" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-gray-300 bg-white"></button>
+              <button data-bg="#f5efe2" title="クリーム" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#f5efe2"></button>
+              <button data-bg="#e8dfc9" title="和紙" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#e8dfc9"></button>
+              <button data-bg="#fce8f0" title="薄桜" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#fce8f0"></button>
+              <button data-bg="#e0e8f0" title="藍白" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#e0e8f0"></button>
+              <button data-bg="#1a1a1a" title="黒" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#1a1a1a"></button>
+              <button data-bg="#1a2040" title="深紺" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#1a2040"></button>
+              <button data-bg="#2d2d2d" title="墨" onclick="setBg(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#2d2d2d"></button>
+            </div>
+            <input type="color" id="opt-bg" value="#f5efe2" class="h-8 w-full rounded border border-gray-300 cursor-pointer" />
+          </div>
+
+          <!-- 文字色 -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">文字色</label>
+            <div class="flex gap-2 mb-2">
+              <button data-tc="#1a1a1a" title="黒" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-gray-300" style="background:#1a1a1a"></button>
+              <button data-tc="#2d2d2d" title="墨" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#2d2d2d"></button>
+              <button data-tc="#ffffff" title="白" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-gray-300 bg-white"></button>
+              <button data-tc="#f5f5f0" title="生成り" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#f5f5f0"></button>
+              <button data-tc="#c0392b" title="朱" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#c0392b"></button>
+              <button data-tc="#1a3a5c" title="藍" onclick="setTc(this)" class="w-7 h-7 rounded-full border-2 border-transparent" style="background:#1a3a5c"></button>
+            </div>
+            <input type="color" id="opt-tc" value="#1a1a1a" class="h-8 w-full rounded border border-gray-300 cursor-pointer" />
+          </div>
+
+          <!-- フォント -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">フォント</label>
+            <select id="opt-font" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="Noto Serif JP">游明朝風（Noto Serif JP）</option>
+              <option value="Shippori Mincho">筑紫明朝風（Shippori Mincho）</option>
+              <option value="Yuji Syuku">筆文字（Yuji Syuku）</option>
+              <option value="M PLUS 1p">ゴシック体（M PLUS 1p）</option>
+            </select>
+            <p id="font-status" class="text-xs text-gray-400 mt-1">フォント読み込み中...</p>
+          </div>
+
+          <!-- 文字サイズ -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">文字サイズ</label>
+            <div class="flex gap-2">
+              <button data-fs="small" onclick="setFs(this)" class="flex-1 py-1.5 text-sm rounded-lg border border-gray-300 bg-gray-50 hover:bg-gray-100">小</button>
+              <button data-fs="medium" onclick="setFs(this)" class="flex-1 py-1.5 text-sm rounded-lg border-2 border-indigo-500 bg-indigo-50 text-indigo-700">中</button>
+              <button data-fs="large" onclick="setFs(this)" class="flex-1 py-1.5 text-sm rounded-lg border border-gray-300 bg-gray-50 hover:bg-gray-100">大</button>
+            </div>
+          </div>
+
+          <!-- 装飾 -->
+          <div>
+            <label class="text-xs text-gray-500 mb-2 block">装飾</label>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" id="opt-border" checked class="rounded text-indigo-600" />
+                枠線
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" id="opt-colline" class="rounded text-indigo-600" />
+                列区切り線
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" id="opt-stamp" class="rounded text-indigo-600" />
+                朱印風装飾
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" id="opt-texture" checked class="rounded text-indigo-600" />
+                和紙テクスチャ
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ボタン -->
+        <div class="flex gap-2">
+          <button onclick="renderAndPreview()" id="btn-render"
+            class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+            🎨 生成・プレビュー
+          </button>
+          <button onclick="downloadPNG()"
+            class="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+            ⬇ PNG保存
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: プレビュー ===== -->
+      <div class="bg-gray-100 rounded-xl p-4 flex flex-col items-center min-h-[500px]">
+        <div class="w-full flex justify-between items-center mb-3">
+          <span class="text-sm font-medium text-gray-600">プレビュー</span>
+          <span id="canvas-info" class="text-xs text-gray-400"></span>
+        </div>
+        <div class="flex-1 w-full flex items-center justify-center overflow-auto">
+          <canvas id="preview-canvas" style="max-width:100%;max-height:70vh;box-shadow:0 4px 24px rgba(0,0,0,0.15);border-radius:4px;"></canvas>
+        </div>
+        <p class="text-xs text-gray-400 mt-3 text-center">「生成・プレビュー」ボタンで画像を更新 → 「PNG保存」でフルサイズDL</p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // ===== FONT CONFIG =====
+    const FONT_GF = {
+      'Noto Serif JP': 'Noto+Serif+JP:wght@400;700',
+      'Shippori Mincho': 'Shippori+Mincho:wght@400;700',
+      'Yuji Syuku': 'Yuji+Syuku',
+      'M PLUS 1p': 'M+PLUS+1p:wght@400;700',
+    };
+
+    const FONT_SIZE_MAP = { small: 0.75, medium: 1.0, large: 1.35 };
+
+    // Size presets: w, h, baseFontSize, padding
+    const SIZE_PRESETS = {
+      '1080x1920': { w: 1080, h: 1920, baseFont: 58, pad: 90 },
+      '1080x1350': { w: 1080, h: 1350, baseFont: 58, pad: 80 },
+      '1080x1080': { w: 1080, h: 1080, baseFont: 52, pad: 80 },
+      '800x1200':  { w: 800,  h: 1200, baseFont: 46, pad: 70 },
+    };
+
+    let currentFontSize = 'medium';
+    let loadedFonts = new Set();
+
+    // ===== FONT LOADING =====
+    async function ensureFont(fontName) {
+      if (loadedFonts.has(fontName)) return;
+      const gfParam = FONT_GF[fontName];
+      if (!gfParam) return;
+
+      // Inject Google Fonts link if not already present
+      const linkId = 'gf-' + fontName.replace(/\s/g, '-');
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'stylesheet';
+        link.href = `https://fonts.googleapis.com/css2?family=${gfParam}&display=swap`;
+        document.head.appendChild(link);
+      }
+
+      // Wait for font to actually load
+      try {
+        await document.fonts.load(`400 40px "${fontName}"`);
+        await document.fonts.load(`700 40px "${fontName}"`);
+        loadedFonts.add(fontName);
+        document.getElementById('font-status').textContent = `✅ ${fontName} 読み込み完了`;
+      } catch(e) {
+        document.getElementById('font-status').textContent = `⚠ フォント読み込み失敗（システムフォントで代替）`;
+      }
+    }
+
+    // Pre-load default font on page load
+    window.addEventListener('load', () => {
+      ensureFont('Noto Serif JP');
+      document.getElementById('font-status').textContent = '読み込み中...';
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Auto-render on option changes (debounced)
+      let debounceTimer;
+      const autoRender = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(renderAndPreview, 400);
+      };
+
+      document.getElementById('opt-size').addEventListener('change', autoRender);
+      document.getElementById('opt-bg').addEventListener('input', autoRender);
+      document.getElementById('opt-tc').addEventListener('input', autoRender);
+      document.getElementById('opt-border').addEventListener('change', autoRender);
+      document.getElementById('opt-colline').addEventListener('change', autoRender);
+      document.getElementById('opt-stamp').addEventListener('change', autoRender);
+      document.getElementById('opt-texture').addEventListener('change', autoRender);
+
+      document.getElementById('opt-font').addEventListener('change', async e => {
+        document.getElementById('font-status').textContent = '読み込み中...';
+        await ensureFont(e.target.value);
+        renderAndPreview();
+      });
+
+      document.getElementById('inp-text').addEventListener('input', e => {
+        document.getElementById('char-count').textContent = `${[...e.target.value].length} / 300文字`;
+        autoRender();
+      });
+      document.getElementById('inp-author').addEventListener('input', autoRender);
+
+      // Initial render
+      renderAndPreview();
+    });
+
+    // ===== CONTROLS =====
+    function setBg(btn) {
+      document.getElementById('opt-bg').value = btn.dataset.bg;
+      document.querySelectorAll('#bg-presets button').forEach(b => b.classList.remove('border-indigo-500'));
+      btn.classList.add('border-indigo-500');
+      renderAndPreview();
+    }
+    function setTc(btn) {
+      document.getElementById('opt-tc').value = btn.dataset.tc;
+      renderAndPreview();
+    }
+    function setFs(btn) {
+      currentFontSize = btn.dataset.fs;
+      document.querySelectorAll('[data-fs]').forEach(b => {
+        b.className = 'flex-1 py-1.5 text-sm rounded-lg border border-gray-300 bg-gray-50 hover:bg-gray-100';
+      });
+      btn.className = 'flex-1 py-1.5 text-sm rounded-lg border-2 border-indigo-500 bg-indigo-50 text-indigo-700';
+      renderAndPreview();
+    }
+
+    function setSample() {
+      document.getElementById('inp-text').value =
+        '山は静かにして\n己を語らず\n\n水は絶えずして\n止まることを知らず\n\n人もまた\nその両様を学ぶべし';
+      document.getElementById('inp-author').value = '　　　　作';
+      document.getElementById('char-count').textContent =
+        `${[...document.getElementById('inp-text').value].length} / 300文字`;
+      renderAndPreview();
+    }
+
+    // ===== VERTICAL TEXT RENDERING =====
+    function splitIntoColumns(text, maxCharsPerCol) {
+      const columns = [];
+      const lines = text.split('\n');
+      for (const line of lines) {
+        if (line.trim() === '') {
+          columns.push([]); // empty column = paragraph break
+          continue;
+        }
+        const chars = [...line]; // Unicode-safe split
+        for (let i = 0; i < chars.length; i += maxCharsPerCol) {
+          columns.push(chars.slice(i, i + maxCharsPerCol));
+        }
+      }
+      return columns;
+    }
+
+    // Characters that need 90° clockwise rotation in vertical writing
+    const ROTATABLE_RE = /[a-zA-Z0-9!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~（）「」『』【】〔〕｛｝〈〉《》]/;
+
+    function drawChar(ctx, char, colX, charY, colW, charH, fontSize, fontStr, color) {
+      if (!char || char === ' ') return;
+      ctx.save();
+      ctx.font = fontStr;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = colX + colW / 2;
+      const cy = charY + charH / 2;
+      if (ROTATABLE_RE.test(char)) {
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(char, 0, 0);
+      } else {
+        ctx.fillText(char, cx, cy);
+      }
+      ctx.restore();
+    }
+
+    function drawWashiTexture(ctx, w, h, bgColor) {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+      // Subtle paper grain
+      const isDark = isColorDark(bgColor);
+      const grainColor = isDark ? 'rgba(255,255,255,' : 'rgba(0,0,0,';
+      const dots = Math.floor(w * h / 400);
+      for (let i = 0; i < dots; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const alpha = (Math.random() * 0.04).toFixed(3);
+        ctx.fillStyle = grainColor + alpha + ')';
+        ctx.fillRect(x, y, Math.random() > 0.7 ? 2 : 1, Math.random() > 0.7 ? 2 : 1);
+      }
+    }
+
+    function isColorDark(hex) {
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+    }
+
+    function drawBorder(ctx, w, h, pad, color) {
+      const bPad = pad * 0.55;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5;
+      ctx.strokeRect(bPad, bPad, w - bPad * 2, h - bPad * 2);
+      // Double line (inner)
+      ctx.lineWidth = 0.8;
+      ctx.globalAlpha = 0.25;
+      const inner = bPad + 8;
+      ctx.strokeRect(inner, inner, w - inner * 2, h - inner * 2);
+      ctx.globalAlpha = 1;
+    }
+
+    function drawStamp(ctx, w, h, pad) {
+      const size = Math.min(w, h) * 0.09;
+      const x = pad * 1.0;
+      const y = h - pad * 1.0 - size;
+      ctx.save();
+      ctx.strokeStyle = '#c0392b';
+      ctx.fillStyle = 'rgba(192,57,43,0.08)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.rect(x, y, size, size);
+      ctx.fill();
+      ctx.stroke();
+      // Inner cross
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x + size*0.2, y + size/2);
+      ctx.lineTo(x + size*0.8, y + size/2);
+      ctx.moveTo(x + size/2, y + size*0.2);
+      ctx.lineTo(x + size/2, y + size*0.8);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // ===== MAIN RENDER =====
+    async function renderAndPreview() {
+      const fontName = document.getElementById('opt-font').value;
+      await ensureFont(fontName);
+
+      const sizeKey = document.getElementById('opt-size').value;
+      const preset = SIZE_PRESETS[sizeKey];
+      if (!preset) return;
+
+      const { w, h, pad } = preset;
+      const bgColor = document.getElementById('opt-bg').value;
+      const textColor = document.getElementById('opt-tc').value;
+      const fsScale = FONT_SIZE_MAP[currentFontSize];
+      const fontSize = Math.round(preset.baseFont * fsScale);
+      const showBorder = document.getElementById('opt-border').checked;
+      const showColLine = document.getElementById('opt-colline').checked;
+      const showStamp = document.getElementById('opt-stamp').checked;
+      const showTexture = document.getElementById('opt-texture').checked;
+      const rawText = document.getElementById('inp-text').value;
+      const authorText = document.getElementById('inp-author').value.trim();
+
+      const canvas = document.getElementById('preview-canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      if (showTexture) {
+        drawWashiTexture(ctx, w, h, bgColor);
+      } else {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Border
+      if (showBorder) drawBorder(ctx, w, h, pad, textColor);
+
+      // Text area
+      const areaX = pad;
+      const areaY = pad;
+      const areaW = w - pad * 2;
+      const areaH = h - pad * 2;
+
+      const lineSpacing = 1.55;
+      const colSpacing = 1.45;
+      const charH = Math.round(fontSize * lineSpacing);
+      const colW = Math.round(fontSize * colSpacing);
+
+      const maxCharsPerCol = Math.floor(areaH / charH);
+      const maxCols = Math.floor(areaW / colW);
+
+      const fontStr = `${fontSize}px "${fontName}", "Hiragino Mincho ProN", serif`;
+      const columns = rawText.trim() ? splitIntoColumns(rawText, maxCharsPerCol) : [];
+
+      // Reserve last column for author if present
+      const authorFontSize = Math.round(fontSize * 0.58);
+      const authorCharH = Math.round(authorFontSize * lineSpacing);
+      const authorColW = Math.round(authorFontSize * colSpacing);
+      const authorCols = authorText ? 1 : 0;
+      const availCols = maxCols - authorCols;
+
+      // Column separator lines
+      if (showColLine && columns.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = textColor;
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.15;
+        const renderCols = Math.min(columns.length, availCols);
+        for (let ci = 1; ci < renderCols; ci++) {
+          const lx = Math.round(areaX + areaW - ci * colW - colW / 2);
+          ctx.beginPath();
+          ctx.moveTo(lx, areaY + 10);
+          ctx.lineTo(lx, areaY + areaH - 10);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // Main text
+      const renderCols = Math.min(columns.length, availCols);
+      for (let ci = 0; ci < renderCols; ci++) {
+        const col = columns[ci];
+        const colX = areaX + areaW - (ci + 1) * colW;
+        for (let chi = 0; chi < col.length; chi++) {
+          drawChar(ctx, col[chi], colX, areaY + chi * charH, colW, charH, fontSize, fontStr, textColor);
+        }
+      }
+
+      // Author line (bottom-aligned, leftmost column)
+      if (authorText && maxCols > 0) {
+        const authorFontStr = `${authorFontSize}px "${fontName}", "Hiragino Mincho ProN", serif`;
+        const authorChars = [...authorText];
+        const authorTotalH = authorChars.length * authorCharH;
+        const authorColX = areaX;
+        const authorStartY = areaY + areaH - authorTotalH;
+        for (let i = 0; i < authorChars.length; i++) {
+          drawChar(ctx, authorChars[i], authorColX, authorStartY + i * authorCharH, authorColW, authorCharH, authorFontSize, authorFontStr, textColor);
+        }
+      }
+
+      // Stamp
+      if (showStamp) drawStamp(ctx, w, h, pad);
+
+      document.getElementById('canvas-info').textContent = `${w} × ${h} px`;
+    }
+
+    // ===== DOWNLOAD =====
+    function downloadPNG() {
+      const canvas = document.getElementById('preview-canvas');
+      if (!canvas.width) { alert('先に「生成・プレビュー」ボタンを押してください'); return; }
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = '縦書き画像.png';
+      a.click();
+    }
+  </script>
+</Layout>

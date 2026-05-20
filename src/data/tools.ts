@@ -161,7 +161,7 @@ export const tools: Tool[] = [
 		id: 22, slug: 'vertical-text-image',
 		name: '縦書き縦長画像ジェネレーター',
 		description: 'ポエム・名言を入れると和文フォントで縦書き画像を生成。',
-		emoji: '✍️', category: 'creator', status: 'coming-soon',
+		emoji: '✍️', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 23, slug: 'podcast-show-notes',
