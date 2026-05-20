@@ -209,7 +209,7 @@ export const tools: Tool[] = [
 		id: 30, slug: 'stream-title',
 		name: '配信タイトル・サムネ案ブレスト',
 		description: 'ゲーム名・回数を入れると魅力的なタイトル案を10個生成。',
-		emoji: '🎮', category: 'creator', status: 'coming-soon',
+		emoji: '🎮', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 31, slug: 'font-combo',

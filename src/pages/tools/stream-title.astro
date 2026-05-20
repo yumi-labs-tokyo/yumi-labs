@@ -1,0 +1,333 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="配信タイトル・サムネ案AIブレスト | yumi Labs">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🎮</div>
+      <div class="text-3xl font-bold text-white mb-2">配信タイトル・サムネ案AIブレスト</div>
+      <div class="text-gray-400 text-sm">ゲーム名・回数を入れると「○○#5 ついに○○編突入!」風のタイトル案を10個生成</div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+
+      <!-- Left: Input -->
+      <div class="lg:w-[360px] flex-shrink-0 space-y-4">
+
+        <!-- 基本情報 -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-4">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">基本情報</div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">ゲーム名 / コンテンツ名<span class="text-red-400">*</span></label>
+            <input id="inGame" type="text" placeholder="例: エルデンリング、マイクラ" maxlength="40"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">配信回数（任意）</label>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-400 text-sm">#</span>
+              <input id="inEpisode" type="number" placeholder="5" min="1" max="9999"
+                class="w-28 bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+              <span class="text-gray-500 text-xs">空白でもOK</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">今回の見どころ・進行状況（任意）</label>
+            <input id="inHighlight" type="text" placeholder="例: ボス直前、2章クリア、初見プレイ" maxlength="60"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- 配信スタイル -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-3">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">配信スタイル</div>
+          <div class="grid grid-cols-2 gap-2" id="styleBtns">
+            <button onclick="setStyle('gameplay')"  id="stylegameplay"  class="style-btn active-style py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">🎮 ゲーム実況</button>
+            <button onclick="setStyle('firstplay')" id="stylefirstplay" class="style-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">👀 初見プレイ</button>
+            <button onclick="setStyle('challenge')" id="stylechallenge" class="style-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">🔥 縛り/チャレンジ</button>
+            <button onclick="setStyle('casual')"    id="stylecasual"    class="style-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">💬 雑談混じり</button>
+            <button onclick="setStyle('collab')"    id="stylecollab"    class="style-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all col-span-2">🤝 コラボ配信</button>
+          </div>
+        </div>
+
+        <!-- 雰囲気 -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-3">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">雰囲気・方向性（複数選択可）</div>
+          <div class="grid grid-cols-2 gap-2" id="moodGrid">
+            <button onclick="toggleMood('exciting', this)" data-mood="exciting" class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">🔥 盛り上がり</button>
+            <button onclick="toggleMood('funny', this)"    data-mood="funny"    class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">😂 笑い・ユーモア</button>
+            <button onclick="toggleMood('emotional', this)" data-mood="emotional" class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">😢 感動・エモい</button>
+            <button onclick="toggleMood('serious', this)"  data-mood="serious"  class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">💀 シリアス</button>
+            <button onclick="toggleMood('shocking', this)" data-mood="shocking" class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">😱 衝撃・ヤバい</button>
+            <button onclick="toggleMood('milestone', this)" data-mood="milestone" class="mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">🎉 達成・記念</button>
+          </div>
+        </div>
+
+        <!-- Generate -->
+        <button onclick="generateTitles()" id="genBtn"
+          class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all flex items-center justify-center gap-2"
+          style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+          <span id="genBtnIcon">✨</span>
+          <span id="genBtnText">AIでタイトルを10個生成</span>
+        </button>
+
+        <!-- Tips -->
+        <div class="bg-white/5 rounded-2xl p-4">
+          <div class="text-xs text-gray-400 font-semibold mb-2">コツ</div>
+          <div class="space-y-1.5 text-xs text-gray-500">
+            <div>「見どころ」が具体的なほど精度アップ</div>
+            <div>サムネ文字は12字以内が読みやすい目安</div>
+            <div>気に入ったタイトルは個別コピーできます</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="flex-1">
+
+        <!-- Toolbar (visible after generation) -->
+        <div id="toolbar" class="hidden mb-4 flex items-center justify-between">
+          <div class="text-sm text-gray-400">10個のタイトル案を生成しました</div>
+          <button onclick="copyAll()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">全コピー</button>
+        </div>
+
+        <!-- Placeholder -->
+        <div id="placeholder" class="bg-white/5 rounded-2xl p-10 text-center">
+          <div class="text-4xl mb-4">🎬</div>
+          <div class="text-gray-400 text-sm mb-2">ゲーム名を入力して</div>
+          <div class="text-gray-400 text-sm">「AIでタイトルを10個生成」を押してください</div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden bg-white/5 rounded-2xl p-10 text-center">
+          <div class="text-4xl mb-4 animate-pulse">⚡</div>
+          <div class="text-gray-400 text-sm">AIがタイトルを考えています...</div>
+          <div class="mt-3 w-48 h-1 bg-white/10 rounded-full mx-auto overflow-hidden">
+            <div class="h-full rounded-full animate-pulse" style="background: linear-gradient(90deg, #9333ea, #ec4899); width: 60%;"></div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="errorBox" class="hidden bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-400 text-sm"></div>
+
+        <!-- Results -->
+        <div id="results" class="hidden space-y-3"></div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  let selectedStyle = 'gameplay';
+  let selectedMoods = new Set();
+  let allTitles = [];
+
+  const STYLE_IDS = ['gameplay', 'firstplay', 'challenge', 'casual', 'collab'];
+
+  const MOOD_LABELS = {
+    exciting:  '盛り上がり',
+    funny:     '笑い・ユーモア',
+    emotional: '感動・エモい',
+    serious:   'シリアス',
+    shocking:  '衝撃・ヤバい',
+    milestone: '達成・記念',
+  };
+
+  const STYLE_COLORS = [
+    'from-purple-600 to-pink-600',
+    'from-blue-600 to-purple-600',
+    'from-orange-600 to-red-600',
+    'from-green-600 to-teal-600',
+    'from-yellow-600 to-orange-600',
+    'from-pink-600 to-rose-600',
+    'from-teal-600 to-cyan-600',
+    'from-indigo-600 to-blue-600',
+    'from-red-600 to-pink-600',
+    'from-cyan-600 to-green-600',
+  ];
+
+  function setStyle(v) {
+    selectedStyle = v;
+    STYLE_IDS.forEach(k => {
+      const b = document.getElementById('style' + k);
+      if (!b) return;
+      if (k === v) {
+        b.className = 'style-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all' + (k === 'collab' ? ' col-span-2' : '');
+      } else {
+        b.className = 'style-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all' + (k === 'collab' ? ' col-span-2' : '');
+      }
+    });
+  }
+
+  function toggleMood(id, btn) {
+    if (selectedMoods.has(id)) {
+      selectedMoods.delete(id);
+      btn.className = 'mood-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all';
+    } else {
+      selectedMoods.add(id);
+      btn.className = 'mood-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function generateTitles() {
+    const game      = document.getElementById('inGame').value.trim();
+    const episode   = document.getElementById('inEpisode').value.trim();
+    const highlight = document.getElementById('inHighlight').value.trim();
+
+    if (!game) {
+      showError('ゲーム名を入力してください。');
+      return;
+    }
+
+    setUI('loading');
+
+    const moods = [...selectedMoods].map(id => MOOD_LABELS[id]);
+
+    try {
+      const resp = await fetch('/api/stream-title', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ game, episode, highlight, style: selectedStyle, moods }),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        showError(data.error || 'エラーが発生しました。');
+        return;
+      }
+
+      if (!data.titles || data.titles.length === 0) {
+        showError('タイトルを生成できませんでした。再試行してください。');
+        return;
+      }
+
+      allTitles = data.titles;
+      renderResults(data.titles);
+      setUI('results');
+
+    } catch (e) {
+      showError('通信エラーが発生しました。再試行してください。');
+    }
+  }
+
+  function renderResults(titles) {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    titles.forEach((item, i) => {
+      const grad = STYLE_COLORS[i % STYLE_COLORS.length];
+      const card = document.createElement('div');
+      card.className = 'bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-purple-500/30 transition-all';
+      card.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${escHtml(grad)}">
+            ${i + 1}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span class="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30">${escHtml(item.style || '')}</span>
+              <span class="text-xs text-gray-500">${escHtml(item.hook || '')}</span>
+            </div>
+            <div class="text-sm text-white font-medium leading-relaxed mb-2">${escHtml(item.title || '')}</div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">サムネ:</span>
+              <span class="px-2 py-0.5 rounded text-xs font-bold text-yellow-300 bg-yellow-500/10 border border-yellow-500/20">${escHtml(item.thumbnail || '')}</span>
+            </div>
+          </div>
+          <button onclick="copyOne(${i})" id="copyBtn${i}"
+            class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+            コピー
+          </button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function copyOne(i) {
+    const item = allTitles[i];
+    if (!item) return;
+    const text = `${item.title}\nサムネ: ${item.thumbnail}`;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn' + i);
+      const orig = btn.textContent;
+      btn.textContent = 'コピー済み';
+      btn.style.color = '#a78bfa';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    });
+  }
+
+  function copyAll() {
+    if (allTitles.length === 0) return;
+    const text = allTitles.map((item, i) =>
+      `#${i + 1} ${item.title}\n　サムネ: ${item.thumbnail}`
+    ).join('\n\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('[onclick="copyAll()"]');
+      if (!btn) return;
+      const orig = btn.textContent;
+      btn.textContent = 'コピーしました！';
+      btn.style.color = '#a78bfa';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    });
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = '⚠ ' + msg;
+    setUI('error');
+  }
+
+  function setUI(state) {
+    document.getElementById('placeholder').classList.add('hidden');
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('errorBox').classList.add('hidden');
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('toolbar').classList.add('hidden');
+
+    const btn = document.getElementById('genBtn');
+    const btnIcon = document.getElementById('genBtnIcon');
+    const btnText = document.getElementById('genBtnText');
+
+    if (state === 'loading') {
+      document.getElementById('loading').classList.remove('hidden');
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btnIcon.textContent = '⏳';
+      btnText.textContent = '生成中...';
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btnIcon.textContent = '✨';
+      btnText.textContent = 'AIでタイトルを10個生成';
+    }
+
+    if (state === 'error') {
+      document.getElementById('errorBox').classList.remove('hidden');
+    } else if (state === 'results') {
+      document.getElementById('results').classList.remove('hidden');
+      document.getElementById('toolbar').classList.remove('hidden');
+    } else if (state === 'loading') {
+      // already handled
+    } else {
+      document.getElementById('placeholder').classList.remove('hidden');
+    }
+  }
+
+  // Enter key on inputs
+  ['inGame', 'inEpisode', 'inHighlight'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') generateTitles(); });
+  });
+</script>
