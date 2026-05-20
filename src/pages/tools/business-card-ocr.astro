@@ -1,0 +1,547 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="名刺OCR → vCard変換 — yumi-Labs"
+  description="名刺を撮影してアップロードするだけで、連絡先情報をvCard形式に変換。iPhoneやAndroidにそのまま登録できます。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">📇</span>
+      <div>
+        <h1 class="tool-title">名刺OCR → vCard変換</h1>
+        <p class="tool-sub">名刺を撮影してアップロード → 連絡先をそのままスマホに登録</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- UPLOAD -->
+      <section class="card input-card">
+        <h2 class="card-title">📸 名刺画像をアップロード</h2>
+
+        <div id="drop-zone" class="drop-zone">
+          <div id="drop-content">
+            <div class="drop-icon">📇</div>
+            <p class="drop-text">タップまたはドラッグ＆ドロップ</p>
+            <p class="drop-sub">JPEG・PNG・WebP対応 / 最大10MB</p>
+            <button type="button" class="upload-btn" onclick="document.getElementById('file-input').click()">
+              画像を選択
+            </button>
+          </div>
+          <img id="preview-img" class="preview-img" alt="名刺プレビュー" style="display:none" />
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none" />
+
+        <div id="upload-actions" style="display:none; margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+          <button type="button" class="btn-change" onclick="document.getElementById('file-input').click()">
+            画像を変更
+          </button>
+          <span id="file-name" class="file-name-label"></span>
+        </div>
+
+        <button id="ocr-btn" class="btn-primary" style="margin-top:18px; display:none" onclick="runOcr()">
+          🔍 名刺を解析する
+        </button>
+
+        <div id="loading" class="loading-box" style="display:none">
+          <div class="spinner"></div>
+          <span>名刺を読み取り中...</span>
+        </div>
+        <div id="error-box" class="error-box" style="display:none"></div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result-section" class="card result-card" style="display:none">
+        <h2 class="card-title">✏️ 抽出情報を確認・編集</h2>
+        <p class="result-hint">読み取り結果を確認し、必要なら編集してください。編集するとvCardに即反映されます。</p>
+
+        <div class="fields-grid">
+          <div class="field-row">
+            <label class="fl">姓</label>
+            <input class="fi" id="f-lastName" placeholder="山田" oninput="updateVcard()" />
+            <label class="fl">名</label>
+            <input class="fi" id="f-firstName" placeholder="太郎" oninput="updateVcard()" />
+          </div>
+          <div class="field-row">
+            <label class="fl">姓（読み）</label>
+            <input class="fi" id="f-lastNameKana" placeholder="ヤマダ" oninput="updateVcard()" />
+            <label class="fl">名（読み）</label>
+            <input class="fi" id="f-firstNameKana" placeholder="タロウ" oninput="updateVcard()" />
+          </div>
+          <div class="field-row full">
+            <label class="fl">会社名</label>
+            <input class="fi" id="f-company" placeholder="株式会社サンプル" oninput="updateVcard()" />
+          </div>
+          <div class="field-row">
+            <label class="fl">部署</label>
+            <input class="fi" id="f-department" placeholder="営業部" oninput="updateVcard()" />
+            <label class="fl">役職</label>
+            <input class="fi" id="f-title" placeholder="部長" oninput="updateVcard()" />
+          </div>
+          <div class="field-row">
+            <label class="fl">電話（代表）</label>
+            <input class="fi" id="f-tel" placeholder="03-1234-5678" oninput="updateVcard()" />
+            <label class="fl">携帯</label>
+            <input class="fi" id="f-mobile" placeholder="090-0000-0000" oninput="updateVcard()" />
+          </div>
+          <div class="field-row">
+            <label class="fl">FAX</label>
+            <input class="fi" id="f-fax" placeholder="03-1234-5679" oninput="updateVcard()" />
+            <label class="fl">メール</label>
+            <input class="fi" id="f-email" placeholder="taro@example.com" oninput="updateVcard()" />
+          </div>
+          <div class="field-row full">
+            <label class="fl">WebサイトURL</label>
+            <input class="fi" id="f-url" placeholder="https://example.com" oninput="updateVcard()" />
+          </div>
+          <div class="field-row">
+            <label class="fl">郵便番号</label>
+            <input class="fi" id="f-zip" placeholder="100-0001" oninput="updateVcard()" />
+            <label class="fl"></label>
+            <div class="fi"></div>
+          </div>
+          <div class="field-row full">
+            <label class="fl">住所</label>
+            <input class="fi" id="f-address" placeholder="東京都千代田区〇〇1-2-3" oninput="updateVcard()" />
+          </div>
+          <div class="field-row full">
+            <label class="fl">備考</label>
+            <input class="fi" id="f-note" placeholder="SNSや追記事項など" oninput="updateVcard()" />
+          </div>
+        </div>
+
+        <!-- vCard output -->
+        <div class="vcard-section">
+          <div class="vcard-header">
+            <h3 class="vcard-title">📋 vCard データ</h3>
+            <button class="btn-copy-sm" onclick="copyVcard()">コピー</button>
+          </div>
+          <pre id="vcard-output" class="vcard-pre"></pre>
+        </div>
+
+        <!-- actions -->
+        <div class="action-row">
+          <button class="btn-download" onclick="downloadVcf()">
+            ⬇️ .vcfファイルをダウンロード
+          </button>
+        </div>
+
+        <div class="tip-box">
+          <p class="tip-title">📱 スマホへの登録方法</p>
+          <ul class="tip-list">
+            <li><strong>iPhone：</strong>ダウンロードした .vcf ファイルを開く → 連絡先アプリで「新規連絡先を作成」</li>
+            <li><strong>Android：</strong>ファイルをタップ → 連絡先アプリで読み込み</li>
+            <li><strong>PC(Mac)：</strong>ダブルクリックで連絡先アプリに自動インポート</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 24px; }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 20px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--surface);
+      position: relative;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drop-zone.drag-over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .drop-icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .drop-text { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+    .drop-sub { font-size: 0.82rem; color: var(--muted); margin: 0 0 16px; }
+    .upload-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .preview-img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+
+    .btn-change {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .file-name-label { font-size: 0.85rem; color: var(--muted); }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .loading-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 10px;
+      background: var(--surface);
+      margin-top: 14px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #b91c1c;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+
+    /* Result */
+    .result-hint { font-size: 0.88rem; color: var(--muted); margin: -12px 0 20px; }
+
+    .fields-grid { display: flex; flex-direction: column; gap: 12px; }
+    .field-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 90px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .field-row.full { grid-template-columns: 90px 1fr; }
+    .fl { font-size: 0.82rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .fi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .fi:focus { outline: none; border-color: var(--accent); }
+
+    /* vCard */
+    .vcard-section { margin-top: 24px; }
+    .vcard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .vcard-title { font-size: 0.95rem; font-weight: 700; margin: 0; }
+    .vcard-pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 0;
+      white-space: pre;
+      font-family: 'Courier New', monospace;
+    }
+    .btn-copy-sm {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .action-row { margin-top: 20px; display: flex; justify-content: center; }
+    .btn-download {
+      background: linear-gradient(135deg, #06b6d4, #0e7490);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-download:hover { opacity: 0.9; }
+
+    .tip-box {
+      margin-top: 24px;
+      background: color-mix(in srgb, #f59e0b 10%, transparent);
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .tip-title { font-weight: 700; font-size: 0.95rem; margin: 0 0 10px; }
+    .tip-list { margin: 0; padding-left: 18px; font-size: 0.88rem; line-height: 1.8; }
+
+    @media (max-width: 600px) {
+      .field-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .field-row .fl:first-child { grid-column: 1; }
+      .field-row .fi:nth-child(2) { grid-column: 2; }
+      .field-row .fl:nth-child(3) { grid-column: 1; }
+      .field-row .fi:nth-child(4) { grid-column: 2; }
+    }
+  </style>
+
+  <script is:inline>
+    let currentFields = {};
+
+    // File input / drag-drop wiring
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
+    dropZone.addEventListener('click', e => {
+      if (e.target === dropZone) fileInput.click();
+    });
+
+    function handleFile(file) {
+      if (file.size > 10 * 1024 * 1024) {
+        showError('ファイルサイズは10MB以下にしてください。');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const src = ev.target.result;
+        const img = document.getElementById('preview-img');
+        img.src = src;
+        img.style.display = 'block';
+        document.getElementById('drop-content').style.display = 'none';
+        dropZone.style.padding = '12px';
+
+        const actions = document.getElementById('upload-actions');
+        actions.style.display = 'flex';
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('ocr-btn').style.display = 'block';
+        clearError();
+        document.getElementById('result-section').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function runOcr() {
+      const img = document.getElementById('preview-img');
+      const src = img.src;
+      if (!src || !src.startsWith('data:')) return;
+
+      const comma = src.indexOf(',');
+      const mimeType = src.substring(5, src.indexOf(';'));
+      const imageBase64 = src.substring(comma + 1);
+
+      document.getElementById('ocr-btn').disabled = true;
+      document.getElementById('loading').style.display = 'flex';
+      clearError();
+
+      try {
+        const res = await fetch('/api/business-card-ocr', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ imageBase64, mimeType }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '解析に失敗しました');
+
+        fillFields(data.fields);
+        updateVcard();
+        document.getElementById('result-section').style.display = 'block';
+        document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('ocr-btn').disabled = false;
+      }
+    }
+
+    function fillFields(f) {
+      currentFields = f;
+      const map = {
+        'f-lastName': f.lastName,
+        'f-firstName': f.firstName,
+        'f-lastNameKana': f.lastNameKana,
+        'f-firstNameKana': f.firstNameKana,
+        'f-company': f.company,
+        'f-department': f.department,
+        'f-title': f.title,
+        'f-tel': f.tel,
+        'f-mobile': f.mobile,
+        'f-fax': f.fax,
+        'f-email': f.email,
+        'f-url': f.url,
+        'f-zip': f.zip,
+        'f-address': f.address,
+        'f-note': f.note,
+      };
+      for (const [id, val] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+      }
+    }
+
+    function getFieldValues() {
+      return {
+        lastName: document.getElementById('f-lastName')?.value.trim() || '',
+        firstName: document.getElementById('f-firstName')?.value.trim() || '',
+        lastNameKana: document.getElementById('f-lastNameKana')?.value.trim() || '',
+        firstNameKana: document.getElementById('f-firstNameKana')?.value.trim() || '',
+        company: document.getElementById('f-company')?.value.trim() || '',
+        department: document.getElementById('f-department')?.value.trim() || '',
+        title: document.getElementById('f-title')?.value.trim() || '',
+        tel: document.getElementById('f-tel')?.value.trim() || '',
+        mobile: document.getElementById('f-mobile')?.value.trim() || '',
+        fax: document.getElementById('f-fax')?.value.trim() || '',
+        email: document.getElementById('f-email')?.value.trim() || '',
+        url: document.getElementById('f-url')?.value.trim() || '',
+        zip: document.getElementById('f-zip')?.value.trim() || '',
+        address: document.getElementById('f-address')?.value.trim() || '',
+        note: document.getElementById('f-note')?.value.trim() || '',
+      };
+    }
+
+    function buildVcard(f) {
+      const fullName = [f.lastName, f.firstName].filter(Boolean).join(' ');
+      const kanaName = [f.lastNameKana, f.firstNameKana].filter(Boolean).join(' ');
+      const orgParts = [f.company, f.department].filter(Boolean).join(';');
+
+      const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+
+      // Name
+      lines.push(`N:${f.lastName};${f.firstName};;;`);
+      if (fullName) lines.push(`FN:${fullName}`);
+
+      // Phonetic (kana)
+      if (kanaName) lines.push(`X-PHONETIC-LAST-NAME:${f.lastNameKana}`);
+      if (kanaName) lines.push(`X-PHONETIC-FIRST-NAME:${f.firstNameKana}`);
+
+      // Org
+      if (orgParts) lines.push(`ORG:${orgParts}`);
+      if (f.title) lines.push(`TITLE:${f.title}`);
+
+      // Phones
+      if (f.tel) lines.push(`TEL;TYPE=WORK,VOICE:${f.tel}`);
+      if (f.mobile) lines.push(`TEL;TYPE=CELL,VOICE:${f.mobile}`);
+      if (f.fax) lines.push(`TEL;TYPE=FAX:${f.fax}`);
+
+      // Email
+      if (f.email) lines.push(`EMAIL;TYPE=WORK,INTERNET:${f.email}`);
+
+      // URL
+      if (f.url) lines.push(`URL:${f.url}`);
+
+      // Address
+      if (f.address || f.zip) {
+        lines.push(`ADR;TYPE=WORK:;;${f.address};;;${f.zip};Japan`);
+      }
+
+      // Note
+      if (f.note) lines.push(`NOTE:${f.note}`);
+
+      lines.push('END:VCARD');
+      return lines.join('\r\n');
+    }
+
+    function updateVcard() {
+      const f = getFieldValues();
+      const vcard = buildVcard(f);
+      document.getElementById('vcard-output').textContent = vcard;
+    }
+
+    function copyVcard() {
+      const text = document.getElementById('vcard-output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.btn-copy-sm');
+        const orig = btn.textContent;
+        btn.textContent = 'コピーしました！';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      });
+    }
+
+    function downloadVcf() {
+      const f = getFieldValues();
+      const vcard = buildVcard(f);
+      const fullName = [f.lastName, f.firstName].filter(Boolean).join('_') || 'contact';
+      const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fullName}.vcf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-box');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function clearError() {
+      document.getElementById('error-box').style.display = 'none';
+    }
+  </script>
+</BaseLayout>

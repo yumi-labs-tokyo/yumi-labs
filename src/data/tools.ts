@@ -99,7 +99,7 @@ export const tools: Tool[] = [
 		id: 12, slug: 'business-card-ocr',
 		name: '名刺OCR → vCard変換',
 		description: '画像アップロードでOCR→連絡先をvCard形式で出力。',
-		emoji: '📇', category: 'practical', badge: 'New', status: 'coming-soon',
+		emoji: '📇', category: 'practical', badge: 'New', status: 'available',
 	},
 	{
 		id: 13, slug: 'thank-you-letter',
