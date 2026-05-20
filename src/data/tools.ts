@@ -63,7 +63,7 @@ export const tools: Tool[] = [
 		id: 6, slug: 'resignation-letter-pdf',
 		name: '退職届PDFジェネレーター',
 		description: '縦書き・手書き風フォント対応。日付自動計算してPDFダウンロード。',
-		emoji: '📄', category: 'practical', badge: 'New', status: 'coming-soon',
+		emoji: '📄', category: 'practical', badge: 'New', status: 'available',
 	},
 	{
 		id: 7, slug: 'koden-amount',

@@ -1,0 +1,514 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="退職届・退職願PDFジェネレーター — yumi-Labs"
+  description="縦書き・手書き風フォントで退職届・退職願をその場で作成。日付自動計算してPDFダウンロード。"
+>
+  <!-- Google Fonts: handwriting-style Japanese -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
+
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">📄</span>
+      <div>
+        <h1 class="tool-title">退職届・退職願PDFジェネレーター</h1>
+        <p class="tool-sub">縦書き・手書き風フォント対応。入力するだけでPDF完成。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- LEFT: Form -->
+      <section class="card form-card">
+        <h2 class="card-title">📝 内容を入力</h2>
+
+        <!-- 書類種別 -->
+        <div class="field-group">
+          <label class="field-label">書類の種類</label>
+          <div class="doc-type-pills">
+            <label class="doc-pill">
+              <input type="radio" name="doc-type" value="退職届" class="doc-radio" checked />
+              <span>退職届</span>
+            </label>
+            <label class="doc-pill">
+              <input type="radio" name="doc-type" value="退職願" class="doc-radio" />
+              <span>退職願</span>
+            </label>
+          </div>
+          <p class="hint-text">退職届＝会社が拒否できない／退職願＝撤回可能な申し出</p>
+        </div>
+
+        <!-- 退職日 -->
+        <div class="field-group">
+          <label class="field-label">退職日</label>
+          <div class="date-shortcuts">
+            <button class="shortcut-btn" onclick="setDate(14)">2週間後</button>
+            <button class="shortcut-btn" onclick="setDate(30)">1ヶ月後</button>
+            <button class="shortcut-btn" onclick="setDate(60)">2ヶ月後</button>
+          </div>
+          <input type="date" id="retire-date" class="text-input" />
+        </div>
+
+        <!-- 提出日 -->
+        <div class="field-group">
+          <label class="field-label">提出日（本日）</label>
+          <input type="date" id="submit-date" class="text-input" />
+        </div>
+
+        <!-- 氏名 -->
+        <div class="field-group">
+          <label class="field-label">氏名</label>
+          <input type="text" id="my-name" class="text-input" placeholder="山田　花子" maxlength="20" />
+        </div>
+
+        <!-- 所属 -->
+        <div class="field-group">
+          <label class="field-label">所属部署</label>
+          <input type="text" id="department" class="text-input" placeholder="営業部　第一課" maxlength="30" />
+        </div>
+
+        <!-- 会社名 -->
+        <div class="field-group">
+          <label class="field-label">会社名</label>
+          <input type="text" id="company-name" class="text-input" placeholder="株式会社〇〇" maxlength="30" />
+        </div>
+
+        <!-- 宛名 -->
+        <div class="field-group">
+          <label class="field-label">宛名（役職＋氏名）</label>
+          <input type="text" id="addressee" class="text-input" placeholder="代表取締役社長　鈴木　一郎" maxlength="30" />
+        </div>
+
+        <!-- 退職理由 -->
+        <div class="field-group">
+          <label class="field-label">退職理由</label>
+          <div class="reason-pills">
+            <button class="reason-btn active" onclick="setReason(this, '一身上の都合により')">一身上の都合（定番）</button>
+            <button class="reason-btn" onclick="setReason(this, '転職のため')">転職のため</button>
+            <button class="reason-btn" onclick="setReason(this, '一家都合により')">家庭の都合</button>
+          </div>
+          <input type="text" id="reason" class="text-input" value="一身上の都合により" placeholder="退職理由" maxlength="30" style="margin-top:0.5rem" />
+        </div>
+
+        <button class="preview-btn" onclick="updatePreview()">👁 プレビューを更新</button>
+        <button class="download-btn" id="download-btn" onclick="downloadPDF()">
+          <span id="dl-text">⬇ PDFをダウンロード</span>
+          <span id="dl-loader" class="loader" hidden></span>
+        </button>
+      </section>
+
+      <!-- RIGHT: Preview -->
+      <section class="card preview-card">
+        <h2 class="card-title">👁 プレビュー</h2>
+        <p class="preview-note">※実際のPDFはA4縦書きで出力されます</p>
+        <div class="preview-scroll">
+          <div id="doc-preview" class="doc-preview">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Hidden full-size render target for PDF -->
+  <div id="pdf-render-wrap" style="position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;">
+    <div id="pdf-render" class="pdf-render"></div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+// ---- Date helpers ----
+function today() {
+  return new Date();
+}
+function fmtDateInput(d) {
+  return d.toISOString().slice(0, 10);
+}
+function jpDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  // Reiwa calculation
+  if (y >= 2019) return `令和${y - 2018}年${m}月${day}日`;
+  if (y >= 1989) return `平成${y - 1988}年${m}月${day}日`;
+  return `${y}年${m}月${day}日`;
+}
+
+function setDate(daysLater) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysLater);
+  document.getElementById('retire-date').value = fmtDateInput(d);
+  updatePreview();
+}
+
+function setReason(btn, text) {
+  document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('reason').value = text;
+  updatePreview();
+}
+
+// ---- Init ----
+function init() {
+  const t = today();
+  document.getElementById('submit-date').value = fmtDateInput(t);
+  const r = new Date(t);
+  r.setDate(r.getDate() + 30);
+  document.getElementById('retire-date').value = fmtDateInput(r);
+
+  // live update
+  document.querySelectorAll('#my-name,#department,#company-name,#addressee,#reason,#retire-date,#submit-date').forEach(el => {
+    el.addEventListener('input', updatePreview);
+  });
+  document.querySelectorAll('.doc-radio').forEach(r => r.addEventListener('change', updatePreview));
+
+  updatePreview();
+}
+
+// ---- Gather form values ----
+function getValues() {
+  return {
+    docType: document.querySelector('.doc-radio:checked')?.value || '退職届',
+    retireDate: jpDate(document.getElementById('retire-date').value),
+    submitDate: jpDate(document.getElementById('submit-date').value),
+    myName: document.getElementById('my-name').value || '氏名',
+    department: document.getElementById('department').value || '○○部',
+    companyName: document.getElementById('company-name').value || '株式会社○○',
+    addressee: document.getElementById('addressee').value || '代表取締役社長　氏名',
+    reason: document.getElementById('reason').value || '一身上の都合により',
+  };
+}
+
+// ---- Build document HTML ----
+function buildDocHTML(v, scale) {
+  const s = scale || 1;
+  const base = 16 * s;
+  return `
+<div style="
+  width:${540 * s}px;
+  min-height:${720 * s}px;
+  padding:${40 * s}px ${50 * s}px;
+  font-family:'Klee One',serif;
+  writing-mode:vertical-rl;
+  direction:ltr;
+  display:flex;
+  flex-direction:row;
+  align-items:flex-start;
+  justify-content:center;
+  gap:${24 * s}px;
+  box-sizing:border-box;
+  background:#fff;
+  color:#1a1a1a;
+  line-height:2;
+  letter-spacing:0.15em;
+">
+  <!-- タイトル列 -->
+  <div style="font-size:${base * 1.6}px;font-weight:600;text-align:center;flex-shrink:0;margin-top:${10*s}px;">
+    ${v.docType}
+  </div>
+
+  <!-- 本文列 -->
+  <div style="font-size:${base}px;flex:1;min-width:0;">
+    <span style="display:block;margin-bottom:${8*s}px;">
+      私儀、${v.reason}、誠に勝手ながら来る
+    </span>
+    <span style="display:block;font-size:${base * 1.05}px;font-weight:600;margin-bottom:${8*s}px;">
+      ${v.retireDate}
+    </span>
+    <span style="display:block;">
+      をもちまして退職いたしたく、ここにお届け申し上げます。
+    </span>
+  </div>
+
+  <!-- 日付・署名列 -->
+  <div style="font-size:${base * 0.9}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:${12*s}px;flex-shrink:0;align-self:stretch;">
+    <div>${v.submitDate}</div>
+    <div>${v.department}</div>
+    <div style="font-size:${base * 1.05}px;font-weight:600;">${v.myName}　㊞</div>
+  </div>
+
+  <!-- 宛名列 -->
+  <div style="font-size:${base * 0.9}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:${6*s}px;flex-shrink:0;align-self:stretch;">
+    <div>${v.companyName}</div>
+    <div>${v.addressee}　殿</div>
+  </div>
+</div>
+  `;
+}
+
+// ---- Update preview ----
+function updatePreview() {
+  const v = getValues();
+  document.getElementById('doc-preview').innerHTML = buildDocHTML(v, 0.56);
+}
+
+// ---- PDF download ----
+async function downloadPDF() {
+  const btn = document.getElementById('download-btn');
+  const dlText = document.getElementById('dl-text');
+  const dlLoader = document.getElementById('dl-loader');
+  btn.disabled = true;
+  dlText.hidden = true;
+  dlLoader.hidden = false;
+
+  try {
+    // Dynamically load libs
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+    const v = getValues();
+    const renderDiv = document.getElementById('pdf-render');
+    renderDiv.innerHTML = buildDocHTML(v, 1);
+
+    // Wait for font
+    await document.fonts.ready;
+    await new Promise(r => setTimeout(r, 300));
+
+    const canvas = await html2canvas(renderDiv, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // A4: 210×297mm. Place image centered with 20mm margins.
+    const pageW = 210, pageH = 297;
+    const margin = 20;
+    const maxW = pageW - margin * 2;
+    const maxH = pageH - margin * 2;
+    const ratio = canvas.width / canvas.height;
+    let imgW = maxW;
+    let imgH = imgW / ratio;
+    if (imgH > maxH) { imgH = maxH; imgW = imgH * ratio; }
+    const x = (pageW - imgW) / 2;
+    const y = (pageH - imgH) / 2;
+
+    pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH);
+    pdf.save(`${v.docType}_${v.myName || '氏名'}.pdf`);
+  } catch (e) {
+    alert('PDF生成に失敗しました: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    dlText.hidden = false;
+    dlLoader.hidden = true;
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// Init on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+
+<style>
+  .page-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: 0.875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .tool-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .tool-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+  .tool-title { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; margin: 0 0 0.25rem; word-break: break-word; }
+  .tool-sub { margin: 0; color: var(--gray-400); font-size: 0.9rem; }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 680px) {
+    .main-layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin: 0 0 1.25rem; }
+
+  .field-group { margin-bottom: 1.1rem; }
+  .field-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--gray-300); margin-bottom: 0.4rem; }
+  .hint-text { font-size: 0.75rem; color: var(--gray-500); margin: 0.3rem 0 0; }
+
+  .text-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.875rem;
+    font-size: 0.95rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 0.625rem;
+    background: var(--gray-950);
+    color: var(--gray-0);
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .text-input:focus { outline: none; border-color: var(--accent-regular); }
+
+  /* Doc type pills */
+  .doc-type-pills { display: flex; gap: 0.75rem; margin-bottom: 0.4rem; }
+  .doc-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.1rem;
+    border: 2px solid var(--gray-700);
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .doc-pill input { display: none; }
+  .doc-pill:has(input:checked) {
+    border-color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 15%, transparent);
+    color: var(--accent-regular);
+  }
+
+  /* Date shortcuts */
+  .date-shortcuts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .shortcut-btn {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--gray-700);
+    border-radius: 2rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .shortcut-btn:hover { border-color: var(--accent-regular); color: var(--accent-regular); }
+
+  /* Reason pills */
+  .reason-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .reason-btn {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--gray-700);
+    border-radius: 2rem;
+    background: transparent;
+    color: var(--gray-300);
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .reason-btn:hover, .reason-btn.active {
+    border-color: var(--accent-regular);
+    color: var(--accent-regular);
+    background: color-mix(in srgb, var(--accent-regular) 10%, transparent);
+  }
+
+  .preview-btn {
+    width: 100%;
+    padding: 0.65rem;
+    background: transparent;
+    border: 2px solid var(--gray-600);
+    color: var(--gray-200);
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 0.625rem;
+    cursor: pointer;
+    font-family: inherit;
+    margin-bottom: 0.75rem;
+    transition: all 0.15s;
+    box-sizing: border-box;
+  }
+  .preview-btn:hover { border-color: var(--accent-regular); color: var(--accent-regular); }
+
+  .download-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--accent-regular);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: opacity 0.2s;
+    box-sizing: border-box;
+  }
+  .download-btn:hover { opacity: 0.88; }
+  .download-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .loader {
+    width: 1.1rem; height: 1.1rem;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Preview */
+  .preview-note { font-size: 0.75rem; color: var(--gray-500); margin: -0.75rem 0 1rem; }
+  .preview-scroll { overflow-x: auto; }
+  .doc-preview {
+    background: #fff;
+    border: 1px solid #e0d8c8;
+    border-radius: 0.5rem;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Hidden full-size target */
+  .pdf-render {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
