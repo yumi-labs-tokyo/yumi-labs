@@ -1,0 +1,660 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="同人誌奥付ジェネレーター | yumi Labs">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">📚</div>
+      <div class="text-3xl font-bold text-white mb-2">同人誌奥付ジェネレーター</div>
+      <div class="text-gray-400 text-sm">必要情報を入力して、印刷所提出可能な奥付を生成（A5 / 300dpi）</div>
+    </div>
+
+    <div class="flex flex-col xl:flex-row gap-6">
+      <!-- Left: Input Panel -->
+      <div class="xl:w-[380px] flex-shrink-0">
+        <div class="bg-white/5 rounded-2xl p-5 space-y-5">
+
+          <!-- Style selector -->
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">デザインスタイル</div>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="setStyle('simple')" id="styleSimple"
+                class="style-btn py-2 px-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">
+                シンプル
+              </button>
+              <button onclick="setStyle('classic')" id="styleClassic"
+                class="style-btn py-2 px-2 rounded-lg text-xs font-medium border-2 border-white/20 text-gray-400 transition-all">
+                クラシック
+              </button>
+              <button onclick="setStyle('wafuu')" id="styleWafuu"
+                class="style-btn py-2 px-2 rounded-lg text-xs font-medium border-2 border-white/20 text-gray-400 transition-all">
+                和風モダン
+              </button>
+            </div>
+          </div>
+
+          <hr class="border-white/10">
+
+          <!-- 基本情報 -->
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">基本情報</div>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400">作品タイトル <span class="text-red-400">*</span></label>
+                <input id="fieldTitle" type="text" placeholder="例: 夢見る銀河の果てで"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">サブタイトル / Vol.番号</label>
+                <input id="fieldSubtitle" type="text" placeholder="例: Vol.3 / ～星と海の章～"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">サークル名 <span class="text-red-400">*</span></label>
+                <input id="fieldCircle" type="text" placeholder="例: 星屑工房"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">著者名 / ペンネーム</label>
+                <input id="fieldAuthor" type="text" placeholder="例: 星野ひかり"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+            </div>
+          </div>
+
+          <!-- 発行情報 -->
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">発行情報</div>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400">発行日</label>
+                <input id="fieldDate" type="date"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">版</label>
+                <select id="fieldEdition"
+                  class="w-full mt-1 px-3 py-2 bg-gray-800 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  onchange="scheduleRender()">
+                  <option value="初版発行">初版発行</option>
+                  <option value="第2版発行">第2版発行</option>
+                  <option value="第3版発行">第3版発行</option>
+                  <option value="重版">重版</option>
+                  <option value="増刷">増刷</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">印刷所</label>
+                <input id="fieldPrinter" type="text" placeholder="例: 栄光印刷 / ○○印刷"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">頒布価格</label>
+                <div class="flex gap-2 items-center mt-1">
+                  <input id="fieldPrice" type="number" placeholder="500" min="0"
+                    class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                    oninput="scheduleRender()">
+                  <span class="text-gray-400 text-sm whitespace-nowrap">円（税込）</span>
+                </div>
+                <div class="mt-1">
+                  <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                    <input type="checkbox" id="fieldFree" onchange="scheduleRender()" class="rounded">
+                    無料 / 非売品にする
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">対象年齢</label>
+                <select id="fieldRating"
+                  class="w-full mt-1 px-3 py-2 bg-gray-800 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  onchange="scheduleRender()">
+                  <option value="">指定なし</option>
+                  <option value="全年齢対象">全年齢対象</option>
+                  <option value="15歳以上推奨">15歳以上推奨</option>
+                  <option value="成人向け（18歳以上）">成人向け（18歳以上）</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 連絡先 -->
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">連絡先 / SNS</div>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400">WebサイトURL / X(Twitter)</label>
+                <input id="fieldUrl" type="text" placeholder="例: @username / https://..."
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">メールアドレス</label>
+                <input id="fieldEmail" type="email" placeholder="例: circle@example.com"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400"
+                  oninput="scheduleRender()">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400">備考・注記</label>
+                <textarea id="fieldNote" rows="2" placeholder="例: この作品はフィクションです。"
+                  class="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400 resize-none"
+                  oninput="scheduleRender()"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Download buttons -->
+          <div class="space-y-2 pt-1">
+            <button onclick="downloadPng()"
+              class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-bold text-sm transition-all">
+              📥 PNG でダウンロード（A5・300dpi）
+            </button>
+            <button onclick="downloadWord()"
+              class="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium text-sm transition-all border border-white/20">
+              📄 Word（.doc）でダウンロード
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="flex-1">
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-sm text-gray-400">プレビュー（A5サイズ）</div>
+            <div class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">
+              印刷用PNG: 1748×2480px（300dpi）
+            </div>
+          </div>
+          <div class="flex justify-center">
+            <canvas id="colophonCanvas" width="420" height="595"
+              class="max-w-full rounded-lg shadow-2xl"
+              style="max-height: 700px; width: auto; border: 1px solid rgba(255,255,255,0.1)">
+            </canvas>
+          </div>
+          <div class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-300">
+            💡 ダウンロードしたPNGは印刷所への入稿データとして使用可能です。Word版は編集・手直し用にご利用ください。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    let currentStyle = 'simple';
+    let renderTimer = null;
+    let fontsLoaded = false;
+
+    // Load Google Fonts for canvas
+    const fontLink = document.createElement('link');
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap';
+    document.head.appendChild(fontLink);
+
+    async function loadFonts() {
+      try {
+        await Promise.all([
+          document.fonts.load('400 16px "Noto Serif JP"'),
+          document.fonts.load('700 16px "Noto Serif JP"'),
+          document.fonts.load('400 16px "Noto Sans JP"'),
+          document.fonts.load('700 16px "Noto Sans JP"'),
+        ]);
+      } catch (e) {}
+      fontsLoaded = true;
+      render();
+    }
+    loadFonts();
+
+    function setStyle(style) {
+      currentStyle = style;
+      document.querySelectorAll('.style-btn').forEach(btn => {
+        btn.classList.remove('border-purple-500', 'bg-purple-500/20', 'text-purple-300');
+        btn.classList.add('border-white/20', 'text-gray-400');
+      });
+      const map = { simple: 'styleSimple', classic: 'styleClassic', wafuu: 'styleWafuu' };
+      const btn = document.getElementById(map[style]);
+      if (btn) {
+        btn.classList.add('border-purple-500', 'bg-purple-500/20', 'text-purple-300');
+        btn.classList.remove('border-white/20', 'text-gray-400');
+      }
+      render();
+    }
+
+    function scheduleRender() {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(render, 80);
+    }
+
+    function getFields() {
+      const dateVal = document.getElementById('fieldDate').value;
+      let dateStr = '';
+      if (dateVal) {
+        const d = new Date(dateVal + 'T00:00:00');
+        dateStr = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+      }
+
+      const priceRaw = document.getElementById('fieldPrice').value;
+      const isFree = document.getElementById('fieldFree').checked;
+      let priceStr = '';
+      if (isFree) priceStr = '無料（非売品）';
+      else if (priceRaw !== '') priceStr = `${parseInt(priceRaw || '0').toLocaleString()}円（税込）`;
+
+      return {
+        title:    document.getElementById('fieldTitle').value   || '作品タイトル',
+        subtitle: document.getElementById('fieldSubtitle').value,
+        circle:   document.getElementById('fieldCircle').value  || 'サークル名',
+        author:   document.getElementById('fieldAuthor').value,
+        date:     dateStr,
+        edition:  document.getElementById('fieldEdition').value,
+        printer:  document.getElementById('fieldPrinter').value,
+        price:    priceStr,
+        rating:   document.getElementById('fieldRating').value,
+        url:      document.getElementById('fieldUrl').value,
+        email:    document.getElementById('fieldEmail').value,
+        note:     document.getElementById('fieldNote').value,
+      };
+    }
+
+    function render() {
+      const canvas = document.getElementById('colophonCanvas');
+      const ctx = canvas.getContext('2d');
+      const fields = getFields();
+      drawColophon(ctx, canvas.width, canvas.height, fields, currentStyle);
+    }
+
+    function drawColophon(ctx, w, h, fields, style) {
+      ctx.clearRect(0, 0, w, h);
+      const scale = w / 420;
+      if (style === 'simple')  drawSimple(ctx, w, h, scale, fields);
+      else if (style === 'classic') drawClassic(ctx, w, h, scale, fields);
+      else if (style === 'wafuu')   drawWafuu(ctx, w, h, scale, fields);
+    }
+
+    function fitText(ctx, text, maxW) {
+      if (!text) return '';
+      if (ctx.measureText(text).width <= maxW) return text;
+      let t = text;
+      while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+      return t + '…';
+    }
+
+    function buildRows(fields) {
+      const rows = [];
+      if (fields.date) rows.push(['発行日', `${fields.date}　${fields.edition}`]);
+      else             rows.push(['版',     fields.edition]);
+      if (fields.circle)  rows.push(['発　行', fields.circle]);
+      if (fields.author)  rows.push(['著　者', fields.author]);
+      if (fields.printer) rows.push(['印刷所', fields.printer]);
+      if (fields.price)   rows.push(['頒布価格', fields.price]);
+      if (fields.rating)  rows.push(['対象年齢', fields.rating]);
+      if (fields.url)     rows.push(['連絡先',  fields.url]);
+      if (fields.email)   rows.push(['e-mail',  fields.email]);
+      if (fields.note)    rows.push(['備考',    fields.note]);
+      return rows;
+    }
+
+    /* ─── Simple Style ─── */
+    function drawSimple(ctx, w, h, sc, f) {
+      const pad = 32 * sc;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 1 * sc;
+      ctx.strokeRect(pad * 0.6, pad * 0.6, w - pad * 1.2, h - pad * 1.2);
+
+      let y = pad + 28 * sc;
+
+      // Title
+      ctx.fillStyle = '#111111';
+      ctx.font = `bold ${23 * sc}px "Noto Serif JP", serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(fitText(ctx, f.title, w - pad * 2), w / 2, y);
+      y += 8 * sc;
+
+      if (f.subtitle) {
+        y += 14 * sc;
+        ctx.font = `${12 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#555555';
+        ctx.fillText(fitText(ctx, f.subtitle, w - pad * 2), w / 2, y);
+        y += 4 * sc;
+      }
+
+      y += 22 * sc;
+
+      // Top rule
+      ctx.strokeStyle = '#111111';
+      ctx.lineWidth = 1.5 * sc;
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
+      y += 24 * sc;
+
+      // Rows
+      const rows = buildRows(f);
+      const labelW = 68 * sc;
+      const rowH   = 21 * sc;
+      const valueMaxW = w - pad - labelW - pad * 0.5;
+
+      rows.forEach(([label, value]) => {
+        ctx.font = `${10 * sc}px "Noto Sans JP", sans-serif`;
+        ctx.fillStyle = '#999999';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, pad, y);
+
+        ctx.font = `${11.5 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#111111';
+        ctx.fillText(fitText(ctx, value, valueMaxW), pad + labelW, y);
+
+        ctx.strokeStyle = '#eeeeee';
+        ctx.lineWidth = 0.5 * sc;
+        ctx.setLineDash([2 * sc, 3 * sc]);
+        ctx.beginPath();
+        ctx.moveTo(pad, y + 5 * sc);
+        ctx.lineTo(w - pad, y + 5 * sc);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        y += rowH + 10 * sc;
+      });
+
+      // Bottom rule
+      const lineY = h - pad - 28 * sc;
+      ctx.strokeStyle = '#111111';
+      ctx.lineWidth = 1 * sc;
+      ctx.beginPath(); ctx.moveTo(pad, lineY); ctx.lineTo(w - pad, lineY); ctx.stroke();
+
+      // Copyright
+      const year = new Date().getFullYear();
+      const name = f.author || f.circle;
+      ctx.font = `${9 * sc}px "Noto Sans JP", sans-serif`;
+      ctx.fillStyle = '#999999';
+      ctx.textAlign = 'center';
+      ctx.fillText(`© ${year} ${name}　Printed in Japan`, w / 2, h - pad - 10 * sc);
+    }
+
+    /* ─── Classic Style ─── */
+    function drawClassic(ctx, w, h, sc, f) {
+      const pad = 28 * sc;
+      const ip  = pad + 18 * sc; // inner padding
+
+      // Cream background
+      ctx.fillStyle = '#faf8f3';
+      ctx.fillRect(0, 0, w, h);
+
+      // Double border
+      ctx.strokeStyle = '#8b7355';
+      ctx.lineWidth = 2 * sc;
+      ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
+      ctx.lineWidth = 0.5 * sc;
+      ctx.strokeRect(pad + 6 * sc, pad + 6 * sc, w - (pad + 6 * sc) * 2, h - (pad + 6 * sc) * 2);
+
+      // Corner diamonds
+      [[pad, pad], [w - pad, pad], [pad, h - pad], [w - pad, h - pad]].forEach(([cx, cy]) => {
+        ctx.fillStyle = '#8b7355';
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(-3 * sc, -3 * sc, 6 * sc, 6 * sc);
+        ctx.restore();
+      });
+
+      let y = ip + 20 * sc;
+
+      // Circle name at top
+      ctx.font = `${10 * sc}px "Noto Serif JP", serif`;
+      ctx.fillStyle = '#8b7355';
+      ctx.textAlign = 'center';
+      ctx.fillText(f.circle, w / 2, y);
+      y += 22 * sc;
+
+      // Title
+      ctx.font = `bold ${24 * sc}px "Noto Serif JP", serif`;
+      ctx.fillStyle = '#2c1f0e';
+      ctx.fillText(fitText(ctx, f.title, w - ip * 2), w / 2, y);
+      y += 8 * sc;
+
+      if (f.subtitle) {
+        y += 13 * sc;
+        ctx.font = `${12 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#5a4422';
+        ctx.fillText(fitText(ctx, f.subtitle, w - ip * 2), w / 2, y);
+        y += 4 * sc;
+      }
+
+      y += 18 * sc;
+      classicRule(ctx, ip, w - ip, y, sc);
+      y += 24 * sc;
+
+      const rows = buildRows(f);
+      const labelW  = 68 * sc;
+      const sepX    = ip + labelW + 10 * sc;
+      const valueX  = sepX + 12 * sc;
+      const valueMaxW = w - ip - valueX + ip;
+
+      rows.forEach(([label, value]) => {
+        ctx.font = `${11 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#8b7355';
+        ctx.textAlign = 'right';
+        ctx.fillText(label, ip + labelW, y);
+
+        ctx.strokeStyle = '#c4a97d';
+        ctx.lineWidth = 0.5 * sc;
+        ctx.beginPath();
+        ctx.moveTo(sepX, y - 12 * sc);
+        ctx.lineTo(sepX, y + 4 * sc);
+        ctx.stroke();
+
+        ctx.font = `${11.5 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#2c1f0e';
+        ctx.textAlign = 'left';
+        ctx.fillText(fitText(ctx, value, w - ip - valueX), valueX, y);
+
+        y += 23 * sc;
+      });
+
+      y += 8 * sc;
+      classicRule(ctx, ip, w - ip, y, sc);
+
+      const year = new Date().getFullYear();
+      const name = f.author || f.circle;
+      ctx.font = `${9 * sc}px "Noto Sans JP", sans-serif`;
+      ctx.fillStyle = '#8b7355';
+      ctx.textAlign = 'center';
+      ctx.fillText(`© ${year} ${name}　Printed in Japan`, w / 2, h - ip - 4 * sc);
+    }
+
+    function classicRule(ctx, x1, x2, y, sc) {
+      const mid = (x1 + x2) / 2;
+      ctx.strokeStyle = '#8b7355';
+      ctx.lineWidth = 0.5 * sc;
+      ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(mid - 12 * sc, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mid + 12 * sc, y); ctx.lineTo(x2, y); ctx.stroke();
+      ctx.fillStyle = '#8b7355';
+      ctx.save();
+      ctx.translate(mid, y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-4 * sc, -4 * sc, 8 * sc, 8 * sc);
+      ctx.restore();
+    }
+
+    /* ─── Wafuu Modern Style ─── */
+    function drawWafuu(ctx, w, h, sc, f) {
+      const pad = 24 * sc;
+      const RED = '#b22222';
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+
+      // Red header bar
+      ctx.fillStyle = RED;
+      ctx.fillRect(0, 0, w, 58 * sc);
+
+      // White title in red bar
+      ctx.font = `bold ${16 * sc}px "Noto Serif JP", serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.fillText('奥　付', pad, 36 * sc);
+
+      ctx.font = `${11 * sc}px "Noto Serif JP", serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(fitText(ctx, f.circle, w * 0.5), w - pad, 36 * sc);
+
+      // Red left accent strip
+      ctx.fillStyle = RED;
+      ctx.fillRect(pad, 58 * sc, 3 * sc, h - 58 * sc - pad);
+
+      const contentX = pad + 16 * sc;
+      let y = 58 * sc + 32 * sc;
+
+      // Title
+      ctx.font = `bold ${25 * sc}px "Noto Serif JP", serif`;
+      ctx.fillStyle = '#1a1a1a';
+      ctx.textAlign = 'left';
+      ctx.fillText(fitText(ctx, f.title, w - contentX - pad), contentX, y);
+      y += 8 * sc;
+
+      if (f.subtitle) {
+        y += 13 * sc;
+        ctx.font = `${12 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#555555';
+        ctx.fillText(fitText(ctx, f.subtitle, w - contentX - pad), contentX, y);
+        y += 4 * sc;
+      }
+
+      y += 20 * sc;
+
+      // Red rule
+      ctx.fillStyle = RED;
+      ctx.fillRect(contentX, y, w - contentX - pad, 1.5 * sc);
+      y += 18 * sc;
+
+      const rows = buildRows(f);
+      const labelW = 68 * sc;
+      const rowH   = 25 * sc;
+      const valueMaxW = w - contentX - labelW - pad;
+
+      rows.forEach(([label, value], i) => {
+        if (i % 2 === 0) {
+          ctx.fillStyle = '#fff5f5';
+          ctx.fillRect(contentX - 4 * sc, y - 16 * sc, w - contentX - pad + 4 * sc, rowH);
+        }
+
+        ctx.font = `${10 * sc}px "Noto Sans JP", sans-serif`;
+        ctx.fillStyle = RED;
+        ctx.textAlign = 'left';
+        ctx.fillText(label, contentX, y);
+
+        ctx.font = `${11.5 * sc}px "Noto Serif JP", serif`;
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillText(fitText(ctx, value, valueMaxW), contentX + labelW, y);
+
+        y += rowH;
+      });
+
+      // Bottom
+      const lineY = h - pad - 24 * sc;
+      ctx.fillStyle = RED;
+      ctx.fillRect(pad, lineY, w - pad * 2, 1 * sc);
+
+      const year = new Date().getFullYear();
+      const name = f.author || f.circle;
+      ctx.font = `${9 * sc}px "Noto Sans JP", sans-serif`;
+      ctx.fillStyle = '#999999';
+      ctx.textAlign = 'center';
+      ctx.fillText(`© ${year} ${name}　Printed in Japan`, w / 2, h - pad - 6 * sc);
+    }
+
+    /* ─── PNG Download ─── */
+    function downloadPng() {
+      const dlCanvas = document.createElement('canvas');
+      dlCanvas.width  = 1748;
+      dlCanvas.height = 2480;
+      const ctx = dlCanvas.getContext('2d');
+      const fields = getFields();
+      drawColophon(ctx, dlCanvas.width, dlCanvas.height, fields, currentStyle);
+      dlCanvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = fields.title.replace(/[\\/:*?"<>|]/g, '_');
+        a.download = `奥付_${safeName}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    }
+
+    /* ─── Word (.doc) Download ─── */
+    function downloadWord() {
+      const f = getFields();
+      const year = new Date().getFullYear();
+      const name = f.author || f.circle;
+      const rows = buildRows(f);
+
+      const tableRows = rows.map(([label, value]) => `
+        <tr>
+          <td style="padding:5px 14px 5px 0;color:#888;font-size:9pt;white-space:nowrap;vertical-align:top;">${label}</td>
+          <td style="padding:5px 0;font-size:10.5pt;border-bottom:1px dotted #ddd;">${value}</td>
+        </tr>`).join('');
+
+      const accentColor = currentStyle === 'wafuu' ? '#b22222' : currentStyle === 'classic' ? '#8b7355' : '#222222';
+
+      const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<title>奥付 - ${f.title}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Normal</w:View><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>
+  @page { size: 148mm 210mm; margin: 18mm 20mm; }
+  body { font-family: "游明朝","Yu Mincho","MS Mincho",serif; color: #1a1a1a; margin: 0; padding: 0; }
+  .circle-name { font-size: 9pt; color: #888; text-align: center; margin-bottom: 6px; }
+  .main-title  { font-size: 18pt; font-weight: bold; text-align: center; margin-bottom: 4px; color: #111; }
+  .sub-title   { font-size: 11pt; text-align: center; color: #555; margin-bottom: 14px; }
+  .rule        { border: none; border-top: 1.5px solid ${accentColor}; margin: 10px 0; }
+  table        { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .copyright   { font-size: 8.5pt; text-align: center; color: #888; margin-top: 16px;
+                 border-top: 0.5px solid #ccc; padding-top: 8px; }
+  .note-text   { font-size: 8.5pt; color: #666; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="circle-name">${f.circle}</div>
+<div class="main-title">${f.title}</div>
+${f.subtitle ? `<div class="sub-title">${f.subtitle}</div>` : ''}
+<hr class="rule">
+<table>${tableRows}</table>
+${f.note ? `<div class="note-text">${f.note}</div>` : ''}
+<div class="copyright">© ${year} ${name}　Printed in Japan</div>
+</body></html>`;
+
+      const blob = new Blob(['﻿', html], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = f.title.replace(/[\\/:*?"<>|]/g, '_');
+      a.download = `奥付_${safeName}.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Set default values for demo
+    document.getElementById('fieldTitle').value  = '夢見る銀河の果てで';
+    document.getElementById('fieldCircle').value = '星屑工房';
+    document.getElementById('fieldAuthor').value = '星野ひかり';
+    document.getElementById('fieldDate').value   = new Date().toISOString().split('T')[0];
+    document.getElementById('fieldPrinter').value = '栄光印刷';
+    document.getElementById('fieldPrice').value  = '500';
+    document.getElementById('fieldRating').value = '全年齢対象';
+    document.getElementById('fieldUrl').value    = '@hoshino_hikari';
+
+    render();
+  </script>
+</BaseLayout>

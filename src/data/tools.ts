@@ -179,7 +179,7 @@ export const tools: Tool[] = [
 		id: 25, slug: 'doujin-colophon',
 		name: '同人誌奥付ジェネレーター',
 		description: 'タイトル・サークル名・発行日を入れると奥付PNGを生成。',
-		emoji: '📚', category: 'creator', badge: '人気', status: 'coming-soon',
+		emoji: '📚', category: 'creator', badge: '人気', status: 'available',
 	},
 	{
 		id: 26, slug: 'fan-letter',
