@@ -221,7 +221,7 @@ export const tools: Tool[] = [
 		id: 32, slug: 'handle-check',
 		name: 'SNSハンドルネーム空き確認',
 		description: '入力したIDがX/Insta/TikTok/YouTubeで取得可能か確認。',
-		emoji: '🔍', category: 'creator', status: 'coming-soon',
+		emoji: '🔍', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 33, slug: 'manga-panels',
