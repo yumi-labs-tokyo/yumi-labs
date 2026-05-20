@@ -1,0 +1,499 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="二次創作タグ自動生成 | yumi Labs">
+  <div class="max-w-4xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🏷️</div>
+      <div class="text-3xl font-bold text-white mb-2">二次創作タグ自動生成</div>
+      <div class="text-gray-400 text-sm">カプ名・ジャンルを入力するとpixiv / X(Twitter)向けタグを自動生成。地雷回避タグも自動付与。</div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+
+      <!-- Left: Input Panel -->
+      <div class="lg:w-[400px] flex-shrink-0 space-y-5">
+
+        <!-- 基本情報 -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-4">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">基本情報</div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">ジャンル名（作品名）<span class="text-red-400">*</span></label>
+            <input id="inFandom" type="text" placeholder="例: ワンピース、鬼滅の刃" maxlength="40"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">キャラ1（攻め側）</label>
+              <input id="inChar1" type="text" placeholder="例: ゾロ" maxlength="20"
+                class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">キャラ2（受け側）</label>
+              <input id="inChar2" type="text" placeholder="例: サンジ" maxlength="20"
+                class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" />
+            </div>
+          </div>
+
+          <!-- カプ方向 -->
+          <div>
+            <div class="text-xs text-gray-400 mb-2">カプの方向性</div>
+            <div class="grid grid-cols-3 gap-2" id="dirBtns">
+              <button onclick="setDir('1to2')" id="dir1to2" class="dir-btn active-dir py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">
+                1→2（固定）
+              </button>
+              <button onclick="setDir('2to1')" id="dir2to1" class="dir-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">
+                2→1（逆）
+              </button>
+              <button onclick="setDir('free')" id="dirfree" class="dir-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">
+                固定なし
+              </button>
+            </div>
+          </div>
+
+          <!-- カプ種別 -->
+          <div>
+            <div class="text-xs text-gray-400 mb-2">カプ種別</div>
+            <div class="grid grid-cols-4 gap-2" id="typeBtns">
+              <button onclick="setType('BL')" id="typeBL" class="type-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">BL</button>
+              <button onclick="setType('GL')" id="typeGL" class="type-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">百合</button>
+              <button onclick="setType('NL')" id="typeNL" class="type-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">NL</button>
+              <button onclick="setType('OTHER')" id="typeOTHER" class="type-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">その他</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 作品情報 -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-4">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">作品情報</div>
+
+          <!-- 形式 -->
+          <div>
+            <div class="text-xs text-gray-400 mb-2">作品形式</div>
+            <div class="grid grid-cols-3 gap-2" id="fmtBtns">
+              <button onclick="setFmt('illust')" id="fmtillust" class="fmt-btn active-fmt py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">イラスト</button>
+              <button onclick="setFmt('manga')" id="fmtmanga" class="fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">漫画</button>
+              <button onclick="setFmt('novel')" id="fmtnovel" class="fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">小説/SS</button>
+              <button onclick="setFmt('poem')" id="fmtpoem" class="fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">詩/掌編</button>
+              <button onclick="setFmt('cosplay')" id="fmtcosplay" class="fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">コスプレ</button>
+              <button onclick="setFmt('other')" id="fmtother" class="fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">その他</button>
+            </div>
+          </div>
+
+          <!-- R指定 -->
+          <div>
+            <div class="text-xs text-gray-400 mb-2">年齢指定</div>
+            <div class="grid grid-cols-3 gap-2" id="ageBtns">
+              <button onclick="setAge('all')" id="ageall" class="age-btn active-age py-2 rounded-lg text-xs font-medium border-2 border-green-500 bg-green-500/20 text-green-300 transition-all">全年齢</button>
+              <button onclick="setAge('r15')" id="ager15" class="age-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">R15</button>
+              <button onclick="setAge('r18')" id="ager18" class="age-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">R18</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 内容タグ -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">内容タグ（複数選択可）</div>
+          <div class="grid grid-cols-3 gap-2" id="contentGrid">
+            <!-- JS で生成 -->
+          </div>
+        </div>
+
+        <!-- 地雷回避設定 -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-orange-400 font-semibold uppercase tracking-wider mb-3">地雷回避タグ設定</div>
+          <div class="space-y-2" id="avoidGrid">
+            <!-- JS で生成 -->
+          </div>
+        </div>
+
+        <!-- 追加フリーワード -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">追加フリーワード</div>
+          <textarea id="inExtra" rows="2" placeholder="追加したいタグをスペース区切りで入力（例: 学パロ 現代パラレル）"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none"></textarea>
+        </div>
+
+        <!-- Generate Button -->
+        <button onclick="generateTags()"
+          class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all"
+          style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+          タグを生成する
+        </button>
+      </div>
+
+      <!-- Right: Output Panel -->
+      <div class="flex-1 space-y-5">
+
+        <!-- Pixiv -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded" style="background:#00b9ff;"></div>
+              <div class="text-sm font-semibold text-white">pixiv 用タグ</div>
+            </div>
+            <button onclick="copyTags('pixiv')" id="copyPixivBtn"
+              class="px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+              コピー
+            </button>
+          </div>
+          <div id="pixivOutput" class="min-h-[80px] bg-black/30 rounded-xl p-3 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
+            ← 左のフォームを入力して「タグを生成する」を押してください
+          </div>
+          <div id="pixivCount" class="mt-2 text-xs text-gray-500"></div>
+        </div>
+
+        <!-- Twitter -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded-full bg-black border border-white/20 flex items-center justify-center text-white text-xs font-bold">X</div>
+              <div class="text-sm font-semibold text-white">X (Twitter) 用ハッシュタグ</div>
+            </div>
+            <button onclick="copyTags('twitter')" id="copyTwitterBtn"
+              class="px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+              コピー
+            </button>
+          </div>
+          <div id="twitterOutput" class="min-h-[80px] bg-black/30 rounded-xl p-3 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
+            ← 左のフォームを入力して「タグを生成する」を押してください
+          </div>
+          <div id="twitterCount" class="mt-2 text-xs text-gray-500"></div>
+        </div>
+
+        <!-- 地雷回避タグ -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-orange-400 text-sm">⚠️</span>
+              <div class="text-sm font-semibold text-white">地雷回避タグ</div>
+            </div>
+            <button onclick="copyTags('avoid')" id="copyAvoidBtn"
+              class="px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+              コピー
+            </button>
+          </div>
+          <div id="avoidOutput" class="min-h-[60px] bg-black/30 rounded-xl p-3 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
+            ← タグ生成後に表示されます
+          </div>
+          <div class="mt-2 text-xs text-gray-500">投稿の末尾や説明欄に追記することで、苦手な読者への配慮になります。</div>
+        </div>
+
+        <!-- タグ一覧（チップ表示） -->
+        <div class="bg-white/5 rounded-2xl p-5" id="chipSection" style="display:none;">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">生成されたタグ一覧</div>
+          <div id="chipContainer" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- ガイド -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">使い方のヒント</div>
+          <div class="space-y-2 text-xs text-gray-400">
+            <div class="flex gap-2"><span class="text-purple-400 flex-shrink-0">●</span><span>pixivタグはスペース区切りでタグ欄に貼り付けてください。</span></div>
+            <div class="flex gap-2"><span class="text-purple-400 flex-shrink-0">●</span><span>Xハッシュタグは投稿文末に追記するのが一般的です。</span></div>
+            <div class="flex gap-2"><span class="text-purple-400 flex-shrink-0">●</span><span>カプ名は「キャラ1×キャラ2」形式で、×の左が攻め（書き手側）です。</span></div>
+            <div class="flex gap-2"><span class="text-orange-400 flex-shrink-0">●</span><span>地雷回避タグは「※」「【注意】」などを添えて目立つ位置に置くと親切です。</span></div>
+            <div class="flex gap-2"><span class="text-orange-400 flex-shrink-0">●</span><span>R18作品は必ずR18タグ・成人向けタグを付けてプラットフォームのルールを守りましょう。</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // --- State ---
+  let state = {
+    dir: '1to2',
+    type: 'BL',
+    fmt: 'illust',
+    age: 'all',
+    contentTags: new Set(),
+    avoidChecks: new Set(),
+  };
+
+  let generated = { pixiv: '', twitter: '', avoid: '' };
+
+  // --- Content tag definitions ---
+  const CONTENT_TAGS = [
+    { id: 'sweet',    label: '甘々',       pixiv: '甘々',      tw: '甘々' },
+    { id: 'sugar',    label: '砂糖吐く',   pixiv: '砂糖吐く',  tw: '砂糖吐く' },
+    { id: 'healing',  label: 'ほのぼの',   pixiv: 'ほのぼの',  tw: 'ほのぼの' },
+    { id: 'gag',      label: 'ギャグ',      pixiv: 'ギャグ',    tw: 'ギャグ' },
+    { id: 'serious',  label: 'シリアス',    pixiv: 'シリアス',  tw: 'シリアス' },
+    { id: 'dark',     label: '鬱展開',      pixiv: '鬱展開',    tw: '鬱展開', warn: true },
+    { id: 'he',       label: 'ハッピーエンド', pixiv: 'ハッピーエンド', tw: 'ハッピーエンド' },
+    { id: 'be',       label: 'バッドエンド', pixiv: 'バッドエンド', tw: 'バッドエンド', warn: true },
+    { id: 'death',    label: '死ネタ',      pixiv: '死ネタ',    tw: '死ネタ', warn: true },
+    { id: 'capture',  label: '捏造',        pixiv: '捏造注意',  tw: '捏造' },
+    { id: 'paro',     label: 'パロ',        pixiv: 'パロディ',  tw: 'パロディ' },
+    { id: 'gakuparo', label: '学パロ',      pixiv: '学生パロ',  tw: '学パロ' },
+    { id: 'genparo',  label: '現パロ',      pixiv: '現代パラレル', tw: '現パロ' },
+    { id: 'if',       label: 'if展開',      pixiv: 'if展開',    tw: 'if展開' },
+    { id: 'reunion',  label: '再会',        pixiv: '再会',      tw: '再会' },
+    { id: 'love',     label: '告白',        pixiv: '告白',      tw: '告白' },
+    { id: 'jealous',  label: '嫉妬',        pixiv: '嫉妬',      tw: '嫉妬' },
+    { id: 'possessive', label: '独占欲',   pixiv: '独占欲',    tw: '独占欲' },
+    { id: 'doting',   label: '溺愛',        pixiv: '溺愛',      tw: '溺愛' },
+    { id: 'firsttime', label: '初めて',     pixiv: '初めて',    tw: '初めて' },
+  ];
+
+  // --- Avoid tag definitions ---
+  const AVOID_TAGS = [
+    { id: 'avoidReverse',  label: '逆カプ注意をつける',     tag: '逆カプ注意' },
+    { id: 'avoidBreak',    label: 'キャラ崩壊注意をつける', tag: 'キャラ崩壊注意' },
+    { id: 'avoidSpoiler',  label: 'ネタバレ注意をつける',   tag: 'ネタバレ注意' },
+    { id: 'avoidNL',       label: 'NL注意をつける',          tag: 'NL注意' },
+    { id: 'avoidBL',       label: 'BL注意をつける',          tag: 'BL注意' },
+    { id: 'avoidGL',       label: '百合注意をつける',        tag: '百合注意' },
+    { id: 'avoidGuro',     label: 'グロ注意をつける',        tag: 'グロ注意' },
+    { id: 'avoidCaption',  label: 'カプ注意をつける',        tag: 'カプ注意' },
+  ];
+
+  // --- Format map ---
+  const FMT_MAP = {
+    illust:  { pixiv: 'イラスト', tw: '絵', twa: '_絵' },
+    manga:   { pixiv: '漫画',     tw: '漫画', twa: '_漫画' },
+    novel:   { pixiv: '小説',     tw: '小説', twa: '_小説' },
+    poem:    { pixiv: '詩',       tw: '詩', twa: '_詩' },
+    cosplay: { pixiv: 'コスプレ', tw: 'コスプレ', twa: '_コスプレ' },
+    other:   { pixiv: '',         tw: '', twa: '' },
+  };
+
+  // --- Type map ---
+  const TYPE_PIXIV = { BL: 'BL', GL: '百合', NL: 'NL', OTHER: '' };
+  const TYPE_TW    = { BL: 'BL', GL: '百合', NL: 'NL', OTHER: '' };
+
+  // --- Init ---
+  function init() {
+    // Build content tag checkboxes
+    const cg = document.getElementById('contentGrid');
+    CONTENT_TAGS.forEach(t => {
+      const btn = document.createElement('button');
+      btn.id = 'ct_' + t.id;
+      btn.className = 'ct-btn py-1.5 rounded-lg text-xs border-2 border-white/10 text-gray-400 transition-all';
+      btn.textContent = t.label;
+      if (t.warn) btn.style.borderColor = 'rgba(251,146,60,0.3)';
+      btn.onclick = () => toggleContent(t.id, btn, t.warn);
+      cg.appendChild(btn);
+    });
+
+    // Build avoid checkboxes
+    const ag = document.getElementById('avoidGrid');
+    AVOID_TAGS.forEach(t => {
+      const label = document.createElement('label');
+      label.className = 'flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none';
+      label.innerHTML = `<input type="checkbox" id="av_${t.id}" class="rounded" style="accent-color:#9333ea;" onchange="toggleAvoid('${t.id}', this.checked)"><span>${t.label}</span>`;
+      ag.appendChild(label);
+    });
+  }
+
+  // --- Toggle helpers ---
+  function toggleContent(id, btn, warn) {
+    if (state.contentTags.has(id)) {
+      state.contentTags.delete(id);
+      btn.className = 'ct-btn py-1.5 rounded-lg text-xs border-2 border-white/10 text-gray-400 transition-all';
+      if (warn) btn.style.borderColor = 'rgba(251,146,60,0.3)';
+      else btn.style.borderColor = '';
+    } else {
+      state.contentTags.add(id);
+      if (warn) {
+        btn.className = 'ct-btn py-1.5 rounded-lg text-xs border-2 text-orange-300 transition-all';
+        btn.style.cssText = 'border-color:#f97316;background:rgba(249,115,22,0.15);';
+      } else {
+        btn.className = 'ct-btn py-1.5 rounded-lg text-xs border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all';
+        btn.style.cssText = '';
+      }
+    }
+  }
+
+  function toggleAvoid(id, checked) {
+    if (checked) state.avoidChecks.add(id);
+    else state.avoidChecks.delete(id);
+  }
+
+  // --- Selector button helpers ---
+  function setDir(v) {
+    state.dir = v;
+    ['1to2','2to1','free'].forEach(k => {
+      const b = document.getElementById('dir' + k);
+      if (k === v) { b.className = 'dir-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'; }
+      else { b.className = 'dir-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all'; }
+    });
+  }
+
+  function setType(v) {
+    state.type = v;
+    ['BL','GL','NL','OTHER'].forEach(k => {
+      const b = document.getElementById('type' + k);
+      if (k === v) { b.className = 'type-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'; }
+      else { b.className = 'type-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all'; }
+    });
+  }
+
+  function setFmt(v) {
+    state.fmt = v;
+    ['illust','manga','novel','poem','cosplay','other'].forEach(k => {
+      const b = document.getElementById('fmt' + k);
+      if (k === v) { b.className = 'fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'; }
+      else { b.className = 'fmt-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all'; }
+    });
+  }
+
+  function setAge(v) {
+    state.age = v;
+    const colorMap = { all: 'border-green-500 bg-green-500/20 text-green-300', r15: 'border-yellow-500 bg-yellow-500/20 text-yellow-300', r18: 'border-red-500 bg-red-500/20 text-red-300' };
+    ['all','r15','r18'].forEach(k => {
+      const b = document.getElementById('age' + k);
+      if (k === v) { b.className = `age-btn py-2 rounded-lg text-xs font-medium border-2 ${colorMap[k]} transition-all`; }
+      else { b.className = 'age-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all'; }
+    });
+  }
+
+  // --- Main generation ---
+  function generateTags() {
+    const fandom = document.getElementById('inFandom').value.trim();
+    const char1  = document.getElementById('inChar1').value.trim();
+    const char2  = document.getElementById('inChar2').value.trim();
+    const extra  = document.getElementById('inExtra').value.trim().split(/[\s\n]+/).filter(Boolean);
+
+    if (!fandom) {
+      document.getElementById('pixivOutput').textContent = '⚠ ジャンル名を入力してください。';
+      return;
+    }
+
+    // Build couple tag
+    let coupleTag = '';
+    if (char1 && char2) {
+      if (state.dir === '1to2') coupleTag = `${char1}×${char2}`;
+      else if (state.dir === '2to1') coupleTag = `${char2}×${char1}`;
+      else coupleTag = `${char1}${char2}`;
+    } else if (char1) {
+      coupleTag = char1;
+    }
+
+    const fmt = FMT_MAP[state.fmt] || FMT_MAP.other;
+    const typePixiv = TYPE_PIXIV[state.type] || '';
+    const typeTw    = TYPE_TW[state.type] || '';
+
+    // --- pixiv tags ---
+    const pixivSet = [];
+    const add = (t) => { if (t && !pixivSet.includes(t)) pixivSet.push(t); };
+
+    add(fandom);
+    if (char1) add(char1);
+    if (char2) add(char2);
+    if (coupleTag) add(coupleTag);
+    if (coupleTag && fandom) add(`${fandom}_${coupleTag}`);
+    if (typePixiv) add(typePixiv);
+    if (typePixiv && fandom) add(`${fandom}_${typePixiv}`);
+    if (fmt.pixiv) add(fmt.pixiv);
+    if (fmt.pixiv && fandom) add(`${fandom}_${fmt.pixiv}`);
+
+    // content tags
+    state.contentTags.forEach(id => {
+      const t = CONTENT_TAGS.find(c => c.id === id);
+      if (t) add(t.pixiv);
+    });
+
+    // age
+    if (state.age === 'r18') { add('R-18'); add('成人向け'); }
+    if (state.age === 'r15') add('R-15');
+
+    // extra
+    extra.forEach(t => add(t));
+
+    // --- Twitter tags ---
+    const twSet = [];
+    const addTw = (t) => { if (t && !twSet.includes(t)) twSet.push(`#${t}`); };
+
+    addTw(fandom);
+    if (coupleTag) addTw(coupleTag);
+    if (fandom && fmt.twa) addTw(`${fandom}${fmt.twa}`);
+    else if (fandom && fmt.tw) addTw(`${fandom}${fmt.tw}`);
+    if (typeTw) addTw(typeTw);
+    if (char1 && fandom) addTw(`${fandom}${char1}`);
+    if (char2 && fandom) addTw(`${fandom}${char2}`);
+
+    // content tags (subset)
+    ['sweet','sugar','healing','gag','serious','dark','he','be','death','gakuparo','genparo'].forEach(id => {
+      if (state.contentTags.has(id)) {
+        const t = CONTENT_TAGS.find(c => c.id === id);
+        if (t) addTw(t.tw);
+      }
+    });
+
+    if (state.age === 'r18') addTw('R18');
+    extra.forEach(t => addTw(t));
+
+    // --- Avoid tags ---
+    const avoidSet = [];
+    const addAv = (t) => { if (t && !avoidSet.includes(t)) avoidSet.push(t); };
+
+    // auto-add based on type
+    if (state.type === 'BL') addAv('BL注意');
+    if (state.type === 'GL') addAv('百合注意');
+    if (state.age === 'r18') { addAv('R18注意'); addAv('18禁'); }
+
+    // auto-add from content
+    if (state.contentTags.has('death')) addAv('※死ネタあり');
+    if (state.contentTags.has('dark'))  addAv('鬱展開注意');
+    if (state.contentTags.has('be'))    addAv('バッドエンド注意');
+    if (state.contentTags.has('capture')) addAv('捏造注意');
+
+    // manual avoid selections
+    state.avoidChecks.forEach(id => {
+      const t = AVOID_TAGS.find(a => a.id === id);
+      if (t) addAv(t.tag);
+    });
+
+    // Store and render
+    generated.pixiv   = pixivSet.join(' ');
+    generated.twitter = twSet.join(' ');
+    generated.avoid   = avoidSet.join(' ');
+
+    document.getElementById('pixivOutput').textContent   = generated.pixiv || '（タグなし）';
+    document.getElementById('twitterOutput').textContent = generated.twitter || '（タグなし）';
+    document.getElementById('avoidOutput').textContent   = generated.avoid || '（地雷回避タグなし）';
+
+    document.getElementById('pixivCount').textContent   = `${pixivSet.length} タグ`;
+    document.getElementById('twitterCount').textContent = `${twSet.length} ハッシュタグ`;
+
+    // Chip display
+    const chipSection = document.getElementById('chipSection');
+    const chipContainer = document.getElementById('chipContainer');
+    chipContainer.innerHTML = '';
+    chipSection.style.display = 'block';
+
+    const allTags = [...new Set([...pixivSet, ...avoidSet])];
+    allTags.forEach(tag => {
+      const chip = document.createElement('span');
+      const isAvoid = avoidSet.includes(tag);
+      chip.className = `px-2 py-1 rounded-lg text-xs font-medium ${isAvoid ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'}`;
+      chip.textContent = tag;
+      chipContainer.appendChild(chip);
+    });
+  }
+
+  // --- Copy ---
+  function copyTags(type) {
+    const text = generated[type] || '';
+    if (!text || text === '') return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btnId = type === 'pixiv' ? 'copyPixivBtn' : type === 'twitter' ? 'copyTwitterBtn' : 'copyAvoidBtn';
+      const btn = document.getElementById(btnId);
+      const orig = btn.textContent;
+      btn.textContent = 'コピーしました！';
+      btn.style.color = '#a78bfa';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    });
+  }
+
+  // --- Run ---
+  init();
+</script>

@@ -203,7 +203,7 @@ export const tools: Tool[] = [
 		id: 29, slug: 'nijisousaku-tags',
 		name: '二次創作タグ自動生成',
 		description: 'カプ名・ジャンルを入れるとpixiv/Twitter向け定型タグを生成。',
-		emoji: '🏷️', category: 'creator', badge: 'New', status: 'coming-soon',
+		emoji: '🏷️', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 30, slug: 'stream-title',
