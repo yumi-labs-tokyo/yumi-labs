@@ -105,7 +105,7 @@ export const tools: Tool[] = [
 		id: 13, slug: 'thank-you-letter',
 		name: 'お礼状文例ジェネレーター',
 		description: 'シチュエーション×相手との距離感で3パターン生成。',
-		emoji: '💌', category: 'practical', status: 'coming-soon',
+		emoji: '💌', category: 'practical', status: 'available',
 	},
 	{
 		id: 14, slug: 'vaccine-scheduler',

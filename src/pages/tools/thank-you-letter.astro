@@ -1,0 +1,467 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="お礼状文例ジェネレーター — yumi-Labs"
+  description="贈答・面接・葬儀などシチュエーション×距離感で3パターンのお礼状を生成。手書き向け・メール向け切替対応。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">💌</span>
+      <div>
+        <h1 class="tool-title">お礼状文例ジェネレーター</h1>
+        <p class="tool-sub">シチュエーション × 距離感 で3パターン生成。手書き・メールを切り替えて使えます。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+
+        <!-- シチュエーション -->
+        <div class="field-block">
+          <label class="block-label">① シチュエーション <span class="required">必須</span></label>
+          <div class="sit-grid" id="sit-grid">
+            <button class="sit-btn" data-sit="gift">🎁 贈答品・お中元・お歳暮</button>
+            <button class="sit-btn" data-sit="interview">💼 就活・転職 面接後</button>
+            <button class="sit-btn" data-sit="funeral">🕊️ 葬儀・弔事</button>
+            <button class="sit-btn" data-sit="business">🍽️ ビジネス接待・会食</button>
+            <button class="sit-btn" data-sit="visit">🏠 訪問・お世話になった</button>
+            <button class="sit-btn" data-sit="favor">🤝 紹介・助けてもらった</button>
+          </div>
+        </div>
+
+        <!-- 距離感 -->
+        <div class="field-block">
+          <label class="block-label">② 相手との距離感 <span class="required">必須</span></label>
+          <div class="rel-row" id="rel-row">
+            <button class="rel-btn" data-rel="formal">
+              <span class="rel-icon">🎩</span>
+              <span class="rel-name">目上・ビジネス</span>
+              <span class="rel-sub">丁寧・格式重視</span>
+            </button>
+            <button class="rel-btn" data-rel="colleague">
+              <span class="rel-icon">👥</span>
+              <span class="rel-name">知人・同僚</span>
+              <span class="rel-sub">普通の丁寧さ</span>
+            </button>
+            <button class="rel-btn" data-rel="friend">
+              <span class="rel-icon">😊</span>
+              <span class="rel-name">親しい友人</span>
+              <span class="rel-sub">カジュアル</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 形式切替 -->
+        <div class="field-block">
+          <label class="block-label">③ 形式</label>
+          <div class="format-toggle" id="format-toggle">
+            <button class="fmt-btn active" data-fmt="handwritten">✍️ 手書き向け</button>
+            <button class="fmt-btn" data-fmt="email">📧 メール向け</button>
+          </div>
+        </div>
+
+        <!-- オプション -->
+        <div class="field-block">
+          <label class="block-label">④ 任意入力（より自然な文章になります）</label>
+          <div class="opt-grid">
+            <div class="opt-field">
+              <label class="opt-label" for="recipient-name">相手のお名前</label>
+              <input class="text-input" id="recipient-name" placeholder="田中部長 / 佐藤さん" maxlength="30" />
+            </div>
+            <div class="opt-field">
+              <label class="opt-label" for="sender-name">自分のお名前</label>
+              <input class="text-input" id="sender-name" placeholder="山田太郎" maxlength="30" />
+            </div>
+          </div>
+          <div class="opt-field" style="margin-top:10px">
+            <label class="opt-label" for="detail">詳細・背景（贈り物の内容・面接企業・弔問の経緯など）</label>
+            <textarea class="text-area" id="detail" placeholder="例：先日いただいた和菓子のお礼 / 〇〇株式会社の営業職面接後 / 先週の御通夜への弔問のお礼" rows="2" maxlength="200"></textarea>
+          </div>
+        </div>
+
+        <button id="generate-btn" class="btn-primary" onclick="generate()">
+          💌 お礼状を3パターン生成する
+        </button>
+
+        <div id="loading" class="loading-box" style="display:none">
+          <div class="spinner"></div>
+          <span>3パターンのお礼状を作成中...</span>
+        </div>
+        <div id="error-box" class="error-box" style="display:none"></div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result-section" class="card result-card" style="display:none">
+
+        <div class="result-top">
+          <h2 class="card-title" style="margin:0">📄 生成されたお礼状</h2>
+          <div id="result-meta" class="result-meta"></div>
+        </div>
+
+        <div id="writing-note" class="writing-note" style="display:none"></div>
+
+        <!-- tabs -->
+        <div class="tab-bar" id="tab-bar"></div>
+
+        <!-- pattern cards -->
+        <div id="patterns-wrap"></div>
+
+      </section>
+
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 24px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+
+    .field-block { margin-bottom: 24px; }
+    .block-label { display: block; font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; }
+    .required { display: inline-block; background: #ef4444; color: #fff; font-size: 0.72rem; font-weight: 700; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+
+    /* Situation grid */
+    .sit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .sit-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .sit-btn:hover { border-color: var(--accent); }
+    .sit-btn.active { border-color: #ec4899; background: color-mix(in srgb, #ec4899 12%, transparent); color: #ec4899; }
+
+    /* Relationship */
+    .rel-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .rel-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .rel-btn:hover { border-color: var(--accent); }
+    .rel-btn.active { border-color: #8b5cf6; background: color-mix(in srgb, #8b5cf6 12%, transparent); }
+    .rel-icon { font-size: 1.6rem; }
+    .rel-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .rel-sub { font-size: 0.75rem; color: var(--muted); }
+
+    /* Format toggle */
+    .format-toggle { display: flex; gap: 10px; }
+    .fmt-btn {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .fmt-btn.active { border-color: #06b6d4; background: color-mix(in srgb, #06b6d4 12%, transparent); color: #0e7490; }
+
+    /* Optional fields */
+    .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .opt-field { display: flex; flex-direction: column; gap: 5px; }
+    .opt-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    .text-input, .text-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .text-input:focus, .text-area:focus { outline: none; border-color: var(--accent); }
+    .text-area { resize: vertical; }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 8px;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .loading-box { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 10px; background: var(--surface); margin-top: 14px; font-size: 0.95rem; color: var(--muted); }
+    .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; color: #b91c1c; font-size: 0.9rem; margin-top: 12px; }
+
+    /* Result section */
+    .result-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .result-meta { font-size: 0.82rem; color: var(--muted); line-height: 1.7; text-align: right; }
+
+    .writing-note {
+      background: color-mix(in srgb, #f59e0b 12%, transparent);
+      border: 1px solid #f59e0b;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    /* Tabs */
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* Pattern card */
+    .pattern-panel { display: none; }
+    .pattern-panel.active { display: block; }
+
+    .pattern-tips {
+      display: inline-block;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .subject-row {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .subject-row strong { color: var(--text); }
+
+    .letter-body {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 0.95rem;
+      line-height: 2;
+      white-space: pre-wrap;
+      min-height: 160px;
+      color: var(--text);
+    }
+
+    .copy-row { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .btn-copy {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .sit-grid { grid-template-columns: 1fr 1fr; }
+      .rel-row { grid-template-columns: 1fr; }
+      .opt-grid { grid-template-columns: 1fr; }
+      .tool-title { font-size: 1.4rem; }
+    }
+  </style>
+
+  <script is:inline>
+    let selectedSit = '';
+    let selectedRel = '';
+    let selectedFmt = 'handwritten';
+
+    // Situation buttons
+    document.getElementById('sit-grid').addEventListener('click', e => {
+      const btn = e.target.closest('.sit-btn');
+      if (!btn) return;
+      document.querySelectorAll('.sit-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedSit = btn.dataset.sit;
+    });
+
+    // Relationship buttons
+    document.getElementById('rel-row').addEventListener('click', e => {
+      const btn = e.target.closest('.rel-btn');
+      if (!btn) return;
+      document.querySelectorAll('.rel-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRel = btn.dataset.rel;
+    });
+
+    // Format toggle
+    document.getElementById('format-toggle').addEventListener('click', e => {
+      const btn = e.target.closest('.fmt-btn');
+      if (!btn) return;
+      document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFmt = btn.dataset.fmt;
+    });
+
+    async function generate() {
+      if (!selectedSit) { showError('シチュエーションを選択してください。'); return; }
+      if (!selectedRel) { showError('相手との距離感を選択してください。'); return; }
+      clearError();
+
+      const payload = {
+        situation: selectedSit,
+        relationship: selectedRel,
+        format: selectedFmt,
+        recipientName: document.getElementById('recipient-name').value.trim(),
+        senderName: document.getElementById('sender-name').value.trim(),
+        detail: document.getElementById('detail').value.trim(),
+      };
+
+      document.getElementById('generate-btn').disabled = true;
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('result-section').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/thank-you-letter', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '生成に失敗しました');
+        renderResult(data, payload);
+        document.getElementById('result-section').style.display = 'block';
+        document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('generate-btn').disabled = false;
+      }
+    }
+
+    const SIT_LABELS = { gift:'贈答品・お中元・お歳暮', interview:'就活・転職 面接後', funeral:'葬儀・弔事', business:'ビジネス接待・会食', visit:'訪問・お世話になった', favor:'紹介・助けてもらった' };
+    const REL_LABELS = { formal:'目上・ビジネス', colleague:'知人・同僚', friend:'親しい友人' };
+    const FMT_LABELS = { handwritten:'✍️ 手書き向け', email:'📧 メール向け' };
+
+    function renderResult(data, payload) {
+      const meta = `${SIT_LABELS[payload.situation] || ''} ／ ${REL_LABELS[payload.relationship] || ''} ／ ${FMT_LABELS[payload.format] || ''}`;
+      document.getElementById('result-meta').innerHTML = meta.replace(/／/g, '<br>');
+
+      if (data.writingNote) {
+        const wn = document.getElementById('writing-note');
+        wn.textContent = '💡 ' + data.writingNote;
+        wn.style.display = 'block';
+      } else {
+        document.getElementById('writing-note').style.display = 'none';
+      }
+
+      const tabBar = document.getElementById('tab-bar');
+      const wrap = document.getElementById('patterns-wrap');
+      tabBar.innerHTML = '';
+      wrap.innerHTML = '';
+
+      (data.patterns || []).forEach((p, i) => {
+        // tab button
+        const tab = document.createElement('button');
+        tab.className = 'tab-btn' + (i === 0 ? ' active' : '');
+        tab.textContent = p.label || `パターン${i + 1}`;
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.pattern-panel').forEach(b => b.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`panel-${i}`).classList.add('active');
+        });
+        tabBar.appendChild(tab);
+
+        // panel
+        const panel = document.createElement('div');
+        panel.className = 'pattern-panel' + (i === 0 ? ' active' : '');
+        panel.id = `panel-${i}`;
+
+        let html = `<span class="pattern-tips">✨ ${escHtml(p.tips || '')}</span>`;
+        if (payload.format === 'email' && p.subject) {
+          html += `<div class="subject-row">件名：<strong>${escHtml(p.subject)}</strong></div>`;
+        }
+        html += `<div class="letter-body" id="body-${i}">${escHtml(p.text || '')}</div>`;
+        html += `<div class="copy-row"><button class="btn-copy" onclick="copyPattern(${i})">📋 コピー</button></div>`;
+        panel.innerHTML = html;
+        wrap.appendChild(panel);
+      });
+    }
+
+    function copyPattern(i) {
+      const el = document.getElementById(`body-${i}`);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        const btns = document.querySelectorAll('.btn-copy');
+        const btn = btns[i];
+        if (btn) {
+          const orig = btn.textContent;
+          btn.textContent = 'コピーしました！';
+          setTimeout(() => { btn.textContent = orig; }, 2000);
+        }
+      });
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-box');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function clearError() {
+      document.getElementById('error-box').style.display = 'none';
+    }
+  </script>
+</BaseLayout>
