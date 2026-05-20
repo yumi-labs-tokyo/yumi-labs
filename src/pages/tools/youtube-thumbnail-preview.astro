@@ -1,0 +1,635 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+---
+<Layout
+  title="YouTubeサムネ文字配置プレビュー | yumi-Labs"
+  description="キャッチコピーを入れると左寄せ・中央・縁取りなど6パターンのサムネイルをCanvas生成・DL。"
+>
+  <div class="max-w-screen-xl mx-auto px-4 py-8">
+    <div class="mb-6">
+      <div class="text-2xl font-bold text-gray-900">YouTubeサムネ文字配置プレビュー</div>
+      <p class="text-gray-500 mt-1 text-sm">キャッチコピーを入れると6つの配置パターンを自動プレビュー。気に入ったパターンを1280×720pxでダウンロード。</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
+
+      <!-- ===== LEFT: コントロール ===== -->
+      <div class="space-y-4">
+
+        <!-- テキスト -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div class="text-sm font-semibold text-gray-700">✏️ テキスト</div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">メインテキスト（改行可）</label>
+            <textarea id="inp-main" rows="3" maxlength="40" placeholder="衝撃の事実を&#10;大公開！"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none font-bold"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">サブテキスト（任意）</label>
+            <input id="inp-sub" type="text" maxlength="30" placeholder="〜知らないと損する話〜"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">アクセント数字・ラベル（任意）</label>
+            <input id="inp-accent" type="text" maxlength="6" placeholder="10選"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+          </div>
+        </div>
+
+        <!-- 背景 -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div class="text-sm font-semibold text-gray-700">🎨 背景</div>
+
+          <!-- ソリッドカラー -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block">カラー</label>
+            <div class="flex flex-wrap gap-2 mb-2" id="bg-swatches">
+              <button data-bg="#1a1a2e" onclick="setBgColor(this)" title="ダークネイビー" class="w-7 h-7 rounded-full border-2 border-gray-300 swatch-btn" style="background:#1a1a2e"></button>
+              <button data-bg="#c0392b" onclick="setBgColor(this)" title="レッド" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#c0392b"></button>
+              <button data-bg="#2980b9" onclick="setBgColor(this)" title="ブルー" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#2980b9"></button>
+              <button data-bg="#f39c12" onclick="setBgColor(this)" title="イエロー" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#f39c12"></button>
+              <button data-bg="#27ae60" onclick="setBgColor(this)" title="グリーン" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#27ae60"></button>
+              <button data-bg="#8e44ad" onclick="setBgColor(this)" title="パープル" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#8e44ad"></button>
+              <button data-bg="#000000" onclick="setBgColor(this)" title="ブラック" class="w-7 h-7 rounded-full border-2 border-transparent swatch-btn" style="background:#000"></button>
+              <button data-bg="#ffffff" onclick="setBgColor(this)" title="ホワイト" class="w-7 h-7 rounded-full border-2 border-gray-300 swatch-btn" style="background:#fff"></button>
+            </div>
+            <input type="color" id="opt-bg" value="#1a1a2e" class="h-8 w-full rounded border border-gray-300 cursor-pointer" />
+          </div>
+
+          <!-- グラデーション -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1.5 block">グラデーション（選択で背景に適用）</label>
+            <div class="grid grid-cols-5 gap-1.5" id="grad-presets">
+              <button data-grad="0" onclick="setGrad(this)" title="サンセット" class="h-8 rounded-lg grad-btn border-2 border-transparent" style="background:linear-gradient(135deg,#f6416c,#ffcd3c)"></button>
+              <button data-grad="1" onclick="setGrad(this)" title="オーシャン" class="h-8 rounded-lg grad-btn border-2 border-transparent" style="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e)"></button>
+              <button data-grad="2" onclick="setGrad(this)" title="ファイア" class="h-8 rounded-lg grad-btn border-2 border-transparent" style="background:linear-gradient(135deg,#f12711,#f5af19)"></button>
+              <button data-grad="3" onclick="setGrad(this)" title="ミント" class="h-8 rounded-lg grad-btn border-2 border-transparent" style="background:linear-gradient(135deg,#11998e,#38ef7d)"></button>
+              <button data-grad="4" onclick="setGrad(this)" title="パープル" class="h-8 rounded-lg grad-btn border-2 border-transparent" style="background:linear-gradient(135deg,#8e2de2,#4a00e0)"></button>
+            </div>
+          </div>
+
+          <!-- 画像アップロード -->
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">背景画像（任意）</label>
+            <input type="file" id="inp-bgimg" accept="image/*" onchange="loadBgImage(this)"
+              class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer" />
+            <button id="btn-clear-img" onclick="clearBgImage()" class="hidden text-xs text-gray-400 hover:text-red-500 mt-1">✕ 画像を削除</button>
+          </div>
+        </div>
+
+        <!-- テキストカラー -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div class="text-sm font-semibold text-gray-700">🖍 テキストカラー</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">文字色</label>
+              <div class="flex gap-1.5 mb-1.5">
+                <button data-tc="#ffffff" onclick="setTc(this)" class="w-6 h-6 rounded-full border border-gray-300 tc-btn" style="background:#fff"></button>
+                <button data-tc="#ffd700" onclick="setTc(this)" class="w-6 h-6 rounded-full border border-transparent tc-btn" style="background:#ffd700"></button>
+                <button data-tc="#ff4444" onclick="setTc(this)" class="w-6 h-6 rounded-full border border-transparent tc-btn" style="background:#ff4444"></button>
+                <button data-tc="#000000" onclick="setTc(this)" class="w-6 h-6 rounded-full border border-gray-300 tc-btn" style="background:#000"></button>
+              </div>
+              <input type="color" id="opt-tc" value="#ffffff" class="h-7 w-full rounded border border-gray-300 cursor-pointer" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">縁取り色</label>
+              <div class="flex gap-1.5 mb-1.5">
+                <button data-sc="#000000" onclick="setSc(this)" class="w-6 h-6 rounded-full border border-gray-300 sc-btn" style="background:#000"></button>
+                <button data-sc="#ffffff" onclick="setSc(this)" class="w-6 h-6 rounded-full border border-gray-300 sc-btn" style="background:#fff"></button>
+                <button data-sc="#ff0000" onclick="setSc(this)" class="w-6 h-6 rounded-full border border-transparent sc-btn" style="background:#ff0000"></button>
+                <button data-sc="#ffd700" onclick="setSc(this)" class="w-6 h-6 rounded-full border border-transparent sc-btn" style="background:#ffd700"></button>
+              </div>
+              <input type="color" id="opt-sc" value="#000000" class="h-7 w-full rounded border border-gray-300 cursor-pointer" />
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">アクセントカラー</label>
+            <div class="flex gap-1.5">
+              <button data-ac="#ff0000" onclick="setAc(this)" class="w-6 h-6 rounded-full border border-transparent ac-btn" style="background:#ff0000"></button>
+              <button data-ac="#ffd700" onclick="setAc(this)" class="w-6 h-6 rounded-full border border-transparent ac-btn" style="background:#ffd700"></button>
+              <button data-ac="#00ff88" onclick="setAc(this)" class="w-6 h-6 rounded-full border border-transparent ac-btn" style="background:#00ff88"></button>
+              <button data-ac="#00cfff" onclick="setAc(this)" class="w-6 h-6 rounded-full border border-transparent ac-btn" style="background:#00cfff"></button>
+              <input type="color" id="opt-ac" value="#ff0000" class="h-6 w-20 rounded border border-gray-300 cursor-pointer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- フォント -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <div class="text-sm font-semibold text-gray-700 mb-2">🔤 フォント</div>
+          <select id="opt-font" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+            <option value="Noto Sans JP">Noto Sans JP（標準）</option>
+            <option value="Zen Kaku Gothic Black">Zen Kaku Gothic Black（インパクト）</option>
+            <option value="M PLUS 1p">M PLUS 1p（丸ゴシック）</option>
+          </select>
+          <p id="font-status" class="text-xs text-gray-400 mt-1">フォント読み込み中...</p>
+        </div>
+
+        <!-- ダウンロード -->
+        <button onclick="downloadSelected()"
+          class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+          ⬇ 選択パターンをDL (1280×720px)
+        </button>
+        <p class="text-xs text-center text-gray-400">パターンをクリックして選択 → ダウンロード</p>
+      </div>
+
+      <!-- ===== RIGHT: プレビューグリッド ===== -->
+      <div>
+        <div class="grid grid-cols-2 gap-3" id="preview-grid">
+          <!-- 6 canvases rendered by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // ===== STATE =====
+    const W = 1280, H = 720;
+    let bgColor = '#1a1a2e';
+    let bgGradient = null;
+    let bgImage = null;
+    let textColor = '#ffffff';
+    let strokeColor = '#000000';
+    let accentColor = '#ff0000';
+    let fontFamily = 'Noto Sans JP';
+    let selectedPattern = 0;
+    let loadedFonts = new Set();
+
+    const GRADIENTS = [
+      { stops: [[0,'#f6416c'],[1,'#ffcd3c']], angle: 135 },
+      { stops: [[0,'#0f3460'],[0.5,'#16213e'],[1,'#1a1a2e']], angle: 135 },
+      { stops: [[0,'#f12711'],[1,'#f5af19']], angle: 135 },
+      { stops: [[0,'#11998e'],[1,'#38ef7d']], angle: 135 },
+      { stops: [[0,'#8e2de2'],[1,'#4a00e0']], angle: 135 },
+    ];
+
+    const PATTERNS = [
+      { id: 'left-panel',   label: '① 左パネル型' },
+      { id: 'center',       label: '② センター型' },
+      { id: 'outline',      label: '③ 縁取り型' },
+      { id: 'band',         label: '④ カラー帯型' },
+      { id: 'box',          label: '⑤ ボックス型' },
+      { id: 'impact',       label: '⑥ インパクト型' },
+    ];
+
+    // ===== INIT =====
+    function init() {
+      // Build preview grid
+      const grid = document.getElementById('preview-grid');
+      PATTERNS.forEach((p, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative cursor-pointer rounded-xl overflow-hidden border-2 border-transparent hover:border-red-400 transition-all';
+        wrapper.id = `wrap-${i}`;
+        wrapper.onclick = () => selectPattern(i);
+
+        const canvas = document.createElement('canvas');
+        canvas.id = `canvas-${i}`;
+        canvas.width = W;
+        canvas.height = H;
+        canvas.style.cssText = 'width:100%;height:auto;display:block;';
+
+        const label = document.createElement('div');
+        label.className = 'absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs py-1 text-center font-medium';
+        label.textContent = p.label;
+
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(label);
+        grid.appendChild(wrapper);
+      });
+
+      selectPattern(0);
+      loadFont(fontFamily);
+
+      // Events
+      ['inp-main','inp-sub','inp-accent'].forEach(id => {
+        document.getElementById(id).addEventListener('input', debounce(renderAll, 200));
+      });
+      document.getElementById('opt-bg').addEventListener('input', e => { bgGradient = null; bgColor = e.target.value; clearGradSel(); renderAll(); });
+      document.getElementById('opt-tc').addEventListener('input', e => { textColor = e.target.value; renderAll(); });
+      document.getElementById('opt-sc').addEventListener('input', e => { strokeColor = e.target.value; renderAll(); });
+      document.getElementById('opt-ac').addEventListener('input', e => { accentColor = e.target.value; renderAll(); });
+      document.getElementById('opt-font').addEventListener('change', async e => {
+        fontFamily = e.target.value;
+        document.getElementById('font-status').textContent = '読み込み中...';
+        await loadFont(fontFamily);
+        renderAll();
+      });
+    }
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    // ===== FONT =====
+    async function loadFont(name) {
+      if (loadedFonts.has(name)) {
+        document.getElementById('font-status').textContent = `✅ ${name}`;
+        return;
+      }
+      const gfMap = {
+        'Noto Sans JP': 'Noto+Sans+JP:wght@700;900',
+        'Zen Kaku Gothic Black': 'Zen+Kaku+Gothic+Black',
+        'M PLUS 1p': 'M+PLUS+1p:wght@700;900',
+      };
+      const gf = gfMap[name];
+      if (gf) {
+        const linkId = 'gf-' + name.replace(/\s/g, '-');
+        if (!document.getElementById(linkId)) {
+          const link = document.createElement('link');
+          link.id = linkId; link.rel = 'stylesheet';
+          link.href = `https://fonts.googleapis.com/css2?family=${gf}&display=swap`;
+          document.head.appendChild(link);
+        }
+      }
+      try {
+        await document.fonts.load(`900 60px "${name}"`);
+        loadedFonts.add(name);
+        document.getElementById('font-status').textContent = `✅ ${name}`;
+      } catch(e) {
+        document.getElementById('font-status').textContent = '⚠ フォント読込失敗（代替使用）';
+      }
+    }
+
+    // ===== COLOR CONTROLS =====
+    function setBgColor(btn) {
+      bgColor = btn.dataset.bg;
+      bgGradient = null;
+      document.getElementById('opt-bg').value = bgColor;
+      highlightSwatch('swatch-btn', btn);
+      clearGradSel();
+      renderAll();
+    }
+    function setGrad(btn) {
+      bgGradient = GRADIENTS[parseInt(btn.dataset.grad)];
+      highlightSwatch('grad-btn', btn);
+      highlightSwatch('swatch-btn', null);
+      renderAll();
+    }
+    function clearGradSel() { document.querySelectorAll('.grad-btn').forEach(b => b.classList.replace('border-white','border-transparent')); }
+    function setTc(btn)  { textColor = btn.dataset.tc;   document.getElementById('opt-tc').value = textColor;   highlightSwatch('tc-btn', btn); renderAll(); }
+    function setSc(btn)  { strokeColor = btn.dataset.sc; document.getElementById('opt-sc').value = strokeColor; highlightSwatch('sc-btn', btn); renderAll(); }
+    function setAc(btn)  { accentColor = btn.dataset.ac; document.getElementById('opt-ac').value = accentColor; highlightSwatch('ac-btn', btn); renderAll(); }
+
+    function highlightSwatch(cls, activeBtn) {
+      document.querySelectorAll('.' + cls).forEach(b => b.classList.remove('border-indigo-500','border-white','ring-2','ring-red-400'));
+      if (activeBtn) activeBtn.classList.add('border-indigo-500');
+    }
+
+    // ===== BG IMAGE =====
+    function loadBgImage(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => { bgImage = img; document.getElementById('btn-clear-img').classList.remove('hidden'); renderAll(); };
+      img.src = URL.createObjectURL(file);
+    }
+    function clearBgImage() {
+      bgImage = null;
+      document.getElementById('inp-bgimg').value = '';
+      document.getElementById('btn-clear-img').classList.add('hidden');
+      renderAll();
+    }
+
+    // ===== PATTERN SELECT =====
+    function selectPattern(i) {
+      selectedPattern = i;
+      PATTERNS.forEach((_, j) => {
+        const w = document.getElementById(`wrap-${j}`);
+        w.classList.toggle('border-red-400', j === i);
+        w.classList.toggle('border-transparent', j !== i);
+        w.classList.toggle('shadow-lg', j === i);
+      });
+    }
+
+    // ===== BACKGROUND DRAW =====
+    function drawBackground(ctx) {
+      if (bgImage) {
+        // Cover crop
+        const ir = bgImage.width / bgImage.height;
+        const cr = W / H;
+        let sx=0,sy=0,sw=bgImage.width,sh=bgImage.height;
+        if (ir > cr) { sw = bgImage.height*cr; sx=(bgImage.width-sw)/2; }
+        else         { sh = bgImage.width/cr;  sy=(bgImage.height-sh)/2; }
+        ctx.drawImage(bgImage, sx, sy, sw, sh, 0, 0, W, H);
+      } else if (bgGradient) {
+        const g = bgGradient;
+        const rad = g.angle * Math.PI / 180;
+        const grd = ctx.createLinearGradient(
+          W/2 - Math.cos(rad)*W/2, H/2 - Math.sin(rad)*H/2,
+          W/2 + Math.cos(rad)*W/2, H/2 + Math.sin(rad)*H/2
+        );
+        g.stops.forEach(([pos, color]) => grd.addColorStop(pos, color));
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, W, H);
+      } else {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    // ===== TEXT HELPER =====
+    function strokeFill(ctx, text, x, y, sw, fill, stroke, align='center', base='middle') {
+      ctx.textAlign = align;
+      ctx.textBaseline = base;
+      if (sw > 0) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = sw;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(text, x, y);
+      }
+      ctx.fillStyle = fill;
+      ctx.fillText(text, x, y);
+    }
+
+    function getLines(ctx, text, maxW) {
+      const lines = [];
+      for (const raw of text.split('\n')) {
+        if (!raw.trim()) { lines.push(''); continue; }
+        let cur = '';
+        for (const ch of raw) {
+          if (ctx.measureText(cur+ch).width > maxW && cur) { lines.push(cur); cur = ch; }
+          else cur += ch;
+        }
+        if (cur) lines.push(cur);
+      }
+      return lines.filter(l => l !== '');
+    }
+
+    function fontStr(size, fam, weight='900') {
+      return `${weight} ${size}px "${fam}", "Hiragino Sans", sans-serif`;
+    }
+
+    // ===== 6 PATTERN RENDERERS =====
+
+    function renderLeftPanel(ctx, main, sub, accent) {
+      drawBackground(ctx);
+      // Dark overlay on left 55%
+      ctx.fillStyle = 'rgba(0,0,0,0.72)';
+      ctx.fillRect(0, 0, W*0.58, H);
+      // Accent bar
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(0, 0, 14, H);
+
+      const fs = 96, padX = 60;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W*0.52);
+      const totalH = lines.length * (fs*1.25);
+      let y = (H - totalH) / 2 + fs*0.6;
+
+      lines.forEach(line => {
+        strokeFill(ctx, line, padX+14, y, 6, textColor, strokeColor, 'left');
+        y += fs*1.25;
+      });
+
+      if (sub) {
+        ctx.font = fontStr(44, fontFamily, '700');
+        const subY = Math.min(y + 20, H - 60);
+        strokeFill(ctx, sub, padX+14, subY, 4, accentColor, strokeColor, 'left');
+      }
+      if (accent) {
+        ctx.font = fontStr(120, fontFamily);
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(accent, W*0.57-20, H-20);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function renderCenter(ctx, main, sub, accent) {
+      drawBackground(ctx);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 0, W, H);
+
+      const fs = 104;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W - 160);
+      const totalH = lines.length * (fs*1.2);
+      let y = (H - totalH) / 2 + fs*0.5 - (sub ? 30 : 0);
+
+      // Shadow
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 20;
+
+      lines.forEach(line => {
+        strokeFill(ctx, line, W/2, y, 5, textColor, strokeColor);
+        y += fs*1.2;
+      });
+
+      ctx.shadowBlur = 0;
+
+      if (sub) {
+        ctx.font = fontStr(46, fontFamily, '700');
+        strokeFill(ctx, sub, W/2, y+20, 3, accentColor, strokeColor);
+      }
+      if (accent) {
+        ctx.font = fontStr(64, fontFamily);
+        ctx.fillStyle = accentColor;
+        ctx.globalAlpha = 0.9;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillText(accent, W-50, 40);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function renderOutline(ctx, main, sub, accent) {
+      drawBackground(ctx);
+
+      const fs = 110;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W - 100);
+      const totalH = lines.length * (fs*1.25);
+      let y = (H - totalH) / 2 + fs*0.55 - (sub ? 30 : 0);
+
+      lines.forEach(line => {
+        // Extra thick stroke for outline effect
+        ctx.font = fontStr(fs, fontFamily);
+        strokeFill(ctx, line, W/2, y, 16, textColor, strokeColor);
+        y += fs*1.25;
+      });
+
+      if (sub) {
+        ctx.font = fontStr(50, fontFamily, '700');
+        strokeFill(ctx, sub, W/2, y+16, 8, accentColor, strokeColor);
+      }
+      if (accent) {
+        ctx.font = fontStr(130, fontFamily);
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(accent, W/2, H/2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function renderBand(ctx, main, sub, accent) {
+      drawBackground(ctx);
+
+      const bandH = 240;
+      const bandY = (H - bandH) / 2;
+
+      // Band shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(0, bandY+8, W, bandH);
+      // Band
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(0, bandY, W, bandH);
+
+      // Diagonal cuts
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.beginPath();
+      ctx.moveTo(0, bandY); ctx.lineTo(80, bandY); ctx.lineTo(0, bandY+bandH); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(W, bandY+bandH); ctx.lineTo(W-80, bandY+bandH); ctx.lineTo(W, bandY); ctx.closePath(); ctx.fill();
+
+      const fs = 88;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W-120);
+      const totalH = lines.length * (fs*1.15);
+      let y = bandY + (bandH - totalH)/2 + fs*0.55;
+
+      lines.forEach(line => {
+        strokeFill(ctx, line, W/2, y, 4, '#fff', 'rgba(0,0,0,0.5)');
+        y += fs*1.15;
+      });
+
+      if (sub) {
+        ctx.font = fontStr(42, fontFamily, '700');
+        const subY = bandY + bandH + 36;
+        strokeFill(ctx, sub, W/2, subY, 4, textColor, strokeColor);
+      }
+      if (accent) {
+        ctx.font = fontStr(56, fontFamily);
+        strokeFill(ctx, accent, 60, bandY + bandH/2, 4, '#fff', 'rgba(0,0,0,0.5)', 'left');
+      }
+    }
+
+    function renderBox(ctx, main, sub, accent) {
+      drawBackground(ctx);
+
+      const fs = 100;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W - 200);
+
+      const padX = 60, padY = 28;
+      const boxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + padX*2;
+      const lineH = fs*1.2;
+      const boxH = lines.length * lineH + padY*2;
+      const boxX = (W - boxW) / 2;
+      const boxY = (H - boxH) / 2 - (sub ? 40 : 0);
+
+      // Box shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(boxX+8, boxY+8, boxW, boxH);
+      // Box
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+
+      let y = boxY + padY + fs*0.7;
+      lines.forEach(line => {
+        strokeFill(ctx, line, W/2, y, 3, '#fff', 'rgba(0,0,0,0.3)');
+        y += lineH;
+      });
+
+      if (sub) {
+        ctx.font = fontStr(44, fontFamily, '700');
+        strokeFill(ctx, sub, W/2, boxY + boxH + 44, 3, textColor, strokeColor);
+      }
+      if (accent) {
+        const aFs = 72;
+        ctx.font = fontStr(aFs, fontFamily);
+        ctx.fillStyle = accentColor;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillText(accent, W-40, 30);
+      }
+    }
+
+    function renderImpact(ctx, main, sub, accent) {
+      drawBackground(ctx);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Decorative lines
+      const lineColor = accentColor;
+      const lineY1 = H*0.22, lineY2 = H*0.78;
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(60, lineY1); ctx.lineTo(W-60, lineY1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(60, lineY2); ctx.lineTo(W-60, lineY2); ctx.stroke();
+
+      const fs = 112;
+      ctx.font = fontStr(fs, fontFamily);
+      const lines = getLines(ctx, main || 'メインテキスト', W - 120);
+      const totalH = lines.length * (fs*1.15);
+      let y = lineY1 + (lineY2 - lineY1 - totalH)/2 + fs*0.55;
+
+      lines.forEach(line => {
+        // Double shadow for impact
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = 30;
+        strokeFill(ctx, line, W/2, y, 8, textColor, strokeColor);
+        ctx.shadowBlur = 0;
+        y += fs*1.15;
+      });
+
+      if (sub) {
+        ctx.font = fontStr(38, fontFamily, '700');
+        ctx.letterSpacing = '4px';
+        strokeFill(ctx, sub, W/2, lineY2 + 34, 3, accentColor, strokeColor);
+      }
+      if (accent) {
+        ctx.font = fontStr(56, fontFamily);
+        strokeFill(ctx, accent, W/2, lineY1 - 36, 3, accentColor, strokeColor);
+      }
+    }
+
+    // ===== RENDER ALL =====
+    const RENDERERS = [renderLeftPanel, renderCenter, renderOutline, renderBand, renderBox, renderImpact];
+
+    function renderAll() {
+      const main   = document.getElementById('inp-main').value   || 'メインテキスト';
+      const sub    = document.getElementById('inp-sub').value;
+      const accent = document.getElementById('inp-accent').value;
+
+      PATTERNS.forEach((_, i) => {
+        const canvas = document.getElementById(`canvas-${i}`);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        try { RENDERERS[i](ctx, main, sub, accent); } catch(e) { console.error(e); }
+      });
+    }
+
+    // ===== DOWNLOAD =====
+    function downloadSelected() {
+      const main   = document.getElementById('inp-main').value   || 'メインテキスト';
+      const sub    = document.getElementById('inp-sub').value;
+      const accent = document.getElementById('inp-accent').value;
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = W; offscreen.height = H;
+      const ctx = offscreen.getContext('2d');
+
+      try { RENDERERS[selectedPattern](ctx, main, sub, accent); } catch(e) { alert('描画エラー: '+e.message); return; }
+
+      const a = document.createElement('a');
+      a.href = offscreen.toDataURL('image/png');
+      a.download = `サムネイル_${PATTERNS[selectedPattern].label}.png`;
+      a.click();
+    }
+
+    // ===== BOOT =====
+    window.addEventListener('DOMContentLoaded', () => {
+      init();
+      loadFont('Noto Sans JP').then(() => renderAll());
+      // Set initial swatch highlight
+      document.querySelector('[data-bg="#1a1a2e"]').classList.add('border-indigo-500');
+      document.querySelector('[data-tc="#ffffff"]').classList.add('border-indigo-500');
+      document.querySelector('[data-sc="#000000"]').classList.add('border-indigo-500');
+    });
+  </script>
+</Layout>

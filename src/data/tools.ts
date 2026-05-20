@@ -173,7 +173,7 @@ export const tools: Tool[] = [
 		id: 24, slug: 'youtube-thumbnail-preview',
 		name: 'YouTubeサムネ文字配置プレビュー',
 		description: 'キャッチコピーを入れると複数の配置パターンをプレビュー。',
-		emoji: '🎬', category: 'creator', badge: 'New', status: 'coming-soon',
+		emoji: '🎬', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 25, slug: 'doujin-colophon',
