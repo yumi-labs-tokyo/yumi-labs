@@ -39,7 +39,7 @@ export const tools: Tool[] = [
 		id: 2, slug: 'resignation-script',
 		name: '退職交渉スクリプト生成',
 		description: '状況と理由を選ぶと、上司への切り出し方〜引き止め対応まで台本化。',
-		emoji: '📝', category: 'practical', status: 'coming-soon',
+		emoji: '📝', category: 'practical', status: 'available',
 	},
 	{
 		id: 3, slug: 'split-bill',

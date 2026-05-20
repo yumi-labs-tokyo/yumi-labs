@@ -1,0 +1,466 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+	title="退職交渉スクリプト生成 — yumi-Labs"
+	description="状況と理由を選ぶだけで、上司への退職の切り出し方〜引き止め対応まで会話台本を自動生成。"
+>
+	<div class="tool-wrapper wrapper">
+		<nav class="breadcrumb">
+			<a href="/">← ツール一覧</a>
+		</nav>
+
+		<header class="tool-header">
+			<div class="section-title-emoji">📝</div>
+			<div>
+				<h1 class="tool-title">退職交渉スクリプト生成</h1>
+				<p class="tool-subtitle">状況と理由を選ぶだけで、上司との会話台本を自動生成します</p>
+			</div>
+		</header>
+	</div>
+
+	<!-- Tool content (self-contained styles) -->
+	<div class="tool-body">
+		<div class="t-container">
+
+			<!-- STEP 1: 状況 -->
+			<div class="t-card">
+				<div class="t-section-title">STEP 1 &nbsp;退職の状況を選んでください</div>
+				<div class="situation-grid">
+					<div class="situation-btn" data-situation="enmity" onclick="selectSituation(this)">
+						<span class="icon">🤝</span>
+						<div class="label">円満退職</div>
+						<div class="sub">関係良好・引き継ぎあり</div>
+					</div>
+					<div class="situation-btn" data-situation="conflict" onclick="selectSituation(this)">
+						<span class="icon">⚡</span>
+						<div class="label">対立・困難</div>
+						<div class="sub">引き止め強い・関係悪化</div>
+					</div>
+					<div class="situation-btn" data-situation="immediate" onclick="selectSituation(this)">
+						<span class="icon">🚨</span>
+						<div class="label">即日・緊急</div>
+						<div class="sub">今すぐ辞めたい・ハラスメント等</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- STEP 2: 理由 -->
+			<div class="t-card">
+				<div class="t-section-title">STEP 2 &nbsp;退職理由を選んでください</div>
+				<div class="reason-grid">
+					<div class="reason-btn" data-reason="career" onclick="selectReason(this)">🚀 キャリアアップ・転職</div>
+					<div class="reason-btn" data-reason="health" onclick="selectReason(this)">🏥 健康上の理由</div>
+					<div class="reason-btn" data-reason="family" onclick="selectReason(this)">👨‍👩‍👧 家族・介護の事情</div>
+					<div class="reason-btn" data-reason="environment" onclick="selectReason(this)">😔 職場環境への不満</div>
+					<div class="reason-btn" data-reason="startup" onclick="selectReason(this)">💡 起業・独立</div>
+					<div class="reason-btn" data-reason="study" onclick="selectReason(this)">📚 学業・留学・資格</div>
+					<div class="reason-btn" data-reason="harassment" onclick="selectReason(this)">🛑 ハラスメント・違法行為</div>
+					<div class="reason-btn" data-reason="other" onclick="selectReason(this)">📌 その他・一身上の都合</div>
+				</div>
+			</div>
+
+			<!-- STEP 3: 詳細 -->
+			<div class="t-card">
+				<div class="t-section-title">STEP 3 &nbsp;詳細情報（任意）</div>
+				<div class="input-group">
+					<label>上司の呼び方</label>
+					<input type="text" id="boss-name" placeholder="例：田中部長、山田さん" maxlength="20">
+				</div>
+				<div class="input-group">
+					<label>希望する退職日・時期</label>
+					<input type="text" id="resign-date" placeholder="例：来月末、3月31日、できるだけ早く">
+				</div>
+				<div class="input-group">
+					<label>伝えたい補足（引き継ぎの意向、感謝など）</label>
+					<textarea id="extra-note" placeholder="例：引き継ぎはしっかり対応したい、お世話になった感謝を伝えたい"></textarea>
+				</div>
+			</div>
+
+			<button class="generate-btn" id="generate-btn" onclick="generateScript()" disabled>
+				台本を生成する
+			</button>
+
+			<!-- OUTPUT -->
+			<div id="output">
+				<div class="t-card" style="margin-top:24px;">
+					<div class="script-header">
+						<div>
+							<h2>退職交渉スクリプト</h2>
+							<div id="output-badge" style="margin-top:6px;"></div>
+						</div>
+						<button class="copy-all-btn" id="copy-btn" onclick="copyAll()">全文コピー</button>
+					</div>
+					<div id="script-content"></div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</BaseLayout>
+
+<script>
+let selectedSituation = null;
+let selectedReason = null;
+
+function selectSituation(el) {
+  document.querySelectorAll('.situation-btn').forEach(b => b.classList.remove('selected', 'enmity', 'conflict', 'immediate'));
+  el.classList.add('selected', el.dataset.situation);
+  selectedSituation = el.dataset.situation;
+  checkReady();
+}
+
+function selectReason(el) {
+  document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedReason = el.dataset.reason;
+  checkReady();
+}
+
+function checkReady() {
+  document.getElementById('generate-btn').disabled = !(selectedSituation && selectedReason);
+}
+
+const situationLabels = {
+  enmity:    { label: '円満退職',   badge: 'badge-enmity',    icon: '🤝' },
+  conflict:  { label: '対立・困難', badge: 'badge-conflict',  icon: '⚡' },
+  immediate: { label: '即日・緊急', badge: 'badge-immediate', icon: '🚨' },
+};
+
+const reasonMap = {
+  career:      { label: 'キャリアアップ・転職', text: '自分のキャリアをさらに広げるため' },
+  health:      { label: '健康上の理由',         text: '体調面での事情があり' },
+  family:      { label: '家族・介護の事情',      text: '家族の事情・介護のため' },
+  environment: { label: '職場環境への不満',      text: '諸事情により（環境面での理由）' },
+  startup:     { label: '起業・独立',            text: '起業・独立を目指すため' },
+  study:       { label: '学業・留学・資格',       text: '学業・留学のため' },
+  harassment:  { label: 'ハラスメント・違法行為', text: '職場環境における問題のため' },
+  other:       { label: 'その他・一身上の都合',  text: '一身上の都合により' },
+};
+
+function generateScript() {
+  const bossName   = document.getElementById('boss-name').value.trim() || '部長';
+  const resignDate = document.getElementById('resign-date').value.trim() || '○月末';
+  const extraNote  = document.getElementById('extra-note').value.trim();
+  const s = selectedSituation;
+  const r = selectedReason;
+  const reason = reasonMap[r];
+  const si = situationLabels[s];
+
+  document.getElementById('output-badge').innerHTML =
+    `<span class="t-badge ${si.badge}">${si.icon} ${si.label}</span>
+     <span style="margin-left:8px;font-size:0.8rem;color:#64748b;">${reason.label}</span>`;
+
+  document.getElementById('script-content').innerHTML = buildScript(s, r, bossName, resignDate, extraNote, reason);
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function section(stepNum, title, isWarn) {
+  return `<div class="script-section${isWarn ? ' warn' : ''}">
+    <h3><span class="step-badge">STEP ${stepNum}</span>${title}</h3>`;
+}
+function myLine(text) {
+  return `<div class="dialogue"><div class="speaker">あなた</div><blockquote>${text}</blockquote></div>`;
+}
+function bossLine(text) {
+  return `<div class="dialogue boss"><div class="speaker">上司（想定）</div><blockquote>${text}</blockquote></div>`;
+}
+function tip(text) { return `<div class="t-tip">💡 <span>${text}</span></div>`; }
+function warn(text) { return `<div class="warning-box">⚠️ ${text}</div>`; }
+function retentionItem(tag, response) {
+  return `<li><div class="retention-tag">${tag}</div><div class="retention-response">${response}</div></li>`;
+}
+
+function buildScript(s, r, boss, date, extra, reason) {
+  let html = '';
+  if (s === 'immediate') {
+    html += section(1, '面談のアポを取る（当日）');
+    html += myLine(`${boss}、今日の業務終了後に15分ほどお時間をいただけますか？\nご相談したいことがございます。`);
+    html += tip('メールやチャットで記録を残しておくと安心です。');
+    html += '</div>';
+
+    html += section(2, '退職意思を明確に伝える');
+    const immText = r === 'harassment'
+      ? `実は、${boss}にご報告しなければならないことがあります。\n現在の職場環境において、${reason.text}、これ以上継続することが困難な状況です。\n\n大変恐れ入りますが、本日付けで退職させていただきたいと考えております。\n法律上、退職の意思表示から2週間で雇用契約は終了できると認識しています。\n有給休暇も残っておりますので、できれば今日から消化させていただきたいです。`
+      : `実は、${boss}に退職のご相談がございます。\n${reason.text}、誠に勝手ながら早急に退職させていただきたい状況です。\n\n具体的には、${date}を退職日として希望しております。\n短い期間での申し出となり、大変ご迷惑をおかけすることは十分承知しております。`;
+    html += myLine(immText);
+    html += '</div>';
+
+    if (r === 'harassment') {
+      html += section(3, '証拠と記録について', true);
+      html += `<div class="dialogue"><blockquote>記録・証拠をしっかり保全しておきましょう。</blockquote></div>`;
+      html += warn(`ハラスメント・違法行為がある場合、以下の対応も検討してください：<br>
+        ① 社内の相談窓口・コンプライアンス部門への申告<br>
+        ② 都道府県労働局やハローワークへの相談<br>
+        ③ 退職代行サービスの活用（直接交渉が困難な場合）<br>
+        ④ 証拠（メール・録音・日記）の保全`);
+      html += '</div>';
+    }
+
+    html += section(4, '引き止めへの対応');
+    html += `<ul class="retention-list">`;
+    html += retentionItem('「急すぎる」', `おっしゃる通り急なご相談で申し訳ありません。しかし、${reason.text}、今の状況では継続が難しいと判断いたしました。ご理解いただけますと幸いです。`);
+    html += retentionItem('「もう少し待ってほしい」', `ご配慮ありがとうございます。ただ、${date}までには退職させていただく必要がございます。引き継ぎできる範囲で最大限対応いたします。`);
+    html += `</ul></div>`;
+
+    if (extra) {
+      html += section(5, '締めの言葉');
+      html += myLine(`${extra}\n大変お世話になりました。ありがとうございます。`);
+      html += '</div>';
+    }
+    return html;
+  }
+
+  html += section(1, '面談のアポを取る（事前連絡）');
+  if (s === 'enmity') {
+    html += myLine(`${boss}、少しお時間よろしいでしょうか？\n個人的なご相談がありまして、30分ほどお時間をいただけますか？`);
+    html += tip('なるべく個室・会議室で話しましょう。「相談がある」とだけ伝え、内容は当日まで伏せて大丈夫です。');
+  } else {
+    html += myLine(`${boss}、折り入ってご相談したいことがございます。\n今週中に30分ほどお時間をいただくことは可能でしょうか？`);
+    html += tip('関係が悪化している場合、メール・チャットでアポを取り記録を残しましょう。');
+  }
+  html += '</div>';
+
+  html += section(2, '退職意思を伝える（本題の切り出し）');
+  html += myLine(buildMainText(s, r, boss, date, reason));
+  if (s === 'conflict' && r === 'environment') {
+    html += tip('不満の具体的な内容はこの場では言わず「一身上の都合」でまとめ、感情的にならないようにしましょう。');
+  } else if (s === 'enmity') {
+    html += tip('ポジティブな理由（成長・挑戦）を前面に出し、会社・上司への感謝を必ず添えましょう。');
+  }
+  html += '</div>';
+
+  html += section(3, '上司の想定反応（シミュレーション）');
+  html += bossLine(getBossReaction(s, r));
+  html += '</div>';
+
+  html += section(4, '引き止めパターン別の対応', s === 'conflict');
+  html += `<ul class="retention-list">`;
+  getRetentions(s, r, boss, date, reason).forEach(([tag, resp]) => { html += retentionItem(tag, resp); });
+  html += `</ul>`;
+  if (s === 'conflict') html += warn('感情的になりそうな場合は「少し考えさせてください」と一旦場を区切り、冷静さを保ちましょう。');
+  html += '</div>';
+
+  html += section(5, '締めの言葉');
+  html += myLine(buildClosing(s, r, boss, date, extra, reason));
+  html += tip('退職届は口頭確認の後、書面（退職届）で改めて提出しましょう。退職日・退職理由を明記します。');
+  html += '</div>';
+
+  return html;
+}
+
+function buildMainText(s, r, boss, date, reason) {
+  const thanks = s === 'enmity' ? 'いつもお世話になり、ありがとうございます。\n' : 'ご時間をとっていただきありがとうございます。\n';
+  const dateStr = date || '○月末';
+  const cores = {
+    career:      s === 'enmity' ? `実は、退職のご相談をしたいと思いまして…。\nこの度、${reason.text}、新しい環境に挑戦したいと考えております。\n${dateStr}を退職日としてご検討いただけますでしょうか。` : `実は、退職のお申し出をしたいと思います。\n${reason.text}、転職先が決まりました。\n${dateStr}での退職を希望しております。`,
+    health:      `実は、退職のご相談をしたいと思いまして…。\n${reason.text}、医師からも療養を勧められており、今後の業務継続が難しい状況です。\n大変勝手なお願いですが、${dateStr}での退職をご検討いただけますでしょうか。`,
+    family:      `実は、退職のご相談をしたいと思いまして…。\n${reason.text}、自宅での対応が必要になりました。\n誠に恐れ入りますが、${dateStr}での退職を希望しております。`,
+    environment: s === 'enmity' ? `実は、退職のご相談をしたいと思いまして…。\n個人的な事情により、${dateStr}での退職をお願いしたいと考えております。\n詳細は一身上の都合とさせていただきたいのですが、ご理解いただけますと幸いです。` : `実は、退職のご連絡をしたいと思います。\n一身上の都合により、${dateStr}での退職を希望しております。\nすでに気持ちは固まっておりますので、ご了承いただけますと幸いです。`,
+    startup:     `実は、退職のご相談をしたいと思いまして…。\n${reason.text}、事業の準備を進めてまいりました。\n${dateStr}での退職をご検討いただけますでしょうか。`,
+    study:       `実は、退職のご相談をしたいと思いまして…。\n${reason.text}、専念したいと思っております。\n${dateStr}での退職をお願いしたいと考えております。`,
+    harassment:  s === 'conflict' ? `実は、退職のご連絡をしたいと思います。\n職場における問題が継続しており、これ以上の勤務継続が困難です。\n${dateStr}での退職を正式にお申し出いたします。\nなお、詳細については別途書面にてお伝えする予定です。` : `実は、退職のご相談をしたいと思いまして…。\n職場環境において${reason.text}、このまま継続することが難しい状況です。\n${dateStr}での退職をお願いしたいと考えております。`,
+    other:       `実は、退職のご相談をしたいと思いまして…。\n一身上の都合により、${dateStr}での退職をお願いしたいと考えております。`,
+  };
+  return thanks + (cores[r] || cores.other);
+}
+
+function getBossReaction(s, r) {
+  if (s === 'conflict') return r === 'harassment' ? `…そうですか。突然ですね。\nどういった問題があったのか、もう少し詳しく聞かせてもらえますか？` : `そうですか…突然ですね。\nもう少し待てませんか？今辞められると困るんですが。`;
+  const map = { career: `そうですか、残念ですね…。\nもう決めたんですか？引き止めても無駄ですか？`, health: `それは大変でしたね。体が一番ですから…。\n少し休んで復帰するという選択肢はないですか？`, family: `それは仕方ないですね。ご家族の事情では…。\n在宅勤務やシフト変更で対応できませんか？`, startup: `そうですか、起業ですか。\n気持ちは固まっているんですね？` };
+  return map[r] || `そうですか…。\nもう少し考えてみる余地はないですか？`;
+}
+
+function getRetentions(s, r, boss, date, reason) {
+  const dateStr = date || '○月末';
+  const common = [
+    ['「もう少し待ってほしい」', `おっしゃる気持ちはよくわかります。ただ、${reason.text}、今の段階で決意しております。${dateStr}までにはご準備させてください。引き継ぎについては責任をもって対応いたします。`],
+    ['「条件を改善する」', `ご配慮いただき、ありがとうございます。ただ、今回の決断は給与や待遇の問題ではなく、${reason.text}という理由によるものです。気持ちは変わらない状況です。`],
+    ['「もったいない」「君には期待していた」', `そのようにおっしゃっていただけて、大変光栄です。${boss}のもとで学んだことは今後の人生でも活かしてまいります。それでも今は前に進む決断をさせてください。`],
+  ];
+  if (s === 'conflict') return [['「なぜ急に」', `急な申し出となり、申し訳ございません。ただ、すでに気持ちは固まっており、${dateStr}での退職を希望しております。引き継ぎには誠実に対応いたします。`], ['「受け入れられない」', `退職は労働者の権利として認められております。ご了承いただけなくとも、${dateStr}に退職の手続きを進めさせていただく予定です。書面での手続きが必要でしたらご案内ください。`], ...common];
+  if (r === 'health') return [['「休職して様子をみては」', `ご提案ありがとうございます。ただ、医師の見解や私自身の状況を考慮した上での判断です。休職ではなく退職が最善と考えております。`], ...common];
+  return common;
+}
+
+function buildClosing(s, r, boss, date, extra, reason) {
+  const dateStr = date || '○月末';
+  const base = s === 'enmity'
+    ? `改めて、${boss}をはじめ皆様には大変お世話になりました。\n${dateStr}までの残りの期間、精一杯務めさせていただきます。\n引き継ぎについても、できる限りしっかり対応いたします。`
+    : s === 'conflict'
+    ? `以上が私の意向です。${dateStr}での退職に向け、必要な手続きを進めさせていただきます。\n引き継ぎ資料の作成など、できる範囲で対応いたします。`
+    : `ご迷惑をおかけしますが、どうぞよろしくお願いいたします。`;
+  return extra ? `${base}\n\n${extra}` : base;
+}
+
+function copyAll() {
+  const content = document.getElementById('script-content');
+  let text = '【退職交渉スクリプト】\n\n';
+  content.querySelectorAll('.script-section').forEach(sec => {
+    text += `▼ ${sec.querySelector('h3').innerText}\n`;
+    sec.querySelectorAll('.dialogue').forEach(d => {
+      text += `[${d.querySelector('.speaker')?.innerText || ''}]\n${d.querySelector('blockquote')?.innerText || ''}\n\n`;
+    });
+    sec.querySelectorAll('.retention-list li').forEach(li => {
+      text += `◆ ${li.querySelector('.retention-tag')?.innerText || ''}\n${li.querySelector('.retention-response')?.innerText || ''}\n\n`;
+    });
+    sec.querySelectorAll('.t-tip, .warning-box').forEach(el => { text += `※ ${el.innerText}\n\n`; });
+  });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'コピー完了！';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '全文コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+<style>
+	/* Breadcrumb & header (uses site vars) */
+	.tool-wrapper { padding-block: 2rem 1rem; }
+	.breadcrumb a { font-size: var(--text-sm); color: var(--gray-300); text-decoration: none; font-family: var(--font-brand); }
+	.breadcrumb a:hover { color: var(--accent-dark); }
+	.tool-header { display: flex; align-items: flex-start; gap: 1rem; margin-top: 1.5rem; }
+	.section-title-emoji { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+	.tool-title { font-size: var(--text-2xl); margin: 0 0 0.3rem; }
+	.tool-subtitle { color: var(--gray-300); margin: 0; font-size: var(--text-base); }
+
+	/* Tool body — self-contained styles */
+	.tool-body {
+		padding: 0 1.5rem 5rem;
+	}
+	.t-container {
+		max-width: 720px;
+		margin: 0 auto;
+	}
+
+	.t-card {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		padding: 24px;
+		margin-bottom: 20px;
+		box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+	}
+	.t-section-title {
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		color: #64748b;
+		margin-bottom: 14px;
+	}
+
+	.situation-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+	.situation-btn {
+		border: 2px solid #e2e8f0;
+		border-radius: 10px;
+		padding: 14px 8px;
+		text-align: center;
+		cursor: pointer;
+		background: white;
+		transition: all 0.15s;
+		user-select: none;
+	}
+	.situation-btn .icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+	.situation-btn .label { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
+	.situation-btn .sub { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+	.situation-btn:hover { border-color: #2563eb; background: #eff6ff; }
+	.situation-btn.selected.enmity   { border-color: #16a34a; background: #f0fdf4; }
+	.situation-btn.selected.conflict { border-color: #dc2626; background: #fef2f2; }
+	.situation-btn.selected.immediate{ border-color: #f59e0b; background: #fffbeb; }
+
+	.reason-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+	.reason-btn {
+		border: 2px solid #e2e8f0;
+		border-radius: 8px;
+		padding: 10px 12px;
+		text-align: left;
+		cursor: pointer;
+		background: white;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #1e293b;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		transition: all 0.15s;
+	}
+	.reason-btn:hover { border-color: #2563eb; background: #eff6ff; }
+	.reason-btn.selected { border-color: #2563eb; background: #dbeafe; color: #1d4ed8; }
+
+	.input-group { margin-bottom: 14px; }
+	.input-group label { display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+	.input-group input, .input-group textarea {
+		width: 100%;
+		border: 1.5px solid #e2e8f0;
+		border-radius: 8px;
+		padding: 10px 12px;
+		font-size: 0.9rem;
+		font-family: inherit;
+		outline: none;
+		transition: border-color 0.15s;
+		background: white;
+		color: #1e293b;
+	}
+	.input-group input:focus, .input-group textarea:focus { border-color: #2563eb; }
+	.input-group textarea { resize: vertical; min-height: 72px; }
+
+	.generate-btn {
+		width: 100%;
+		padding: 16px;
+		background: #2563eb;
+		color: white;
+		border: none;
+		border-radius: 12px;
+		font-size: 1rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: background 0.15s, transform 0.1s;
+		letter-spacing: 0.5px;
+		font-family: inherit;
+	}
+	.generate-btn:hover { background: #1d4ed8; }
+	.generate-btn:active { transform: scale(0.98); }
+	.generate-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+
+	#output { display: none; }
+
+	.script-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+	.script-header h2 { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin: 0; }
+
+	.t-badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
+	.badge-enmity    { background: #dcfce7; color: #15803d; }
+	.badge-conflict  { background: #fee2e2; color: #b91c1c; }
+	.badge-immediate { background: #fef9c3; color: #a16207; }
+
+	.script-section { margin-bottom: 20px; border-left: 3px solid #2563eb; padding-left: 16px; }
+	.script-section.warn { border-left-color: #f59e0b; }
+	.script-section h3 { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+	.step-badge { background: #2563eb; color: white; border-radius: 99px; font-size: 0.65rem; padding: 2px 7px; font-weight: 800; }
+	.script-section.warn .step-badge { background: #f59e0b; }
+
+	.dialogue { background: #f8fafc; border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; font-size: 0.9rem; line-height: 1.7; color: #1e293b; }
+	.dialogue .speaker { font-size: 0.7rem; font-weight: 800; color: #2563eb; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+	.dialogue.boss .speaker { color: #9333ea; }
+	.dialogue blockquote { border: none; font-style: normal; white-space: pre-line; }
+
+	.t-tip { background: #fefce8; border: 1px solid #fde047; border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #854d0e; margin-top: 10px; display: flex; gap: 8px; }
+	.warning-box { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px 14px; font-size: 0.8rem; color: #7f1d1d; margin-top: 10px; }
+
+	.copy-all-btn { background: white; border: 1.5px solid #2563eb; color: #2563eb; border-radius: 8px; padding: 8px 18px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+	.copy-all-btn:hover { background: #eff6ff; }
+	.copy-all-btn.copied { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+
+	.retention-list { list-style: none; padding: 0; margin: 0; }
+	.retention-list li { margin-bottom: 14px; }
+	.retention-tag { display: inline-block; background: #f1f5f9; border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 4px; }
+	.retention-response { background: #f8fafc; border-radius: 8px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.7; color: #1e293b; }
+
+	@media (max-width: 500px) {
+		.situation-grid { grid-template-columns: 1fr; }
+		.reason-grid { grid-template-columns: 1fr; }
+	}
+</style>
