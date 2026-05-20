@@ -1,0 +1,514 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="飲み会割り勘・幹事優遇計算機 — yumi-Labs"
+  description="幹事割引（5〜20%）と先輩後輩の傾斜配分をスライダーで調整できる割り勘計算機。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🍻</span>
+      <div>
+        <h1 class="tool-title">飲み会割り勘・幹事優遇計算機</h1>
+        <p class="tool-sub">幹事割引＋先輩後輩の傾斜配分をリアルタイム計算</p>
+      </div>
+    </header>
+
+    <div class="layout">
+
+      <!-- LEFT: Settings -->
+      <div class="col-settings">
+
+        <!-- 総額 -->
+        <section class="card">
+          <h2 class="card-title">💰 お会計総額</h2>
+          <div class="amount-row">
+            <input id="total" type="number" class="amount-input" placeholder="0" min="0" step="100" value="30000" />
+            <span class="unit">円</span>
+          </div>
+        </section>
+
+        <!-- 参加者 -->
+        <section class="card">
+          <div class="card-title-row">
+            <h2 class="card-title">👥 参加者</h2>
+            <button class="add-btn" id="add-person">＋ 追加</button>
+          </div>
+          <div id="person-list" class="person-list"></div>
+          <p class="hint">役職をクリックして変更できます</p>
+        </section>
+
+        <!-- スライダー -->
+        <section class="card">
+          <h2 class="card-title">⚙️ 配分設定</h2>
+
+          <div class="slider-block">
+            <div class="slider-label-row">
+              <label>幹事割引率</label>
+              <span class="slider-val" id="kanji-val">10%</span>
+            </div>
+            <input type="range" id="kanji-discount" min="5" max="20" value="10" step="1" class="slider slider-pink" />
+            <div class="slider-minmax"><span>5%</span><span>20%</span></div>
+            <p class="slider-desc">幹事さんは会計金額からこの割合が免除されます</p>
+          </div>
+
+          <div class="slider-block">
+            <div class="slider-label-row">
+              <label>傾斜配分（先輩多め）</label>
+              <span class="slider-val" id="slope-val">30%</span>
+            </div>
+            <input type="range" id="slope" min="0" max="100" value="30" step="5" class="slider slider-mint" />
+            <div class="slider-minmax"><span>均等</span><span>最大傾斜</span></div>
+            <p class="slider-desc">0%で全員均等。上げると先輩が多く、後輩が少なく払います</p>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT: Result -->
+      <div class="col-result">
+        <section class="card result-card">
+          <div class="result-header">
+            <h2 class="card-title">📊 計算結果</h2>
+            <button class="copy-btn" id="copy-btn">コピー</button>
+          </div>
+
+          <div id="result-empty" class="result-empty">
+            参加者を追加してください
+          </div>
+
+          <div id="result-list" class="result-list"></div>
+
+          <div id="result-summary" class="result-summary" hidden>
+            <div class="summary-row">
+              <span>合計人数</span>
+              <span id="sum-count">—</span>
+            </div>
+            <div class="summary-row">
+              <span>集金合計</span>
+              <span id="sum-total">—</span>
+            </div>
+            <div class="summary-row diff-row">
+              <span>端数調整</span>
+              <span id="sum-diff">—</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 端数ルール -->
+        <section class="card tip-card">
+          <h3 class="tip-title">💡 端数の扱い</h3>
+          <label class="radio-row">
+            <input type="radio" name="round" value="100" checked /> 100円単位で切り上げ
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round" value="500" /> 500円単位で切り上げ
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round" value="1000" /> 1,000円単位で切り上げ
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round" value="1" /> 1円単位（端数なし）
+          </label>
+        </section>
+      </div>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+// ---- State ----
+const ROLES = ['一般', '先輩', '後輩', '幹事'];
+const ROLE_COLORS = { '幹事': '#ff6b9d', '先輩': '#c77dff', '後輩': '#00c9a7', '一般': '#94a3b8' };
+const ROLE_ICONS  = { '幹事': '⭐', '先輩': '👔', '後輩': '🌱', '一般': '👤' };
+
+let persons = [
+  { id: 1, name: '幹事（自分）', role: '幹事' },
+  { id: 2, name: '田中先輩',     role: '先輩' },
+  { id: 3, name: '山田さん',     role: '一般' },
+  { id: 4, name: '新入り',       role: '後輩' },
+];
+let nextId = 5;
+
+// ---- Helpers ----
+function fmt(n) { return n.toLocaleString('ja-JP') + '円'; }
+function getRound() { return parseInt(document.querySelector('input[name=round]:checked').value); }
+function ceil(n, unit) { return Math.ceil(n / unit) * unit; }
+
+// ---- Weight calculation ----
+function calcWeights(kanjiDiscount, slope) {
+  const kd = kanjiDiscount / 100;
+  const sl = slope / 100;
+  return persons.map(p => {
+    let w = 1.0;
+    if (p.role === '幹事') w = 1 - kd;
+    else if (p.role === '先輩') w = 1 + sl;
+    else if (p.role === '後輩') w = Math.max(0.3, 1 - sl * 0.5);
+    return { ...p, weight: w };
+  });
+}
+
+function calculate() {
+  const total   = parseInt(document.getElementById('total').value) || 0;
+  const kd      = parseInt(document.getElementById('kanji-discount').value);
+  const slope   = parseInt(document.getElementById('slope').value);
+  const unit    = getRound();
+
+  const weighted = calcWeights(kd, slope);
+  const totalWeight = weighted.reduce((s, p) => s + p.weight, 0);
+
+  const shares = weighted.map(p => {
+    const raw     = (p.weight / totalWeight) * total;
+    const rounded = ceil(raw, unit);
+    return { ...p, raw, amount: rounded };
+  });
+
+  const collected = shares.reduce((s, p) => s + p.amount, 0);
+  const diff      = collected - total;
+
+  renderResult(shares, collected, diff, total);
+}
+
+// ---- Render result ----
+function renderResult(shares, collected, diff, total) {
+  const listEl    = document.getElementById('result-list');
+  const emptyEl   = document.getElementById('result-empty');
+  const summaryEl = document.getElementById('result-summary');
+
+  if (persons.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.hidden = false;
+    summaryEl.hidden = true;
+    return;
+  }
+  emptyEl.hidden = true;
+  summaryEl.hidden = false;
+
+  listEl.innerHTML = shares.map(p => {
+    const color = ROLE_COLORS[p.role];
+    const icon  = ROLE_ICONS[p.role];
+    const pct   = total > 0 ? ((p.amount / total) * 100).toFixed(1) : '0.0';
+    const barW  = total > 0 ? Math.round((p.amount / collected) * 100) : 0;
+    return `
+      <div class="result-row">
+        <div class="result-person">
+          <span class="role-chip" style="background:${color}22;color:${color};border-color:${color}44">${icon} ${p.role}</span>
+          <span class="person-name">${p.name}</span>
+        </div>
+        <div class="result-amount-col">
+          <span class="amount-main">${p.amount.toLocaleString()}<small>円</small></span>
+          <span class="amount-pct">${pct}%</span>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar" style="width:${barW}%;background:${color}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('sum-count').textContent = persons.length + '人';
+  document.getElementById('sum-total').textContent = collected.toLocaleString() + '円';
+  const diffEl = document.getElementById('sum-diff');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString() + '円';
+  diffEl.style.color = diff === 0 ? '#64748b' : diff > 0 ? '#16a34a' : '#dc2626';
+}
+
+// ---- Person list ----
+function renderPersons() {
+  const list = document.getElementById('person-list');
+  if (persons.length === 0) {
+    list.innerHTML = '<p class="no-person">参加者がいません</p>';
+    return;
+  }
+  list.innerHTML = persons.map(p => {
+    const color = ROLE_COLORS[p.role];
+    const icon  = ROLE_ICONS[p.role];
+    return `
+      <div class="person-row" data-id="${p.id}">
+        <button class="role-toggle" data-id="${p.id}" title="クリックで役職変更"
+          style="background:${color}22;color:${color};border-color:${color}55">
+          ${icon} ${p.role}
+        </button>
+        <input class="name-input" data-id="${p.id}" value="${p.name}" placeholder="名前" maxlength="12" />
+        <button class="del-btn" data-id="${p.id}">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- Event delegation ----
+document.getElementById('person-list').addEventListener('click', e => {
+  const btn = e.target.closest('.role-toggle');
+  const del = e.target.closest('.del-btn');
+  if (btn) {
+    const id = parseInt(btn.dataset.id);
+    const p  = persons.find(x => x.id === id);
+    if (p) {
+      p.role = ROLES[(ROLES.indexOf(p.role) + 1) % ROLES.length];
+      renderPersons();
+      calculate();
+    }
+  }
+  if (del) {
+    const id = parseInt(del.dataset.id);
+    persons = persons.filter(x => x.id !== id);
+    renderPersons();
+    calculate();
+  }
+});
+
+document.getElementById('person-list').addEventListener('input', e => {
+  const inp = e.target.closest('.name-input');
+  if (inp) {
+    const id = parseInt(inp.dataset.id);
+    const p  = persons.find(x => x.id === id);
+    if (p) { p.name = inp.value; calculate(); }
+  }
+});
+
+document.getElementById('add-person').addEventListener('click', () => {
+  persons.push({ id: nextId++, name: '参加者' + persons.length, role: '一般' });
+  renderPersons();
+  calculate();
+});
+
+// ---- Sliders ----
+document.getElementById('kanji-discount').addEventListener('input', function() {
+  document.getElementById('kanji-val').textContent = this.value + '%';
+  calculate();
+});
+document.getElementById('slope').addEventListener('input', function() {
+  document.getElementById('slope-val').textContent = this.value + '%';
+  calculate();
+});
+document.getElementById('total').addEventListener('input', calculate);
+document.querySelectorAll('input[name=round]').forEach(r => r.addEventListener('change', calculate));
+
+// ---- Copy ----
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const total  = parseInt(document.getElementById('total').value) || 0;
+  const kd     = parseInt(document.getElementById('kanji-discount').value);
+  const slope  = parseInt(document.getElementById('slope').value);
+  const unit   = getRound();
+  const weighted   = calcWeights(kd, slope);
+  const totalWeight = weighted.reduce((s, p) => s + p.weight, 0);
+  const shares = weighted.map(p => ({
+    ...p,
+    amount: ceil((p.weight / totalWeight) * total, unit),
+  }));
+  const collected = shares.reduce((s, p) => s + p.amount, 0);
+
+  let text = `【割り勘計算結果】\n`;
+  text += `お会計: ${total.toLocaleString()}円 / ${persons.length}人\n`;
+  text += `幹事割引: ${kd}% / 傾斜: ${slope}%\n`;
+  text += `─────────────────\n`;
+  shares.forEach(p => {
+    text += `${ROLE_ICONS[p.role]} ${p.name}（${p.role}）: ${p.amount.toLocaleString()}円\n`;
+  });
+  text += `─────────────────\n`;
+  text += `集金合計: ${collected.toLocaleString()}円`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ コピー完了';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+});
+
+// ---- Init ----
+renderPersons();
+calculate();
+</script>
+
+<style>
+  .page-wrap { padding-block: 2rem 5rem; }
+
+  .breadcrumb a { font-size: var(--text-sm); color: var(--gray-300); text-decoration: none; font-family: var(--font-brand); }
+  .breadcrumb a:hover { color: var(--accent-dark); }
+
+  .tool-header { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0 2rem; }
+  .tool-icon { font-size: 2.8rem; line-height: 1; }
+  .tool-title { font-size: var(--text-2xl); margin: 0 0 0.25rem; }
+  .tool-sub { color: var(--gray-300); margin: 0; font-size: var(--text-base); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  @media (max-width: 56em) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--gray-999);
+    border: 1.5px solid var(--gray-700);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.25rem;
+  }
+  .card:last-child { margin-bottom: 0; }
+
+  .card-title { font-size: var(--text-lg); margin: 0 0 1rem; font-family: var(--font-brand); }
+  .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .card-title-row .card-title { margin: 0; }
+
+  /* 総額 */
+  .amount-row { display: flex; align-items: center; gap: 0.5rem; }
+  .amount-input {
+    flex: 1;
+    font-size: 2rem;
+    font-weight: 800;
+    font-family: var(--font-brand);
+    color: var(--gray-100);
+    background: var(--accent-subtle-overlay);
+    border: 2px solid var(--accent-light);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    outline: none;
+    text-align: right;
+    transition: border-color var(--theme-transition);
+  }
+  .amount-input:focus { border-color: var(--accent-regular); }
+  .unit { font-size: 1.25rem; font-weight: 700; color: var(--gray-300); font-family: var(--font-brand); }
+
+  /* 追加ボタン */
+  .add-btn {
+    background: var(--gradient-accent);
+    color: white;
+    border: none;
+    border-radius: 999rem;
+    padding: 0.35rem 1rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    font-family: var(--font-brand);
+    cursor: pointer;
+    transition: transform var(--theme-transition), box-shadow var(--theme-transition);
+  }
+  .add-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+
+  /* 参加者リスト */
+  .person-list { display: flex; flex-direction: column; gap: 0.6rem; min-height: 2rem; }
+  .no-person { color: var(--gray-400); font-size: var(--text-sm); text-align: center; padding: 1rem 0; }
+  .hint { font-size: 0.72rem; color: var(--gray-400); margin: 0.5rem 0 0; font-family: var(--font-brand); }
+
+  .person-row { display: flex; align-items: center; gap: 0.5rem; }
+  .role-toggle {
+    flex-shrink: 0;
+    border: 1.5px solid;
+    border-radius: 999rem;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: var(--font-brand);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--theme-transition);
+  }
+  .role-toggle:hover { filter: brightness(1.1); transform: scale(1.04); }
+
+  .name-input {
+    flex: 1;
+    border: none;
+    border-bottom: 1.5px solid var(--gray-600);
+    background: transparent;
+    color: var(--gray-100);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    padding: 0.25rem 0.25rem;
+    outline: none;
+    transition: border-color var(--theme-transition);
+    min-width: 0;
+  }
+  .name-input:focus { border-bottom-color: var(--accent-regular); }
+
+  .del-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: 0.25rem;
+    transition: color var(--theme-transition), background var(--theme-transition);
+  }
+  .del-btn:hover { color: #dc2626; background: #fef2f2; }
+
+  /* スライダー */
+  .slider-block { margin-bottom: 1.5rem; }
+  .slider-block:last-child { margin-bottom: 0; }
+  .slider-label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .slider-label-row label { font-size: var(--text-sm); font-weight: 700; font-family: var(--font-brand); color: var(--gray-200); }
+  .slider-val { font-size: var(--text-xl); font-weight: 800; font-family: var(--font-brand); }
+
+  .slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 999rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .slider-pink { background: linear-gradient(to right, var(--accent-light), var(--accent-regular)); }
+  .slider-pink::-webkit-slider-thumb { appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-regular); border: 3px solid white; box-shadow: var(--shadow-sm); cursor: pointer; }
+  .slider-mint { background: linear-gradient(to right, #b8f0e6, #00c9a7); }
+  .slider-mint::-webkit-slider-thumb { appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #00c9a7; border: 3px solid white; box-shadow: var(--shadow-sm); cursor: pointer; }
+
+  .slider-minmax { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--gray-400); margin-top: 0.3rem; }
+  .slider-desc { font-size: 0.72rem; color: var(--gray-300); margin-top: 0.5rem; line-height: 1.5; }
+
+  /* 結果 */
+  .result-card { }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+  .result-header .card-title { margin: 0; }
+
+  .copy-btn {
+    background: var(--gradient-subtle);
+    border: 1.5px solid var(--accent-light);
+    color: var(--accent-dark);
+    border-radius: 999rem;
+    padding: 0.35rem 1rem;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    font-family: var(--font-brand);
+    cursor: pointer;
+    transition: all var(--theme-transition);
+  }
+  .copy-btn:hover { background: var(--gradient-accent); color: white; border-color: transparent; }
+  .copy-btn.copied { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+
+  .result-empty { text-align: center; padding: 2.5rem 1rem; color: var(--gray-400); font-size: var(--text-sm); }
+  .result-list { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1.25rem; }
+
+  .result-row { }
+  .result-person { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+  .role-chip { font-size: 0.7rem; font-weight: 700; font-family: var(--font-brand); padding: 0.15rem 0.6rem; border-radius: 999rem; border: 1px solid; flex-shrink: 0; }
+  .person-name { font-weight: 700; font-size: var(--text-base); color: var(--gray-100); }
+
+  .result-amount-col { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
+  .amount-main { font-size: 1.5rem; font-weight: 800; font-family: var(--font-brand); color: var(--gray-100); }
+  .amount-main small { font-size: 0.9rem; font-weight: 700; margin-left: 0.1rem; }
+  .amount-pct { font-size: var(--text-sm); color: var(--gray-300); }
+
+  .bar-wrap { height: 6px; background: var(--gray-700); border-radius: 999rem; overflow: hidden; }
+  .bar { height: 100%; border-radius: 999rem; transition: width 0.3s ease; }
+
+  .result-summary { border-top: 1.5px solid var(--gray-700); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .summary-row { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--gray-200); }
+  .diff-row { font-weight: 700; }
+
+  /* 端数 */
+  .tip-card { }
+  .tip-title { font-size: var(--text-base); margin: 0 0 0.75rem; font-family: var(--font-brand); color: var(--gray-200); }
+  .radio-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; cursor: pointer; font-size: var(--text-sm); color: var(--gray-200); }
+  .radio-row input { accent-color: var(--accent-regular); width: 1rem; height: 1rem; cursor: pointer; }
+</style>

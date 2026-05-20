@@ -45,7 +45,7 @@ export const tools: Tool[] = [
 		id: 3, slug: 'split-bill',
 		name: '飲み会割り勘・幹事優遇計算',
 		description: '幹事の労力分を自動割引。先輩後輩の傾斜配分もスライダーで調整。',
-		emoji: '🍻', category: 'practical', badge: '人気', status: 'coming-soon',
+		emoji: '🍻', category: 'practical', badge: '人気', status: 'available',
 	},
 	{
 		id: 4, slug: 'kids-why',
