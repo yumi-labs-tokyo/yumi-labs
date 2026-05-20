@@ -1,248 +1,599 @@
 ---
-import { getCollection } from 'astro:content';
-import CallToAction from '../components/CallToAction.astro';
-import ContactCTA from '../components/ContactCTA.astro';
-import Grid from '../components/Grid.astro';
-import Hero from '../components/Hero.astro';
-import Icon from '../components/Icon.astro';
-import Pill from '../components/Pill.astro';
-import PortfolioPreview from '../components/PortfolioPreview.astro';
-import Skills from '../components/Skills.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { tools, categories, toolsByCategory } from '../data/tools';
 
-const projects = (await getCollection('work'))
-	.sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf())
-	.slice(0, 4);
+const totalTools = tools.length;
+const availableTools = tools.filter((t) => t.status === 'available').length;
 ---
 
-<BaseLayout>
-	<div class="stack gap-20 lg:gap-48">
-		<div class="wrapper stack gap-8 lg:gap-20">
-			<header class="hero">
-				<Hero
-					title="こんにちは！ I'm yumi ✨"
-					tagline="クリエイティブデベロッパー & デザイナー。日本からWebの世界を彩ります。"
-					align="start"
-				>
-					<div class="roles">
-						<Pill><Icon icon="code" size="1.2em" /> Developer</Pill>
-						<Pill><Icon icon="pencil-line" size="1.2em" /> Designer</Pill>
-						<Pill><Icon icon="strategy" size="1.2em" /> Creator</Pill>
-					</div>
-				</Hero>
-
-				<img
-					alt="yumi at work"
-					width="480"
-					height="620"
-					src="/assets/portrait.jpg"
-				/>
-			</header>
-
-			<Skills />
+<BaseLayout
+	title="yumi-Labs — 便利ツール集"
+	description="データベース不要・ブラウザで完結する便利ツール100本。生活・仕事・趣味をもっと楽しく。"
+>
+	<!-- Hero -->
+	<section class="hero wrapper">
+		<div class="hero-text">
+			<div class="hero-badge">✦ Free Tools Hub</div>
+			<h1 class="hero-title">
+				暮らしをちょっと<br />
+				<span class="gradient-text">便利に、楽しく。</span>
+			</h1>
+			<p class="hero-desc">
+				ブラウザだけで完結する無料ツール集。<br />
+				登録不要・データは手元に。<wbr />全{totalTools}本収録予定。
+			</p>
+			<div class="hero-stats">
+				<div class="stat">
+					<span class="stat-num">{totalTools}</span>
+					<span class="stat-label">ツール収録予定</span>
+				</div>
+				<div class="stat-divider">✦</div>
+				<div class="stat">
+					<span class="stat-num">{categories.length}</span>
+					<span class="stat-label">カテゴリ</span>
+				</div>
+				<div class="stat-divider">✦</div>
+				<div class="stat">
+					<span class="stat-num">0円</span>
+					<span class="stat-label">完全無料</span>
+				</div>
+			</div>
 		</div>
+		<div class="hero-visual">
+			<div class="floating-icons">
+				<span class="fi fi-1">🎯</span>
+				<span class="fi fi-2">🎨</span>
+				<span class="fi fi-3">🧠</span>
+				<span class="fi fi-4">🍳</span>
+				<span class="fi fi-5">🎮</span>
+				<span class="fi fi-6">✨</span>
+			</div>
+		</div>
+	</section>
 
-		<main class="wrapper stack gap-20 lg:gap-48">
-			<section class="section with-background with-cta">
-				<header class="section-header stack gap-2 lg:gap-4">
-					<h3>作品集 ✦</h3>
-					<p>最近取り組んだプロジェクトをご紹介します。ぜひご覧ください！</p>
-				</header>
+	<!-- Search -->
+	<section class="search-section wrapper">
+		<div class="search-box">
+			<span class="search-icon">🔍</span>
+			<input
+				type="search"
+				id="tool-search"
+				placeholder="ツールを検索... 例：議事録、割り勘、英単語"
+				autocomplete="off"
+			/>
+		</div>
+		<div class="category-pills">
+			<button class="pill pill-active" data-filter="all">すべて</button>
+			{categories.map((cat) => (
+				<button class="pill" data-filter={cat.id}>
+					{cat.emoji} {cat.label}
+				</button>
+			))}
+		</div>
+	</section>
 
-				<div class="gallery">
-					<Grid variant="offset">
-						{
-							projects.map((project) => (
-								<li>
-									<PortfolioPreview project={project} />
-								</li>
-							))
-						}
-					</Grid>
-				</div>
+	<!-- Tool Sections -->
+	<main class="wrapper tools-main" id="tools-container">
+		{categories.map((cat) => {
+			const catTools = toolsByCategory(cat.id);
+			return (
+				<section class="category-section" data-category={cat.id}>
+					<div class="category-header">
+						<span class="category-emoji">{cat.emoji}</span>
+						<h2 class="category-title">{cat.label}</h2>
+						<span class="category-count">{catTools.length}本</span>
+					</div>
+					<div class="tool-grid">
+						{catTools.map((tool) => (
+							<a
+								href={tool.status === 'available' ? `/tools/${tool.slug}/` : '#'}
+								class={`tool-card ${tool.status === 'coming-soon' ? 'coming-soon' : ''}`}
+								data-name={tool.name}
+								data-desc={tool.description}
+								data-category={tool.category}
+							>
+								<div class="tool-emoji">{tool.emoji}</div>
+								<div class="tool-info">
+									<div class="tool-name-row">
+										<span class="tool-name">{tool.name}</span>
+										{tool.badge && (
+											<span class={`badge badge-${tool.badge === '人気' ? 'popular' : tool.badge === 'New' ? 'new' : 'beta'}`}>
+												{tool.badge}
+											</span>
+										)}
+									</div>
+									<p class="tool-desc">{tool.description}</p>
+								</div>
+								{tool.status === 'coming-soon' && (
+									<div class="coming-soon-overlay">準備中</div>
+								)}
+							</a>
+						))}
+					</div>
+				</section>
+			);
+		})}
 
-				<div class="cta">
-					<CallToAction href="/work/">
-						全部見る
-						<Icon icon="arrow-right" size="1.2em" />
-					</CallToAction>
-				</div>
-			</section>
+		<!-- No results -->
+		<div class="no-results" id="no-results" hidden>
+			<span>🔍</span>
+			<p>「<span id="search-term"></span>」に一致するツールが見つかりませんでした。</p>
+		</div>
+	</main>
 
-			<section class="section with-background bg-variant">
-				<header class="section-header stack gap-2 lg:gap-4">
-					<h3>メンション ✿</h3>
-					<p>
-						ありがたいことに、さまざまなメディアでご紹介いただきました。
-					</p>
-				</header>
-
-				<div class="gallery">
-					<Grid variant="small">
-						{
-							['Zenn', 'Qiita', 'note', 'dev.to', 'GitHub'].map((brand) => (
-								<li class="mention-card">
-									<p>{brand}</p>
-								</li>
-							))
-						}
-					</Grid>
-				</div>
-			</section>
-		</main>
-
-		<ContactCTA />
-	</div>
+	<!-- Footer CTA -->
+	<section class="footer-cta wrapper">
+		<div class="footer-cta-inner">
+			<h3>リクエスト・フィードバック</h3>
+			<p>「こんなツールが欲しい！」「ここが使いにくい」はGitHubまで ♡</p>
+			<a href="https://github.com/yumi-labs-tokyo/yumi-labs/issues" class="cta-button" target="_blank" rel="noopener">
+				GitHub Issues を開く →
+			</a>
+		</div>
+	</section>
 </BaseLayout>
 
+<script>
+	const searchInput = document.getElementById('tool-search') as HTMLInputElement;
+	const cards = document.querySelectorAll<HTMLElement>('.tool-card');
+	const sections = document.querySelectorAll<HTMLElement>('.category-section');
+	const pills = document.querySelectorAll<HTMLButtonElement>('.pill');
+	const noResults = document.getElementById('no-results')!;
+	const searchTermEl = document.getElementById('search-term')!;
+
+	let activeFilter = 'all';
+
+	function applyFilters() {
+		const query = searchInput.value.toLowerCase().trim();
+		let visibleCount = 0;
+
+		sections.forEach((section) => {
+			const catId = section.dataset.category!;
+			let sectionVisible = false;
+
+			const sectionCards = section.querySelectorAll<HTMLElement>('.tool-card');
+			sectionCards.forEach((card) => {
+				const name = (card.dataset.name ?? '').toLowerCase();
+				const desc = (card.dataset.desc ?? '').toLowerCase();
+				const cat = card.dataset.category ?? '';
+
+				const matchesSearch = !query || name.includes(query) || desc.includes(query);
+				const matchesFilter = activeFilter === 'all' || cat === activeFilter;
+
+				if (matchesSearch && matchesFilter) {
+					card.style.display = '';
+					sectionVisible = true;
+					visibleCount++;
+				} else {
+					card.style.display = 'none';
+				}
+			});
+
+			section.style.display = sectionVisible ? '' : 'none';
+		});
+
+		noResults.hidden = visibleCount > 0;
+		searchTermEl.textContent = query;
+	}
+
+	searchInput.addEventListener('input', applyFilters);
+
+	pills.forEach((pill) => {
+		pill.addEventListener('click', () => {
+			pills.forEach((p) => p.classList.remove('pill-active'));
+			pill.classList.add('pill-active');
+			activeFilter = pill.dataset.filter ?? 'all';
+			applyFilters();
+		});
+	});
+</script>
+
 <style>
+	/* Hero */
 	.hero {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
+		justify-content: space-between;
 		gap: 2rem;
+		padding-block: 4rem 2rem;
 	}
 
-	.roles {
-		display: none;
+	.hero-text {
+		max-width: 56ch;
 	}
 
-	.hero img {
-		aspect-ratio: 5 / 4;
-		object-fit: cover;
-		object-position: top;
-		border-radius: 2rem;
-		box-shadow: var(--shadow-md);
-		border: 3px solid var(--accent-light);
+	.hero-badge {
+		display: inline-block;
+		background: var(--accent-subtle-overlay);
+		border: 1.5px solid var(--accent-light);
+		color: var(--accent-dark);
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		padding: 0.25rem 0.9rem;
+		border-radius: 999rem;
+		margin-bottom: 1rem;
 	}
 
-	@media (min-width: 50em) {
-		.hero {
-			display: grid;
-			grid-template-columns: 6fr 4fr;
-			padding-inline: 2.5rem;
-			gap: 3.75rem;
-		}
-
-		.roles {
-			margin-top: 0.75rem;
-			display: flex;
-			gap: 0.6rem;
-			flex-wrap: wrap;
-		}
-
-		.hero img {
-			aspect-ratio: 3 / 4;
-			border-radius: 4rem;
-			object-fit: cover;
-		}
+	.hero-title {
+		font-size: clamp(2rem, 5vw, 3.5rem);
+		line-height: 1.2;
+		color: var(--gray-100);
+		margin-bottom: 1rem;
 	}
 
-	/* ====================================================== */
-
-	.section {
-		display: grid;
-		gap: 2rem;
-	}
-
-	.with-background {
-		position: relative;
-	}
-
-	.with-background::before {
-		content: '';
-		position: absolute;
-		pointer-events: none;
-		left: 50%;
-		width: 100vw;
-		aspect-ratio: calc(2.25 / 1.68);
-		top: 0;
-		transform: translateY(-75%) translateX(-50%);
-		background: radial-gradient(ellipse at center, var(--accent-overlay) 0%, transparent 70%);
-		z-index: -1;
-	}
-
-	.with-background.bg-variant::before {
-		background: radial-gradient(ellipse at center, hsla(175, 80%, 75%, 0.15) 0%, transparent 70%);
-	}
-
-	.section-header {
-		justify-self: center;
-		text-align: center;
-		max-width: 50ch;
-		font-size: var(--text-md);
-		color: var(--gray-300);
-	}
-
-	.section-header h3 {
-		font-size: var(--text-2xl);
+	.gradient-text {
 		background: var(--gradient-accent);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
 	}
 
-	@media (min-width: 50em) {
-		.section {
-			grid-template-columns: repeat(4, 1fr);
-			grid-template-areas: 'header header header header' 'gallery gallery gallery gallery';
-			gap: 5rem;
-		}
-
-		.section.with-cta {
-			grid-template-areas: 'header header header cta' 'gallery gallery gallery gallery';
-		}
-
-		.section-header {
-			grid-area: header;
-			font-size: var(--text-lg);
-		}
-
-		.section-header h3 {
-			font-size: var(--text-4xl);
-		}
-
-		.with-cta .section-header {
-			justify-self: flex-start;
-			text-align: left;
-		}
-
-		.gallery {
-			grid-area: gallery;
-		}
-
-		.cta {
-			grid-area: cta;
-		}
-	}
-
-	/* ====================================================== */
-
-	.mention-card {
-		display: flex;
-		height: 7rem;
-		justify-content: center;
-		align-items: center;
-		text-align: center;
-		border: 2px dashed var(--accent-light);
-		border-radius: 1.5rem;
+	.hero-desc {
+		font-size: var(--text-md);
 		color: var(--gray-300);
-		background: var(--gradient-subtle);
-		box-shadow: var(--shadow-sm);
-		font-family: var(--font-brand);
-		font-weight: 700;
-		font-size: var(--text-lg);
-		transition: transform var(--theme-transition), box-shadow var(--theme-transition);
+		line-height: 1.7;
+		margin-bottom: 2rem;
 	}
 
-	.mention-card:hover {
-		transform: translateY(-4px);
+	.hero-stats {
+		display: flex;
+		align-items: center;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.stat-num {
+		font-family: var(--font-brand);
+		font-weight: 800;
+		font-size: var(--text-2xl);
+		color: var(--accent-regular);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+	}
+
+	.stat-divider {
+		color: var(--accent-light);
+		font-size: var(--text-xl);
+	}
+
+	/* Floating icons */
+	.hero-visual {
+		display: none;
+		position: relative;
+		width: 300px;
+		height: 300px;
+		flex-shrink: 0;
+	}
+
+	@media (min-width: 50em) {
+		.hero-visual {
+			display: block;
+		}
+	}
+
+	.floating-icons {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+
+	.fi {
+		position: absolute;
+		font-size: 2.5rem;
+		animation: float 6s ease-in-out infinite;
+		background: var(--gradient-subtle);
+		border: 2px solid var(--accent-light);
+		border-radius: 1.25rem;
+		width: 70px;
+		height: 70px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.fi-1 { top: 10%; left: 10%; animation-delay: 0s; }
+	.fi-2 { top: 5%; left: 55%; animation-delay: 1s; }
+	.fi-3 { top: 40%; left: 70%; animation-delay: 2s; }
+	.fi-4 { top: 65%; left: 45%; animation-delay: 0.5s; }
+	.fi-5 { top: 70%; left: 5%; animation-delay: 1.5s; }
+	.fi-6 { top: 35%; left: 25%; animation-delay: 2.5s; }
+
+	@keyframes float {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-12px); }
+	}
+
+	/* Search */
+	.search-section {
+		padding-block: 1rem 0.5rem;
+	}
+
+	.search-box {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		background: var(--gray-999);
+		border: 2px solid var(--accent-light);
+		border-radius: 999rem;
+		padding: 0.75rem 1.5rem;
+		box-shadow: var(--shadow-sm);
+		margin-bottom: 1.25rem;
+		transition: border-color var(--theme-transition), box-shadow var(--theme-transition);
+	}
+
+	.search-box:focus-within {
+		border-color: var(--accent-regular);
 		box-shadow: var(--shadow-md);
 	}
 
-	@media (min-width: 50em) {
-		.mention-card {
-			height: 9.5rem;
-		}
+	.search-icon {
+		font-size: 1.25rem;
+		flex-shrink: 0;
+	}
+
+	.search-box input {
+		flex: 1;
+		border: none;
+		outline: none;
+		background: transparent;
+		font-family: var(--font-body);
+		font-size: var(--text-md);
+		color: var(--gray-100);
+	}
+
+	.search-box input::placeholder {
+		color: var(--gray-400);
+	}
+
+	.category-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.pill {
+		background: var(--gradient-subtle);
+		border: 1.5px solid var(--gray-600);
+		border-radius: 999rem;
+		padding: 0.4rem 1rem;
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		color: var(--gray-200);
+		cursor: pointer;
+		transition: all var(--theme-transition);
+	}
+
+	.pill:hover {
+		border-color: var(--accent-light);
+		color: var(--accent-dark);
+	}
+
+	.pill-active {
+		background: var(--gradient-accent);
+		border-color: transparent;
+		color: white;
+	}
+
+	/* Tools main */
+	.tools-main {
+		padding-block: 2rem 4rem;
+		display: flex;
+		flex-direction: column;
+		gap: 3.5rem;
+	}
+
+	/* Category section */
+	.category-section {}
+
+	.category-header {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.category-emoji {
+		font-size: 1.75rem;
+	}
+
+	.category-title {
+		font-size: var(--text-xl);
+		color: var(--gray-100);
+		margin: 0;
+	}
+
+	.category-count {
+		background: var(--accent-subtle-overlay);
+		border: 1px solid var(--accent-light);
+		color: var(--accent-dark);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		padding: 0.15rem 0.6rem;
+		border-radius: 999rem;
+		font-family: var(--font-brand);
+	}
+
+	/* Tool grid */
+	.tool-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 1rem;
+	}
+
+	/* Tool card */
+	.tool-card {
+		position: relative;
+		display: flex;
+		align-items: flex-start;
+		gap: 0.9rem;
+		background: var(--gray-999);
+		border: 1.5px solid var(--gray-700);
+		border-radius: 1.25rem;
+		padding: 1.1rem 1.2rem;
+		text-decoration: none;
+		color: inherit;
+		box-shadow: var(--shadow-sm);
+		transition: all var(--theme-transition);
+		overflow: hidden;
+	}
+
+	.tool-card:hover:not(.coming-soon) {
+		border-color: var(--accent-light);
+		box-shadow: var(--shadow-md);
+		transform: translateY(-3px);
+	}
+
+	.tool-card.coming-soon {
+		cursor: default;
+	}
+
+	.tool-card.coming-soon:hover {
+		border-color: var(--gray-600);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.tool-emoji {
+		font-size: 1.75rem;
+		line-height: 1;
+		flex-shrink: 0;
+		margin-top: 0.1rem;
+	}
+
+	.tool-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.tool-name-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.3rem;
+	}
+
+	.tool-name {
+		font-family: var(--font-brand);
+		font-weight: 700;
+		font-size: var(--text-base);
+		color: var(--gray-100);
+		line-height: 1.3;
+	}
+
+	.badge {
+		display: inline-block;
+		font-size: 0.7rem;
+		font-weight: 800;
+		font-family: var(--font-brand);
+		padding: 0.1rem 0.5rem;
+		border-radius: 999rem;
+		flex-shrink: 0;
+	}
+
+	.badge-popular {
+		background: linear-gradient(135deg, #ff6b9d, #c94477);
+		color: white;
+	}
+
+	.badge-new {
+		background: linear-gradient(135deg, #00c9a7, #00a085);
+		color: white;
+	}
+
+	.badge-beta {
+		background: linear-gradient(135deg, #c77dff, #9b5de5);
+		color: white;
+	}
+
+	.tool-desc {
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+		line-height: 1.5;
+		margin: 0;
+	}
+
+	/* Coming soon overlay */
+	.coming-soon-overlay {
+		position: absolute;
+		top: 0.6rem;
+		right: 0.7rem;
+		background: var(--gray-700);
+		color: var(--gray-400);
+		font-size: 0.65rem;
+		font-weight: 700;
+		font-family: var(--font-brand);
+		padding: 0.1rem 0.45rem;
+		border-radius: 999rem;
+	}
+
+	/* No results */
+	.no-results {
+		text-align: center;
+		padding: 4rem 2rem;
+		color: var(--gray-300);
+	}
+
+	.no-results span {
+		font-size: 3rem;
+		display: block;
+		margin-bottom: 1rem;
+	}
+
+	/* Footer CTA */
+	.footer-cta {
+		padding-block: 1rem 4rem;
+	}
+
+	.footer-cta-inner {
+		background: var(--gradient-subtle);
+		border: 2px dashed var(--accent-light);
+		border-radius: 2rem;
+		padding: 2.5rem;
+		text-align: center;
+	}
+
+	.footer-cta-inner h3 {
+		font-size: var(--text-xl);
+		margin-bottom: 0.5rem;
+		background: var(--gradient-accent);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.footer-cta-inner p {
+		color: var(--gray-300);
+		margin-bottom: 1.5rem;
+	}
+
+	.cta-button {
+		display: inline-block;
+		background: var(--gradient-accent);
+		color: white;
+		font-family: var(--font-brand);
+		font-weight: 700;
+		padding: 0.75rem 2rem;
+		border-radius: 999rem;
+		text-decoration: none;
+		transition: transform var(--theme-transition), box-shadow var(--theme-transition);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.cta-button:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
 	}
 </style>
