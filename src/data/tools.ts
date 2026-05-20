@@ -93,7 +93,7 @@ export const tools: Tool[] = [
 		id: 11, slug: 'resume-pr-rewriter',
 		name: '履歴書「自己PR」リライター',
 		description: '業界別（IT/金融/メーカー）にトーン変換。',
-		emoji: '💼', category: 'practical', status: 'coming-soon',
+		emoji: '💼', category: 'practical', status: 'available',
 	},
 	{
 		id: 12, slug: 'business-card-ocr',
