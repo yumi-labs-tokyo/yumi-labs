@@ -191,7 +191,7 @@ export const tools: Tool[] = [
 		id: 27, slug: 'insta-9grid',
 		name: 'インスタ9マス統一感シミュレーター',
 		description: '9枚画像をアップしてフィルターを一括適用プレビュー。',
-		emoji: '📷', category: 'creator', badge: '人気', status: 'coming-soon',
+		emoji: '📷', category: 'creator', badge: '人気', status: 'available',
 	},
 	{
 		id: 28, slug: 'haiku-image',
