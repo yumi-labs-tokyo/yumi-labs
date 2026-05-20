@@ -1,0 +1,620 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="引っ越し荷造り進捗ボード — yumi-Labs"
+  description="部屋ごとの梱包率を可視化し、ダンボール番号と中身を記録。引越し当日の『あれどこ？』を防ぐ荷造り管理ツール。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">📦</span>
+      <div>
+        <h1 class="tool-title">引っ越し荷造り進捗ボード</h1>
+        <p class="tool-sub">部屋ごとの梱包率 + ダンボール番号・中身を記録。当日「あれどこ?」を防ぎます。データはこの端末に保存されます。</p>
+      </div>
+    </header>
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="card date-card">
+        <div class="date-label">🗓️ 引越し予定日</div>
+        <input type="date" id="move-date" class="date-input" oninput="onMoveDateChange()" />
+        <div id="countdown" class="countdown"></div>
+      </div>
+      <div class="card progress-card">
+        <div class="overall-label">全体の梱包進捗</div>
+        <div class="overall-pct" id="overall-pct">0%</div>
+        <div class="overall-track"><div class="overall-fill" id="overall-fill"></div></div>
+        <div class="overall-sub" id="overall-sub">部屋を追加してください</div>
+      </div>
+    </div>
+
+    <!-- ROOMS -->
+    <section class="board-section">
+      <div class="sec-header">
+        <h2 class="sec-title">🏠 部屋別 梱包進捗</h2>
+        <button class="btn-add" id="toggle-add-room" onclick="toggleAddRoom()">+ 部屋を追加</button>
+      </div>
+
+      <div id="add-room-panel" class="add-panel" style="display:none">
+        <div class="preset-label">プリセットから選ぶ</div>
+        <div class="preset-chips" id="preset-chips"></div>
+        <div class="or-divider">または カスタム部屋名</div>
+        <div class="custom-row">
+          <select id="custom-emoji" class="emoji-sel">
+            <option>📦</option><option>🛋️</option><option>🛏️</option>
+            <option>🍳</option><option>🧸</option><option>💻</option>
+            <option>🚿</option><option>🚪</option><option>📚</option>
+            <option>🎮</option><option>🌿</option><option>🎨</option>
+          </select>
+          <input type="text" id="custom-name" class="custom-input" placeholder="部屋名を入力" maxlength="15"
+            onkeydown="if(event.key==='Enter') addCustomRoom()" />
+          <button class="btn-sm-blue" onclick="addCustomRoom()">追加</button>
+          <button class="btn-sm-gray" onclick="toggleAddRoom()">閉じる</button>
+        </div>
+      </div>
+
+      <div id="rooms-grid" class="rooms-grid">
+        <div class="empty-rooms">部屋を追加して梱包の進捗を管理しましょう</div>
+      </div>
+    </section>
+
+    <!-- BOXES -->
+    <section class="board-section">
+      <div class="sec-header">
+        <h2 class="sec-title">📋 ダンボール管理</h2>
+        <button class="btn-add" onclick="toggleAddBox()">+ ダンボール追加</button>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" class="search-input" placeholder="あれどこ？ — 中身・番号で検索..."
+          oninput="filterBoxes()" />
+        <button id="search-clear" class="search-clear" style="display:none" onclick="clearSearch()">✕</button>
+      </div>
+
+      <!-- Room filter tabs -->
+      <div id="room-filter" class="room-filter"></div>
+
+      <!-- Add box form -->
+      <div id="add-box-panel" class="add-panel" style="display:none">
+        <div class="add-box-grid">
+          <div class="ab-field">
+            <label class="ab-label">部屋</label>
+            <select id="new-room" class="sel-sm"></select>
+          </div>
+          <div class="ab-field ab-wide">
+            <label class="ab-label">中身（複数あればカンマ区切り）</label>
+            <input type="text" id="new-contents" class="inp-sm" placeholder="食器類、グラス、調理器具など"
+              maxlength="200" onkeydown="if(event.key==='Enter') submitAddBox()" />
+          </div>
+          <div class="ab-field">
+            <label class="ab-label">優先度</label>
+            <div class="pri-row">
+              <label class="pri-opt"><input type="radio" name="pri" value="high" /> 🔴 最優先</label>
+              <label class="pri-opt"><input type="radio" name="pri" value="normal" checked /> 🟡 普通</label>
+              <label class="pri-opt"><input type="radio" name="pri" value="low" /> 🟢 後でOK</label>
+            </div>
+          </div>
+        </div>
+        <div class="add-box-footer">
+          <button class="btn-primary" onclick="submitAddBox()">📦 ダンボールを追加</button>
+          <button class="btn-sm-gray" onclick="toggleAddBox()">キャンセル</button>
+        </div>
+      </div>
+
+      <div id="boxes-list" class="boxes-list"></div>
+    </section>
+
+    <!-- Reset -->
+    <div style="text-align:right; margin-top:8px">
+      <button class="btn-reset" onclick="resetAll()">🗑️ データをすべてリセット</button>
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.9rem; }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; }
+
+    /* Top bar */
+    .top-bar { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; margin-bottom: 20px; }
+    .date-card { display: flex; flex-direction: column; gap: 8px; }
+    .date-label { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+    .date-input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; color: var(--text); width: 100%; box-sizing: border-box; }
+    .date-input:focus { outline: none; border-color: var(--accent); }
+    .countdown { font-size: 1rem; font-weight: 800; }
+    .countdown.soon { color: #ef4444; }
+    .countdown.ok { color: #10b981; }
+    .countdown.neutral { color: var(--muted); }
+
+    .progress-card { display: flex; flex-direction: column; gap: 6px; }
+    .overall-label { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+    .overall-pct { font-size: 2.2rem; font-weight: 900; color: #f97316; line-height: 1; }
+    .overall-track { height: 10px; background: var(--border); border-radius: 8px; overflow: hidden; }
+    .overall-fill { height: 100%; background: linear-gradient(90deg, #f97316, #22c55e); border-radius: 8px; transition: width 0.4s; }
+    .overall-sub { font-size: 0.8rem; color: var(--muted); }
+
+    /* Sections */
+    .board-section { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; margin-bottom: 16px; }
+    .sec-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .sec-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .btn-add { background: #f97316; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+    .btn-add:hover { opacity: 0.9; }
+
+    /* Add panel */
+    .add-panel { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .preset-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .preset-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .preset-chip { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; }
+    .preset-chip:hover { border-color: #f97316; color: #f97316; }
+    .or-divider { font-size: 0.75rem; color: var(--muted); margin: 10px 0 8px; }
+    .custom-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .emoji-sel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px; font-size: 1rem; cursor: pointer; }
+    .custom-input { flex: 1; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; color: var(--text); min-width: 120px; }
+    .custom-input:focus { outline: none; border-color: var(--accent); }
+    .btn-sm-blue { background: #3b82f6; color: #fff; border: none; border-radius: 7px; padding: 7px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .btn-sm-gray { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 14px; font-size: 0.85rem; cursor: pointer; color: var(--muted); }
+
+    /* Rooms grid */
+    .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .empty-rooms { color: var(--muted); font-size: 0.9rem; padding: 24px 0; text-align: center; }
+
+    .room-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 16px; position: relative; }
+    .room-card.done { border-color: #22c55e; }
+    .room-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .room-name { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .room-emoji { font-size: 1.3rem; }
+    .room-delete { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 0.9rem; padding: 2px 4px; border-radius: 4px; }
+    .room-delete:hover { color: #ef4444; background: #fee2e2; }
+
+    .room-pct { font-size: 1.6rem; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+    .pct-0   { color: var(--muted); }
+    .pct-low { color: #ef4444; }
+    .pct-mid { color: #f97316; }
+    .pct-high { color: #3b82f6; }
+    .pct-full { color: #22c55e; }
+
+    .room-bar-track { height: 8px; background: var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+    .room-bar-fill { height: 100%; border-radius: 6px; transition: width 0.3s; }
+    .fill-low  { background: #ef4444; }
+    .fill-mid  { background: #f97316; }
+    .fill-high { background: #3b82f6; }
+    .fill-full { background: #22c55e; }
+
+    .room-slider { width: 100%; accent-color: #f97316; cursor: pointer; margin-bottom: 8px; }
+    .room-meta { font-size: 0.78rem; color: var(--muted); display: flex; justify-content: space-between; }
+    .done-badge { display: inline-block; background: #dcfce7; color: #15803d; border-radius: 10px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; }
+
+    /* Search */
+    .search-wrap { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+    .search-icon { position: absolute; left: 12px; font-size: 1rem; }
+    .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 36px 10px 38px; font-size: 0.95rem; color: var(--text); box-sizing: border-box; }
+    .search-input:focus { outline: none; border-color: #f97316; }
+    .search-clear { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; }
+
+    /* Room filter */
+    .room-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .rf-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 5px 12px; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; color: var(--text); }
+    .rf-btn:hover { border-color: #f97316; }
+    .rf-btn.active { background: #f97316; border-color: #f97316; color: #fff; }
+
+    /* Add box form */
+    .add-box-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .ab-field { display: flex; flex-direction: column; gap: 4px; }
+    .ab-wide { grid-column: span 1; }
+    .ab-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+    .sel-sm { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 0.88rem; color: var(--text); }
+    .inp-sm { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 0.88rem; color: var(--text); }
+    .inp-sm:focus { outline: none; border-color: var(--accent); }
+    .pri-row { display: flex; flex-direction: column; gap: 4px; }
+    .pri-opt { font-size: 0.82rem; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .add-box-footer { display: flex; gap: 10px; align-items: center; }
+    .btn-primary { background: #f97316; color: #fff; border: none; border-radius: 9px; padding: 10px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* Boxes list */
+    .boxes-list { display: flex; flex-direction: column; gap: 6px; }
+    .no-boxes { color: var(--muted); font-size: 0.9rem; padding: 24px 0; text-align: center; }
+
+    .box-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; }
+    .box-item.opened { opacity: 0.5; }
+    .box-num { font-size: 1.2rem; font-weight: 900; color: #f97316; text-align: center; line-height: 1; }
+    .box-num-label { font-size: 0.65rem; color: var(--muted); text-align: center; font-weight: 600; }
+    .box-info { min-width: 0; }
+    .box-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+    .box-room-badge { background: color-mix(in srgb, #f97316 15%, transparent); color: #c2410c; border-radius: 4px; padding: 2px 7px; font-size: 0.72rem; font-weight: 700; }
+    .box-contents { font-size: 0.92rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .box-opened-label { font-size: 0.72rem; color: #10b981; font-weight: 700; }
+    .box-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .ba-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 0.8rem; cursor: pointer; color: var(--muted); }
+    .ba-btn:hover { border-color: var(--accent); color: var(--text); }
+    .ba-del:hover { border-color: #ef4444; color: #ef4444; background: #fee2e2; }
+    .ba-open:hover { border-color: #10b981; color: #10b981; background: #dcfce7; }
+
+    .pri-icon { font-size: 0.85rem; }
+
+    /* Edit mode */
+    .box-edit-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .box-edit-num { width: 50px; }
+    .box-edit-room { max-width: 120px; }
+    .box-edit-cont { flex: 1; min-width: 100px; }
+    .edit-inp { background: var(--card-bg); border: 1px solid var(--accent); border-radius: 6px; padding: 5px 8px; font-size: 0.85rem; color: var(--text); }
+    .btn-save { background: #22c55e; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .btn-cancel-sm { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.82rem; cursor: pointer; color: var(--muted); }
+
+    .btn-reset { background: none; border: none; color: var(--muted); font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
+    .btn-reset:hover { color: #ef4444; }
+
+    @media (max-width: 640px) {
+      .top-bar { grid-template-columns: 1fr; }
+      .add-box-grid { grid-template-columns: 1fr 1fr; }
+      .ab-wide { grid-column: span 2; }
+      .rooms-grid { grid-template-columns: 1fr 1fr; }
+      .tool-title { font-size: 1.4rem; }
+      .box-item { grid-template-columns: 36px 1fr auto; }
+    }
+    @media (max-width: 400px) {
+      .rooms-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <script is:inline>
+    const STORE_KEY = 'yumi-moving-board';
+    const PRESETS = [
+      { name: 'リビング', emoji: '🛋️' },
+      { name: '寝室', emoji: '🛏️' },
+      { name: 'キッチン', emoji: '🍳' },
+      { name: '子ども部屋', emoji: '🧸' },
+      { name: '書斎', emoji: '💻' },
+      { name: '洗面所', emoji: '🚿' },
+      { name: '玄関・廊下', emoji: '🚪' },
+      { name: '押入れ・納戸', emoji: '📦' },
+      { name: 'ベランダ', emoji: '🌿' },
+    ];
+    const PRI_ICONS = { high: '🔴', normal: '🟡', low: '🟢' };
+
+    let data = { moveDate: '', rooms: [], boxes: [], _nextNum: 1 };
+    let filterRoomId = null;
+
+    function uid() { return Math.random().toString(36).slice(2, 9); }
+
+    function load() {
+      try {
+        const s = localStorage.getItem(STORE_KEY);
+        if (s) data = JSON.parse(s);
+        if (!data._nextNum) data._nextNum = 1;
+      } catch {}
+    }
+
+    function save() {
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    }
+
+    // ── MOVE DATE ──────────────────────────────────────
+    function onMoveDateChange() {
+      data.moveDate = document.getElementById('move-date').value;
+      save();
+      renderCountdown();
+    }
+
+    function renderCountdown() {
+      const el = document.getElementById('countdown');
+      if (!data.moveDate) { el.textContent = ''; return; }
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(data.moveDate);
+      const diff = Math.round((target - today) / 86400000);
+      if (diff > 0)      { el.textContent = `引越しまであと ${diff} 日`; el.className = 'countdown ' + (diff <= 14 ? 'soon' : 'ok'); }
+      else if (diff === 0){ el.textContent = '今日が引越し日！'; el.className = 'countdown soon'; }
+      else               { el.textContent = `引越し日から ${-diff} 日経過`; el.className = 'countdown neutral'; }
+    }
+
+    // ── OVERALL PROGRESS ──────────────────────────────
+    function renderOverall() {
+      if (data.rooms.length === 0) {
+        document.getElementById('overall-pct').textContent = '0%';
+        document.getElementById('overall-fill').style.width = '0%';
+        document.getElementById('overall-sub').textContent = '部屋を追加してください';
+        return;
+      }
+      const avg = data.rooms.reduce((s, r) => s + r.packed, 0) / data.rooms.length;
+      document.getElementById('overall-pct').textContent = Math.round(avg) + '%';
+      document.getElementById('overall-fill').style.width = avg + '%';
+      const done = data.rooms.filter(r => r.packed === 100).length;
+      document.getElementById('overall-sub').textContent =
+        `${data.rooms.length}部屋中 ${done}部屋完了 / ダンボール ${data.boxes.length}箱`;
+    }
+
+    // ── ROOMS ──────────────────────────────────────────
+    function toggleAddRoom() {
+      const p = document.getElementById('add-room-panel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none';
+      if (p.style.display === 'block') buildPresetChips();
+    }
+
+    function buildPresetChips() {
+      const existing = data.rooms.map(r => r.name);
+      const el = document.getElementById('preset-chips');
+      el.innerHTML = PRESETS
+        .filter(p => !existing.includes(p.name))
+        .map(p => `<button class="preset-chip" onclick="addPresetRoom('${p.name}','${p.emoji}')">${p.emoji} ${p.name}</button>`)
+        .join('') || '<span style="color:var(--muted);font-size:.82rem">すべてのプリセットが追加済みです</span>';
+    }
+
+    function addPresetRoom(name, emoji) {
+      addRoom(name, emoji);
+      document.getElementById('add-room-panel').style.display = 'none';
+    }
+
+    function addCustomRoom() {
+      const name = document.getElementById('custom-name').value.trim();
+      const emoji = document.getElementById('custom-emoji').value;
+      if (!name) { alert('部屋名を入力してください'); return; }
+      addRoom(name, emoji);
+      document.getElementById('custom-name').value = '';
+      document.getElementById('add-room-panel').style.display = 'none';
+    }
+
+    function addRoom(name, emoji) {
+      data.rooms.push({ id: uid(), name, emoji, packed: 0 });
+      save();
+      renderRooms();
+      renderOverall();
+      renderRoomFilter();
+    }
+
+    function updateRoomPacked(roomId, val) {
+      const r = data.rooms.find(r => r.id === roomId);
+      if (r) { r.packed = parseInt(val); save(); renderRooms(); renderOverall(); }
+    }
+
+    function deleteRoom(roomId) {
+      if (!confirm('この部屋を削除しますか？（この部屋のダンボール記録は残ります）')) return;
+      data.rooms = data.rooms.filter(r => r.id !== roomId);
+      if (filterRoomId === roomId) filterRoomId = null;
+      save();
+      renderRooms();
+      renderOverall();
+      renderRoomFilter();
+      renderBoxes();
+    }
+
+    function getFillClass(pct) {
+      if (pct === 0)   return 'fill-low';
+      if (pct < 50)    return 'fill-low';
+      if (pct < 80)    return 'fill-mid';
+      if (pct < 100)   return 'fill-high';
+      return 'fill-full';
+    }
+    function getPctClass(pct) {
+      if (pct === 0)  return 'pct-0';
+      if (pct < 50)   return 'pct-low';
+      if (pct < 80)   return 'pct-mid';
+      if (pct < 100)  return 'pct-high';
+      return 'pct-full';
+    }
+
+    function renderRooms() {
+      const el = document.getElementById('rooms-grid');
+      if (data.rooms.length === 0) {
+        el.innerHTML = '<div class="empty-rooms">部屋を追加して梱包の進捗を管理しましょう</div>';
+        return;
+      }
+      el.innerHTML = data.rooms.map(r => {
+        const boxCount = data.boxes.filter(b => b.roomId === r.id).length;
+        const isDone = r.packed === 100;
+        return `<div class="room-card${isDone ? ' done' : ''}">
+          <div class="room-card-header">
+            <div class="room-name"><span class="room-emoji">${r.emoji}</span>${escHtml(r.name)}</div>
+            <button class="room-delete" onclick="deleteRoom('${r.id}')" title="削除">🗑️</button>
+          </div>
+          <div class="room-pct ${getPctClass(r.packed)}">${r.packed}%${isDone ? ' ✅' : ''}</div>
+          <div class="room-bar-track"><div class="room-bar-fill ${getFillClass(r.packed)}" style="width:${r.packed}%"></div></div>
+          <input type="range" class="room-slider" min="0" max="100" value="${r.packed}"
+            oninput="updateRoomPacked('${r.id}',this.value)" />
+          <div class="room-meta">
+            <span>${boxCount}箱登録済み</span>
+            ${isDone ? '<span class="done-badge">梱包完了</span>' : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── BOXES ──────────────────────────────────────────
+    function toggleAddBox() {
+      const p = document.getElementById('add-box-panel');
+      const isHidden = p.style.display === 'none';
+      p.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        buildRoomSelect('new-room');
+        setTimeout(() => document.getElementById('new-contents').focus(), 50);
+      }
+    }
+
+    function buildRoomSelect(elId) {
+      const sel = document.getElementById(elId);
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = data.rooms.length
+        ? data.rooms.map(r => `<option value="${r.id}">${r.emoji} ${escHtml(r.name)}</option>`).join('')
+        : '<option value="">（部屋を追加してください）</option>';
+      if (current) sel.value = current;
+    }
+
+    function submitAddBox() {
+      const roomId = document.getElementById('new-room').value;
+      const contents = document.getElementById('new-contents').value.trim();
+      if (!contents) { alert('中身を入力してください'); return; }
+      const priority = document.querySelector('input[name="pri"]:checked')?.value || 'normal';
+
+      data.boxes.push({
+        id: uid(),
+        number: data._nextNum++,
+        roomId,
+        contents,
+        priority,
+        opened: false,
+        createdAt: Date.now(),
+      });
+      save();
+      document.getElementById('new-contents').value = '';
+      document.getElementById('add-box-panel').style.display = 'none';
+      renderRooms();
+      renderOverall();
+      renderBoxes();
+    }
+
+    function deleteBox(boxId) {
+      if (!confirm('このダンボールを削除しますか？')) return;
+      data.boxes = data.boxes.filter(b => b.id !== boxId);
+      save();
+      renderRooms();
+      renderOverall();
+      renderBoxes();
+    }
+
+    function toggleOpened(boxId) {
+      const b = data.boxes.find(b => b.id === boxId);
+      if (b) { b.opened = !b.opened; save(); renderBoxes(); }
+    }
+
+    function startEdit(boxId) {
+      const b = data.boxes.find(b => b.id === boxId);
+      if (!b) return;
+      const itemEl = document.getElementById('box-' + boxId);
+      if (!itemEl) return;
+      const roomOpts = data.rooms.map(r => `<option value="${r.id}" ${r.id===b.roomId?'selected':''}>${r.emoji} ${escHtml(r.name)}</option>`).join('');
+      itemEl.querySelector('.box-info').innerHTML = `
+        <div class="box-edit-row">
+          <input class="edit-inp box-edit-room" id="edit-room-${boxId}" as="select">
+          <select class="edit-inp box-edit-room" id="edit-room-${boxId}">${roomOpts}</select>
+          <input class="edit-inp box-edit-cont" id="edit-cont-${boxId}" value="${escHtml(b.contents)}" maxlength="200" onkeydown="if(event.key==='Enter') saveEdit('${boxId}')" />
+          <button class="btn-save" onclick="saveEdit('${boxId}')">保存</button>
+          <button class="btn-cancel-sm" onclick="renderBoxes()">×</button>
+        </div>`;
+      itemEl.querySelector(`select#edit-room-${boxId}`)?.focus?.() ||
+      itemEl.querySelector(`#edit-cont-${boxId}`)?.focus?.();
+    }
+
+    function saveEdit(boxId) {
+      const b = data.boxes.find(b => b.id === boxId);
+      if (!b) return;
+      const roomEl = document.getElementById('edit-room-' + boxId);
+      const contEl = document.getElementById('edit-cont-' + boxId);
+      if (roomEl) b.roomId = roomEl.value;
+      if (contEl && contEl.value.trim()) b.contents = contEl.value.trim();
+      save();
+      renderRooms();
+      renderOverall();
+      renderBoxes();
+    }
+
+    function filterBoxes() {
+      const q = document.getElementById('search-input').value;
+      document.getElementById('search-clear').style.display = q ? 'block' : 'none';
+      renderBoxes();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-clear').style.display = 'none';
+      renderBoxes();
+    }
+
+    function setRoomFilter(roomId) {
+      filterRoomId = roomId;
+      renderRoomFilter();
+      renderBoxes();
+    }
+
+    function renderRoomFilter() {
+      const el = document.getElementById('room-filter');
+      const buttons = [
+        `<button class="rf-btn${filterRoomId === null ? ' active' : ''}" onclick="setRoomFilter(null)">すべて (${data.boxes.length})</button>`,
+        ...data.rooms.map(r => {
+          const cnt = data.boxes.filter(b => b.roomId === r.id).length;
+          return `<button class="rf-btn${filterRoomId === r.id ? ' active' : ''}" onclick="setRoomFilter('${r.id}')">${r.emoji} ${escHtml(r.name)} (${cnt})</button>`;
+        }),
+      ];
+      el.innerHTML = buttons.join('');
+    }
+
+    function renderBoxes() {
+      const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+      let boxes = [...data.boxes];
+
+      if (filterRoomId) boxes = boxes.filter(b => b.roomId === filterRoomId);
+      if (q) boxes = boxes.filter(b =>
+        String(b.number).includes(q) ||
+        b.contents.toLowerCase().includes(q) ||
+        (data.rooms.find(r => r.id === b.roomId)?.name || '').toLowerCase().includes(q)
+      );
+
+      boxes.sort((a, b) => a.number - b.number);
+
+      const el = document.getElementById('boxes-list');
+      if (boxes.length === 0) {
+        el.innerHTML = `<div class="no-boxes">${q || filterRoomId ? '検索結果がありません' : 'ダンボールを追加してください'}</div>`;
+        return;
+      }
+
+      el.innerHTML = boxes.map(b => {
+        const room = data.rooms.find(r => r.id === b.roomId);
+        const roomName = room ? `${room.emoji} ${room.name}` : '—';
+        return `<div class="box-item${b.opened ? ' opened' : ''}" id="box-${b.id}">
+          <div>
+            <div class="box-num">#${b.number}</div>
+            <div class="box-num-label">No.</div>
+          </div>
+          <div class="box-info">
+            <div class="box-top">
+              <span class="box-room-badge">${escHtml(roomName)}</span>
+              <span class="pri-icon" title="${b.priority==='high'?'最優先':b.priority==='low'?'後でOK':'普通'}">${PRI_ICONS[b.priority]||'🟡'}</span>
+              ${b.opened ? '<span class="box-opened-label">✔ 開梱済み</span>' : ''}
+            </div>
+            <div class="box-contents">${escHtml(b.contents)}</div>
+          </div>
+          <div class="box-actions">
+            <button class="ba-btn ba-open" onclick="toggleOpened('${b.id}')" title="${b.opened?'未開梱に戻す':'開梱済みにする'}">${b.opened?'↩':'✔'}</button>
+            <button class="ba-btn" onclick="startEdit('${b.id}')" title="編集">✏️</button>
+            <button class="ba-btn ba-del" onclick="deleteBox('${b.id}')" title="削除">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function resetAll() {
+      if (!confirm('すべてのデータをリセットしますか？この操作は元に戻せません。')) return;
+      localStorage.removeItem(STORE_KEY);
+      data = { moveDate: '', rooms: [], boxes: [], _nextNum: 1 };
+      init();
+    }
+
+    function init() {
+      load();
+      if (data.moveDate) document.getElementById('move-date').value = data.moveDate;
+      renderCountdown();
+      renderOverall();
+      renderRooms();
+      renderRoomFilter();
+      renderBoxes();
+    }
+
+    init();
+  </script>
+</BaseLayout>

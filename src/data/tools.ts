@@ -123,7 +123,7 @@ export const tools: Tool[] = [
 		id: 16, slug: 'moving-board',
 		name: '引っ越し荷造り進捗ボード',
 		description: '部屋ごとの梱包率を可視化、ダンボール番号と中身を記録。',
-		emoji: '📦', category: 'practical', status: 'coming-soon',
+		emoji: '📦', category: 'practical', status: 'available',
 	},
 	{
 		id: 17, slug: 'pta-handover',
