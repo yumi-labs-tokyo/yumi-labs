@@ -1,0 +1,491 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="二日酔い回復タイマー — yumi-Labs"
+  description="飲酒量・体重から血中アルコール濃度（BAC）を計算。アルコール完全分解時刻・運転OK時刻をリアルタイム表示。水分補給リマインダー付き。"
+>
+  <div class="wrapper page-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="tool-header">
+      <span class="tool-icon">🍶</span>
+      <div>
+        <h1 class="tool-title">二日酔い回復タイマー</h1>
+        <p class="tool-sub">飲酒量と体重を入れると、アルコール分解時間と運転OK時刻をリアルタイム計算。水分補給リマインダー付き。</p>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- INPUT -->
+      <section class="card input-card">
+        <h2 class="card-title">🍺 飲酒情報を入力</h2>
+
+        <!-- 性別・体重 -->
+        <div class="row-2">
+          <div class="field-block">
+            <label class="field-label">性別（Widmark係数に使用）</label>
+            <div class="gender-row">
+              <button class="gender-btn active" id="btn-male" onclick="setGender('male')">👨 男性</button>
+              <button class="gender-btn" id="btn-female" onclick="setGender('female')">👩 女性</button>
+            </div>
+          </div>
+          <div class="field-block">
+            <div class="slider-header">
+              <label class="field-label">体重</label>
+              <div class="num-unit">
+                <input type="number" class="num-input" id="weight-num" value="65" min="30" max="150" oninput="syncRange('weight'); recalc()" />
+                <span class="unit">kg</span>
+              </div>
+            </div>
+            <input type="range" class="slider" id="weight-range" min="30" max="150" value="65" oninput="syncNum('weight'); recalc()" />
+            <div class="slider-minmax"><span>30kg</span><span>150kg</span></div>
+          </div>
+        </div>
+
+        <!-- 飲み始め時刻 -->
+        <div class="field-block">
+          <label class="field-label">飲み始めた時刻</label>
+          <input type="datetime-local" class="datetime-input" id="start-time" oninput="recalc()" />
+          <button class="btn-now" onclick="setNow()">今すぐセット</button>
+        </div>
+
+        <!-- お酒ピッカー -->
+        <div class="field-block">
+          <label class="field-label">飲んだ（飲んでいる）お酒</label>
+          <div class="drinks-grid" id="drinks-grid"></div>
+          <div class="total-row" id="total-row"></div>
+        </div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result-section" class="result-section" style="display:none">
+
+        <!-- BAC gauge -->
+        <div class="bac-card" id="bac-card">
+          <div class="bac-label">推定血中アルコール濃度（BAC）</div>
+          <div class="bac-value" id="bac-value">0.00%</div>
+          <div class="bac-bar-track"><div class="bac-bar-fill" id="bac-bar"></div></div>
+          <div class="bac-status" id="bac-status"></div>
+        </div>
+
+        <!-- 時刻カード群 -->
+        <div class="time-cards">
+          <div class="time-card card">
+            <div class="tc-icon">🚗</div>
+            <div class="tc-label">運転可能時刻（BAC = 0%）</div>
+            <div class="tc-time" id="drive-ok-time">－</div>
+            <div class="tc-sub" id="drive-ok-sub"></div>
+          </div>
+          <div class="time-card card">
+            <div class="tc-icon">✅</div>
+            <div class="tc-label">アルコール完全分解</div>
+            <div class="tc-time" id="clear-time">－</div>
+            <div class="tc-sub" id="clear-sub"></div>
+          </div>
+        </div>
+
+        <!-- カウントダウン -->
+        <div class="countdown-card card" id="countdown-card">
+          <div class="cd-label" id="cd-label">運転可能まで</div>
+          <div class="cd-timer" id="cd-timer">--:--:--</div>
+          <div class="cd-note" id="cd-note"></div>
+        </div>
+
+        <!-- 法律の注意 -->
+        <div class="law-note">
+          ⚠️ 日本の道路交通法では、呼気1Lあたり0.15mg（BAC約0.03%）以上で「酒気帯び運転」として検挙されます。このツールはあくまで目安です。<strong>少しでも飲んだら乗らない</strong>が原則です。
+        </div>
+
+        <!-- 水分補給 -->
+        <div class="card water-card">
+          <h3 class="res-title">💧 水分補給リマインダー</h3>
+          <div class="water-info" id="water-info"></div>
+          <div class="water-checks" id="water-checks"></div>
+          <div class="water-tips">
+            <div class="wt-item">🥤 起きたらまずコップ1杯の水 or スポーツドリンク</div>
+            <div class="wt-item">🍌 バナナ・蜂蜜・梅干しで電解質補給</div>
+            <div class="wt-item">☕ コーヒーは利尿作用あり、回復期は控えめに</div>
+          </div>
+        </div>
+
+        <!-- 回復アドバイス -->
+        <div class="card recovery-card">
+          <h3 class="res-title">🛌 回復アドバイス</h3>
+          <div id="recovery-advice" class="advice-grid"></div>
+        </div>
+
+      </section>
+    </div>
+  </div>
+
+  <style>
+    .page-wrap { padding-bottom: 60px; }
+    .breadcrumb { margin-bottom: 24px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .tool-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .tool-icon { font-size: 3rem; }
+    .tool-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 4px; }
+    .tool-sub { color: var(--muted); margin: 0; font-size: 0.9rem; }
+
+    .main-layout { display: flex; flex-direction: column; gap: 18px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 18px; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field-block { margin-bottom: 18px; }
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+
+    /* Gender */
+    .gender-row { display: flex; gap: 10px; }
+    .gender-btn { flex: 1; background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: var(--text); transition: all .15s; }
+    .gender-btn.active { border-color: #f97316; background: color-mix(in srgb, #f97316 12%, transparent); color: #c2410c; }
+
+    /* Weight slider */
+    .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .num-unit { display: flex; align-items: center; gap: 6px; }
+    .num-input { width: 60px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; font-size: 1rem; font-weight: 700; color: var(--text); text-align: right; }
+    .unit { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    .slider { width: 100%; accent-color: #f97316; cursor: pointer; }
+    .slider-minmax { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+    /* Datetime */
+    .datetime-input { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; font-size: 0.9rem; color: var(--text); margin-right: 8px; }
+    .datetime-input:focus { outline: none; border-color: var(--accent); }
+    .btn-now { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; cursor: pointer; color: var(--text); }
+    .btn-now:hover { border-color: #f97316; color: #f97316; }
+
+    /* Drinks grid */
+    .drinks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .drink-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; text-align: center; }
+    .di-emoji { font-size: 1.5rem; margin-bottom: 3px; }
+    .di-name { font-size: 0.78rem; font-weight: 700; margin-bottom: 1px; }
+    .di-size { font-size: 0.7rem; color: var(--muted); margin-bottom: 6px; }
+    .di-counter { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .di-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; width: 26px; height: 26px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; transition: all .1s; }
+    .di-btn:hover { border-color: #f97316; color: #f97316; }
+    .di-count { font-size: 1rem; font-weight: 800; min-width: 20px; text-align: center; }
+    .di-grams { font-size: 0.65rem; color: var(--muted); margin-top: 3px; }
+
+    .total-row { margin-top: 10px; background: var(--surface); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; display: flex; gap: 16px; flex-wrap: wrap; }
+    .total-item { font-size: 0.9rem; }
+    .total-val { font-weight: 800; color: #f97316; }
+
+    /* BAC card */
+    .bac-card { border-radius: 20px; padding: 24px 28px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; }
+    .bac-label { font-size: 0.78rem; opacity: 0.7; margin-bottom: 8px; letter-spacing: 0.06em; }
+    .bac-value { font-size: 3.5rem; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .bac-bar-track { height: 12px; background: rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; max-width: 400px; margin: 0 auto 10px; }
+    .bac-bar-fill { height: 100%; border-radius: 8px; transition: width 0.6s, background 0.6s; }
+    .bac-status { font-size: 1rem; font-weight: 700; margin-top: 4px; }
+
+    /* Time cards */
+    .time-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .time-card { text-align: center; }
+    .tc-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .tc-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+    .tc-time { font-size: 1.4rem; font-weight: 900; color: var(--text); margin-bottom: 3px; }
+    .tc-sub { font-size: 0.78rem; color: var(--muted); }
+
+    /* Countdown */
+    .countdown-card { text-align: center; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; }
+    .cd-label { font-size: 0.82rem; font-weight: 700; opacity: 0.75; margin-bottom: 6px; }
+    .cd-timer { font-size: 3rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+    .cd-note { font-size: 0.82rem; opacity: 0.7; margin-top: 6px; }
+
+    /* Law note */
+    .law-note { background: #fff7ed; border: 1px solid #fb923c; border-radius: 12px; padding: 12px 16px; font-size: 0.82rem; line-height: 1.7; color: #7c2d12; }
+
+    /* Water */
+    .water-card { }
+    .res-title { font-size: 1rem; font-weight: 700; margin: 0 0 14px; }
+    .water-info { font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; }
+    .water-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .wc-item { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; transition: all .15s; }
+    .wc-item.checked { background: #dcfce7; border-color: #86efac; text-decoration: line-through; color: #15803d; }
+    .wc-item input { accent-color: #10b981; }
+    .water-tips { display: flex; flex-direction: column; gap: 6px; }
+    .wt-item { font-size: 0.85rem; background: color-mix(in srgb, #06b6d4 8%, transparent); border-radius: 8px; padding: 8px 12px; }
+
+    /* Recovery */
+    .advice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .advice-item { background: var(--surface); border-radius: 10px; padding: 12px; }
+    .ai-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    .ai-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 3px; }
+    .ai-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    .result-section { display: flex; flex-direction: column; gap: 14px; }
+
+    @media (max-width: 600px) {
+      .row-2 { grid-template-columns: 1fr; }
+      .drinks-grid { grid-template-columns: repeat(2, 1fr); }
+      .time-cards { grid-template-columns: 1fr; }
+      .advice-grid { grid-template-columns: 1fr; }
+      .bac-value { font-size: 2.8rem; }
+      .cd-timer { font-size: 2.2rem; }
+      .tool-title { font-size: 1.4rem; }
+    }
+  </style>
+
+  <script is:inline>
+    // Constants
+    const WIDMARK_MALE   = 0.68;
+    const WIDMARK_FEMALE = 0.55;
+    const ELIM_RATE = 0.015; // % per hour
+    const DRIVE_LIMIT = 0.03; // Japan legal limit (%)
+
+    const DRINKS = [
+      { id:'beer350',   name:'ビール',       size:'350ml',  abv:5,   ml:350,  emoji:'🍺' },
+      { id:'beer500',   name:'ビール',       size:'500ml',  abv:5,   ml:500,  emoji:'🍺' },
+      { id:'chuhai',    name:'チューハイ',   size:'350ml',  abv:7,   ml:350,  emoji:'🍋' },
+      { id:'strong',    name:'ストロング系', size:'350ml',  abv:9,   ml:350,  emoji:'⚡' },
+      { id:'wine',      name:'ワイン',       size:'1杯',    abv:12,  ml:125,  emoji:'🍷' },
+      { id:'sake',      name:'日本酒',       size:'1合',    abv:15,  ml:180,  emoji:'🍶' },
+      { id:'shochu',    name:'焼酎',         size:'1合',    abv:25,  ml:180,  emoji:'🥃' },
+      { id:'whisky',    name:'ウイスキー',   size:'ダブル', abv:40,  ml:60,   emoji:'🥃' },
+      { id:'brandy',    name:'ブランデー等', size:'1杯',    abv:40,  ml:30,   emoji:'🥃' },
+    ];
+
+    const counts = {};
+    DRINKS.forEach(d => { counts[d.id] = 0; });
+
+    let gender = 'male';
+    let timerInterval = null;
+
+    // ── Gender ──────────────────────────────────────────
+    function setGender(g) {
+      gender = g;
+      document.getElementById('btn-male').classList.toggle('active', g === 'male');
+      document.getElementById('btn-female').classList.toggle('active', g === 'female');
+      recalc();
+    }
+
+    // ── Slider sync ──────────────────────────────────────
+    function syncNum(id) {
+      const r = document.getElementById(id + '-range');
+      const n = document.getElementById(id + '-num');
+      if (r && n) n.value = r.value;
+    }
+    function syncRange(id) {
+      const r = document.getElementById(id + '-range');
+      const n = document.getElementById(id + '-num');
+      if (r && n) r.value = n.value;
+    }
+
+    // ── Now button ──────────────────────────────────────
+    function setNow() {
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      const local = new Date(now.getTime() - offset * 60000);
+      document.getElementById('start-time').value = local.toISOString().slice(0, 16);
+      recalc();
+    }
+
+    // ── Build drinks UI ──────────────────────────────────
+    function buildDrinks() {
+      const grid = document.getElementById('drinks-grid');
+      grid.innerHTML = DRINKS.map(d => {
+        const gramsPerUnit = d.ml * (d.abv / 100) * 0.8;
+        return `<div class="drink-item" id="di-${d.id}">
+          <div class="di-emoji">${d.emoji}</div>
+          <div class="di-name">${d.name}</div>
+          <div class="di-size">${d.size}</div>
+          <div class="di-counter">
+            <button class="di-btn" onclick="changeCount('${d.id}',-1)">−</button>
+            <div class="di-count" id="cnt-${d.id}">0</div>
+            <button class="di-btn" onclick="changeCount('${d.id}',+1)">＋</button>
+          </div>
+          <div class="di-grams">${gramsPerUnit.toFixed(1)}g/杯</div>
+        </div>`;
+      }).join('');
+    }
+
+    function changeCount(id, delta) {
+      counts[id] = Math.max(0, (counts[id] || 0) + delta);
+      document.getElementById('cnt-' + id).textContent = counts[id];
+      updateTotal();
+      recalc();
+    }
+
+    function updateTotal() {
+      let totalGrams = 0, totalMl = 0;
+      DRINKS.forEach(d => {
+        const n = counts[d.id] || 0;
+        totalGrams += n * d.ml * (d.abv / 100) * 0.8;
+        totalMl += n * d.ml;
+      });
+      const standardDrinks = totalGrams / 10;
+      document.getElementById('total-row').innerHTML = totalGrams > 0 ? `
+        <span class="total-item">純アルコール量：<span class="total-val">${totalGrams.toFixed(1)}g</span></span>
+        <span class="total-item">標準飲酒量：<span class="total-val">${standardDrinks.toFixed(1)}杯分</span></span>
+        <span class="total-item">飲んだ量：<span class="total-val">${totalMl}ml</span></span>
+      ` : '<span style="color:var(--muted);font-size:.85rem">お酒を追加してください</span>';
+      return { totalGrams, standardDrinks };
+    }
+
+    // ── Core calculation ─────────────────────────────────
+    function getTotalGrams() {
+      return DRINKS.reduce((s, d) => s + (counts[d.id] || 0) * d.ml * (d.abv / 100) * 0.8, 0);
+    }
+
+    function calcBAC(grams, weightKg, r, hoursElapsed) {
+      if (grams <= 0) return 0;
+      const peakBAC = grams / (weightKg * r * 10);
+      return Math.max(0, peakBAC - ELIM_RATE * Math.max(0, hoursElapsed));
+    }
+
+    function hoursToZero(grams, weightKg, r) {
+      if (grams <= 0) return 0;
+      return (grams / (weightKg * r * 10)) / ELIM_RATE;
+    }
+
+    function recalc() {
+      const grams   = getTotalGrams();
+      const weight  = parseFloat(document.getElementById('weight-num').value) || 65;
+      const r       = gender === 'male' ? WIDMARK_MALE : WIDMARK_FEMALE;
+      const startStr = document.getElementById('start-time').value;
+
+      if (grams <= 0 || !startStr) {
+        document.getElementById('result-section').style.display = 'none';
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        return;
+      }
+
+      const startTime = new Date(startStr);
+      const now = new Date();
+      const hoursElapsed = Math.max(0, (now - startTime) / 3600000);
+
+      const peakBAC  = grams / (weight * r * 10);
+      const clearH   = hoursToZero(grams, weight, r);
+      const clearTime = new Date(startTime.getTime() + clearH * 3600000);
+      const driveOKH  = Math.max(0, (peakBAC - DRIVE_LIMIT) / ELIM_RATE);
+      const driveOKTime = new Date(startTime.getTime() + driveOKH * 3600000);
+
+      document.getElementById('result-section').style.display = 'flex';
+      renderResult(grams, weight, r, hoursElapsed, peakBAC, clearTime, driveOKTime);
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const h = Math.max(0, (new Date() - startTime) / 3600000);
+        const currentBAC = calcBAC(grams, weight, r, h);
+        updateLiveBAC(currentBAC, clearTime, driveOKTime);
+      }, 1000);
+    }
+
+    function renderResult(grams, weight, r, hoursElapsed, peakBAC, clearTime, driveOKTime) {
+      const currentBAC = calcBAC(grams, weight, r, hoursElapsed);
+
+      // BAC card
+      updateLiveBAC(currentBAC, clearTime, driveOKTime);
+
+      // Time cards
+      const fmtTime = d => d.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
+      const fmtDate = d => {
+        const today = new Date();
+        const diff = Math.round((d - today) / 86400000);
+        if (diff === 0) return '今日 ' + fmtTime(d);
+        if (diff === 1) return '明日 ' + fmtTime(d);
+        return `${d.getMonth()+1}/${d.getDate()} ${fmtTime(d)}`;
+      };
+
+      const now = new Date();
+      const clearMs = clearTime - now;
+      const driveMs = driveOKTime - now;
+
+      document.getElementById('drive-ok-time').textContent = driveMs > 0 ? fmtDate(driveOKTime) : '既に0.03%以下（ただし飲んだら乗らない）';
+      document.getElementById('drive-ok-sub').textContent = driveMs > 0 ? `あと ${hm(driveMs)}` : '';
+      document.getElementById('clear-time').textContent = clearMs > 0 ? fmtDate(clearTime) : '既に0%（完全分解済み）';
+      document.getElementById('clear-sub').textContent = clearMs > 0 ? `あと ${hm(clearMs)}` : '';
+
+      // Water
+      const standardDrinks = Math.ceil(grams / 10);
+      const waterGlasses = Math.min(10, Math.max(1, standardDrinks));
+      document.getElementById('water-info').textContent =
+        `推奨追加水分量：約 ${waterGlasses * 200}ml（コップ${waterGlasses}杯分）。アルコールは利尿作用があり脱水が起きやすいため、水・スポーツドリンクで補給してください。`;
+      const checks = document.getElementById('water-checks');
+      checks.innerHTML = Array.from({length: waterGlasses}, (_, i) =>
+        `<label class="wc-item" id="wc-${i}" onclick="toggleWater(${i})">
+          <input type="checkbox" id="wcc-${i}" onclick="event.stopPropagation()" onchange="toggleWater(${i})" />
+          💧 ${i+1}杯目
+        </label>`
+      ).join('');
+
+      // Recovery advice
+      const advice = [
+        { icon:'💤', title:'睡眠・安静', desc:'アルコール分解には時間が必要。無理せず横になって休みましょう。' },
+        { icon:'🥤', title:'水分・電解質', desc:'水またはスポーツドリンクをこまめに補給。一気飲みは逆効果。' },
+        { icon:'🍚', title:'消化の良い食事', desc:'おかゆ・トースト・バナナなど胃に優しいものを少量ずつ。' },
+        { icon:'🚫', title:'再飲酒NG', desc:'「迎え酒」はアルコール依存のリスクあり。絶対にやめましょう。' },
+      ];
+      document.getElementById('recovery-advice').innerHTML = advice.map(a =>
+        `<div class="advice-item"><div class="ai-icon">${a.icon}</div><div class="ai-title">${a.title}</div><div class="ai-desc">${a.desc}</div></div>`
+      ).join('');
+    }
+
+    function updateLiveBAC(bac, clearTime, driveOKTime) {
+      const now = new Date();
+      const pct = Math.min(100, bac / 0.3 * 100);
+
+      let color, statusText, statusEmoji;
+      if (bac === 0) {
+        color = '#22c55e'; statusEmoji = '✅'; statusText = 'アルコール完全分解済み';
+      } else if (bac < DRIVE_LIMIT) {
+        color = '#86efac'; statusEmoji = '⚠️'; statusText = `0.03%未満ですが飲んだら乗らないが原則`;
+      } else if (bac < 0.08) {
+        color = '#f97316'; statusEmoji = '🚫'; statusText = '運転不可（酒気帯び）';
+      } else if (bac < 0.15) {
+        color = '#ef4444'; statusEmoji = '🚫'; statusText = '運転厳禁（明確に酔っている状態）';
+      } else {
+        color = '#7f1d1d'; statusEmoji = '🆘'; statusText = '危険な飲酒量です。すぐに休息してください。';
+      }
+
+      document.getElementById('bac-value').textContent = bac.toFixed(3) + '%';
+      document.getElementById('bac-value').style.color = color;
+      document.getElementById('bac-bar').style.width = pct + '%';
+      document.getElementById('bac-bar').style.background = `linear-gradient(90deg, #22c55e, ${color})`;
+      document.getElementById('bac-status').textContent = statusEmoji + ' ' + statusText;
+
+      // Countdown
+      const targetMs = Math.max(clearTime - now, 0);
+      const h = Math.floor(targetMs / 3600000);
+      const m = Math.floor((targetMs % 3600000) / 60000);
+      const s = Math.floor((targetMs % 60000) / 1000);
+      const pad = n => String(n).padStart(2, '0');
+      const cdEl = document.getElementById('cd-timer');
+      if (targetMs <= 0) {
+        cdEl.textContent = '00:00:00';
+        document.getElementById('cd-label').textContent = 'アルコール完全分解済み 🎉';
+        document.getElementById('cd-note').textContent = '';
+      } else {
+        cdEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+        document.getElementById('cd-label').textContent = 'アルコール完全分解まで';
+        document.getElementById('cd-note').textContent = '※ Widmark式による推定値。個人差・食事の有無で変わります。';
+      }
+    }
+
+    function toggleWater(i) {
+      const chk = document.getElementById('wcc-' + i);
+      const lbl = document.getElementById('wc-' + i);
+      chk.checked = !chk.checked;
+      lbl.classList.toggle('checked', chk.checked);
+    }
+
+    function hm(ms) {
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      return h > 0 ? `${h}時間${m}分` : `${m}分`;
+    }
+
+    // Init
+    buildDrinks();
+    updateTotal();
+    // Set default time to 2 hours ago as example
+    const defaultStart = new Date(Date.now() - 2 * 3600000);
+    const offset = defaultStart.getTimezoneOffset();
+    document.getElementById('start-time').value =
+      new Date(defaultStart.getTime() - offset * 60000).toISOString().slice(0, 16);
+  </script>
+</BaseLayout>

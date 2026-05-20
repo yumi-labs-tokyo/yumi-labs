@@ -135,7 +135,7 @@ export const tools: Tool[] = [
 		id: 18, slug: 'hangover-timer',
 		name: '二日酔い回復タイマー',
 		description: '飲酒量からアルコール分解時間を計算、運転OK時刻を表示。',
-		emoji: '🍶', category: 'practical', badge: 'New', status: 'coming-soon',
+		emoji: '🍶', category: 'practical', badge: 'New', status: 'available',
 	},
 	{
 		id: 19, slug: 'kaigo-check',
