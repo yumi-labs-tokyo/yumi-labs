@@ -7,7 +7,7 @@ import Layout from '../../layouts/BaseLayout.astro';
 >
   <div class="max-w-screen-xl mx-auto px-4 py-8">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">戸籍謄本「続柄」関係図ジェネレーター</h1>
+      <div class="text-2xl font-bold text-gray-900">戸籍謄本「続柄」関係図ジェネレーター</div>
       <p class="text-gray-500 mt-1 text-sm">家族構成を入力すると相続関係図のSVGを自動生成。相続手続き・家族信託の事前整理に。</p>
     </div>
 
@@ -18,9 +18,9 @@ import Layout from '../../layouts/BaseLayout.astro';
 
         <!-- 人物追加フォーム -->
         <div class="bg-white border border-gray-200 rounded-xl p-4">
-          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <div class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <span class="text-lg">👤</span> 人物を追加
-          </h2>
+          </div>
           <div class="space-y-2">
             <input id="inp-name" type="text" placeholder="氏名（例：山田 太郎）" maxlength="20"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -66,9 +66,9 @@ import Layout from '../../layouts/BaseLayout.astro';
 
         <!-- 関係追加フォーム -->
         <div class="bg-white border border-gray-200 rounded-xl p-4">
-          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <div class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <span class="text-lg">🔗</span> 関係を追加
-          </h2>
+          </div>
           <div class="space-y-2">
             <div>
               <label class="text-xs text-gray-500 mb-0.5 block">人物A</label>
@@ -99,15 +99,15 @@ import Layout from '../../layouts/BaseLayout.astro';
 
         <!-- 登録済み人物リスト -->
         <div class="bg-white border border-gray-200 rounded-xl p-4">
-          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <div class="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <span class="text-lg">📋</span> 登録済み（<span id="person-count">0</span>人）
-          </h2>
+          </div>
           <div id="person-list" class="space-y-1 max-h-48 overflow-y-auto text-sm"></div>
         </div>
 
         <!-- 登録済み関係リスト -->
         <div class="bg-white border border-gray-200 rounded-xl p-4">
-          <h2 class="font-semibold text-gray-800 mb-2 text-sm font-semibold text-gray-700">関係一覧</h2>
+          <div class="text-sm font-semibold text-gray-700 mb-2">関係一覧</div>
           <div id="relation-list" class="space-y-1 max-h-40 overflow-y-auto text-xs"></div>
         </div>
 
