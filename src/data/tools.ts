@@ -147,7 +147,7 @@ export const tools: Tool[] = [
 		id: 20, slug: 'family-tree',
 		name: '戸籍謄本「続柄」関係図生成',
 		description: '家族構成を入れると相関図SVGを生成。相続手続きの整理用。',
-		emoji: '🌳', category: 'practical', status: 'coming-soon',
+		emoji: '🌳', category: 'practical', badge: 'New', status: 'available',
 	},
 
 	// 🎨 クリエイター・SNS (21-40)

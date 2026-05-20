@@ -1,0 +1,647 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+---
+<Layout
+  title="戸籍謄本「続柄」関係図ジェネレーター | yumi-Labs"
+  description="家族構成を入力すると相関図SVGを自動生成。相続手続き・戸籍謄本整理に。"
+>
+  <div class="max-w-screen-xl mx-auto px-4 py-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">戸籍謄本「続柄」関係図ジェネレーター</h1>
+      <p class="text-gray-500 mt-1 text-sm">家族構成を入力すると相続関係図のSVGを自動生成。相続手続き・家族信託の事前整理に。</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[360px,1fr] gap-6">
+
+      <!-- ===== LEFT: コントロールパネル ===== -->
+      <div class="space-y-4">
+
+        <!-- 人物追加フォーム -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span class="text-lg">👤</span> 人物を追加
+          </h2>
+          <div class="space-y-2">
+            <input id="inp-name" type="text" placeholder="氏名（例：山田 太郎）" maxlength="20"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-gray-500 mb-0.5 block">性別</label>
+                <select id="inp-gender" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="M">男性 □</option>
+                  <option value="F">女性 ○</option>
+                  <option value="?">不明 ◇</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 mb-0.5 block">役割</label>
+                <select id="inp-role" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="other">その他</option>
+                  <option value="propositus">被相続人</option>
+                  <option value="heir">相続人</option>
+                  <option value="renounced">相続放棄</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-gray-500 mb-0.5 block">生年（西暦）</label>
+                <input id="inp-birth" type="number" placeholder="1950" min="1850" max="2030"
+                  class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 mb-0.5 block">没年（故人の場合）</label>
+                <input id="inp-death" type="number" placeholder="2024" min="1850" max="2030"
+                  class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+            </div>
+            <input id="inp-note" type="text" placeholder="メモ（例：長男、東京在住）" maxlength="20"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <button onclick="addPerson()"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
+              ＋ 人物を追加
+            </button>
+          </div>
+        </div>
+
+        <!-- 関係追加フォーム -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span class="text-lg">🔗</span> 関係を追加
+          </h2>
+          <div class="space-y-2">
+            <div>
+              <label class="text-xs text-gray-500 mb-0.5 block">人物A</label>
+              <select id="inp-rel-from" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">-- 選択 --</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 mb-0.5 block">関係種別</label>
+              <select id="inp-rel-type" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="marriage">婚姻（AとBは夫婦）</option>
+                <option value="parent-child">親子（AはBの親）</option>
+                <option value="adoption">養子縁組（AはBの養親）</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 mb-0.5 block">人物B</label>
+              <select id="inp-rel-to" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">-- 選択 --</option>
+              </select>
+            </div>
+            <button onclick="addRelation()"
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
+              ＋ 関係を追加
+            </button>
+          </div>
+        </div>
+
+        <!-- 登録済み人物リスト -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <h2 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span class="text-lg">📋</span> 登録済み（<span id="person-count">0</span>人）
+          </h2>
+          <div id="person-list" class="space-y-1 max-h-48 overflow-y-auto text-sm"></div>
+        </div>
+
+        <!-- 登録済み関係リスト -->
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <h2 class="font-semibold text-gray-800 mb-2 text-sm font-semibold text-gray-700">関係一覧</h2>
+          <div id="relation-list" class="space-y-1 max-h-40 overflow-y-auto text-xs"></div>
+        </div>
+
+        <!-- アクションボタン -->
+        <div class="flex gap-2">
+          <button onclick="downloadSVG()"
+            class="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
+            SVGをDL
+          </button>
+          <button onclick="resetAll()"
+            class="px-4 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-lg text-sm transition-colors border border-red-200">
+            リセット
+          </button>
+        </div>
+
+        <!-- 凡例 -->
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-600 space-y-1">
+          <p class="font-semibold text-gray-700 mb-1">凡例</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-1">
+            <span><span class="inline-block w-3 h-3 rounded-sm bg-red-600 mr-1 align-middle"></span>被相続人</span>
+            <span><span class="inline-block w-3 h-3 rounded-sm bg-blue-800 mr-1 align-middle"></span>相続人</span>
+            <span><span class="inline-block w-3 h-3 rounded-sm bg-gray-500 mr-1 align-middle"></span>相続放棄</span>
+            <span>□ 男性 / ○ 女性 / ◇ 不明</span>
+            <span>━━ 婚姻 / ─ ─ 養子</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: SVGダイアグラム ===== -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div id="diagram-wrapper" class="overflow-auto min-h-[400px] flex items-start justify-center">
+          <div id="diagram-placeholder" class="text-center text-gray-400 py-20">
+            <p class="text-4xl mb-3">🌳</p>
+            <p class="font-medium">人物を追加して関係を設定すると<br>家族関係図が自動生成されます</p>
+            <p class="text-xs mt-2">まず「被相続人」の人物を追加してください</p>
+          </div>
+          <div id="diagram-svg" class="hidden"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // ===== STATE =====
+    let persons = [];
+    let relations = [];
+    let nextPersonId = 1;
+    let nextRelId = 1;
+    const STORAGE_KEY = 'yumi-family-tree';
+
+    const CARD_W = 140;
+    const CARD_H = 72;
+    const H_GAP = 60;
+    const V_GAP = 110;
+    const PAD = 50;
+
+    // ===== STORAGE =====
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ persons, relations, nextPersonId, nextRelId }));
+      } catch(e) {}
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        persons = d.persons || [];
+        relations = d.relations || [];
+        nextPersonId = d.nextPersonId || 1;
+        nextRelId = d.nextRelId || 1;
+      } catch(e) {}
+    }
+
+    // ===== PERSON MANAGEMENT =====
+    function addPerson() {
+      const name = document.getElementById('inp-name').value.trim();
+      if (!name) { alert('氏名を入力してください'); return; }
+
+      const person = {
+        id: 'p' + nextPersonId++,
+        name,
+        gender: document.getElementById('inp-gender').value,
+        role: document.getElementById('inp-role').value,
+        birthYear: document.getElementById('inp-birth').value || null,
+        deathYear: document.getElementById('inp-death').value || null,
+        note: document.getElementById('inp-note').value.trim(),
+      };
+
+      persons.push(person);
+      saveData();
+
+      // Clear form
+      ['inp-name','inp-note'].forEach(id => document.getElementById(id).value = '');
+      ['inp-birth','inp-death'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('inp-gender').value = 'M';
+      document.getElementById('inp-role').value = 'other';
+
+      renderAll();
+    }
+
+    function deletePerson(id) {
+      persons = persons.filter(p => p.id !== id);
+      relations = relations.filter(r => r.from !== id && r.to !== id);
+      saveData();
+      renderAll();
+    }
+
+    // ===== RELATION MANAGEMENT =====
+    function addRelation() {
+      const from = document.getElementById('inp-rel-from').value;
+      const to = document.getElementById('inp-rel-to').value;
+      const type = document.getElementById('inp-rel-type').value;
+
+      if (!from || !to) { alert('両方の人物を選択してください'); return; }
+      if (from === to) { alert('同じ人物を選択しています'); return; }
+
+      // Duplicate check
+      const isDup = relations.some(r => {
+        if (r.type !== type) return false;
+        if (type === 'marriage') return (r.from === from && r.to === to) || (r.from === to && r.to === from);
+        return r.from === from && r.to === to;
+      });
+      if (isDup) { alert('同じ関係がすでに登録されています'); return; }
+
+      relations.push({ id: 'r' + nextRelId++, type, from, to });
+      saveData();
+      renderAll();
+    }
+
+    function deleteRelation(id) {
+      relations = relations.filter(r => r.id !== id);
+      saveData();
+      renderAll();
+    }
+
+    // ===== LAYOUT ALGORITHM =====
+    function computeLayout() {
+      if (persons.length === 0) return null;
+
+      const marriages = relations.filter(r => r.type === 'marriage');
+      const parentLinks = relations.filter(r => r.type === 'parent-child' || r.type === 'adoption');
+
+      const spouseMap = {};
+      const parentOfMap = {};
+      const childrenOfMap = {};
+
+      for (const m of marriages) {
+        (spouseMap[m.from] = spouseMap[m.from] || []).push(m.to);
+        (spouseMap[m.to] = spouseMap[m.to] || []).push(m.from);
+      }
+      for (const lnk of parentLinks) {
+        (parentOfMap[lnk.to] = parentOfMap[lnk.to] || []).push(lnk.from);
+        (childrenOfMap[lnk.from] = childrenOfMap[lnk.from] || []).push(lnk.to);
+      }
+
+      // BFS generation assignment from propositus (or first person)
+      const root = persons.find(p => p.role === 'propositus') || persons[0];
+      const genMap = { [root.id]: 0 };
+      const queue = [root.id];
+      const visited = new Set([root.id]);
+
+      while (queue.length) {
+        const id = queue.shift();
+        const g = genMap[id];
+
+        for (const pid of (parentOfMap[id] || [])) {
+          if (!visited.has(pid)) { genMap[pid] = g - 1; visited.add(pid); queue.push(pid); }
+        }
+        for (const cid of (childrenOfMap[id] || [])) {
+          if (!visited.has(cid)) { genMap[cid] = g + 1; visited.add(cid); queue.push(cid); }
+        }
+        for (const sid of (spouseMap[id] || [])) {
+          if (!visited.has(sid)) { genMap[sid] = g; visited.add(sid); queue.push(sid); }
+        }
+      }
+
+      // Assign generation 0 to disconnected persons
+      for (const p of persons) {
+        if (!(p.id in genMap)) genMap[p.id] = 0;
+      }
+
+      // Group by generation
+      const byGen = {};
+      for (const p of persons) {
+        const g = genMap[p.id];
+        (byGen[g] = byGen[g] || []).push(p.id);
+      }
+
+      const genNums = Object.keys(byGen).map(Number).sort((a, b) => a - b);
+
+      // Order within generation: keep spouses adjacent, propositus first in gen 0
+      const orderedByGen = {};
+      for (const g of genNums) {
+        const ids = [...byGen[g]];
+        const ordered = [];
+        const placed = new Set();
+
+        // Sort so propositus / root.id comes first
+        ids.sort((a, b) => {
+          if (a === root.id) return -1;
+          if (b === root.id) return 1;
+          return 0;
+        });
+
+        for (const id of ids) {
+          if (placed.has(id)) continue;
+          placed.add(id); ordered.push(id);
+          for (const sid of (spouseMap[id] || [])) {
+            if (ids.includes(sid) && !placed.has(sid)) {
+              placed.add(sid); ordered.push(sid);
+            }
+          }
+        }
+
+        orderedByGen[g] = ordered;
+      }
+
+      // SVG dimensions
+      const maxCount = Math.max(...genNums.map(g => orderedByGen[g].length));
+      const svgW = Math.max(600, maxCount * (CARD_W + H_GAP) - H_GAP + PAD * 2);
+      const svgH = genNums.length * (CARD_H + V_GAP) - V_GAP + PAD * 2;
+
+      // Calculate positions
+      const positions = {};
+      genNums.forEach((g, gi) => {
+        const ids = orderedByGen[g];
+        const rowW = ids.length * CARD_W + (ids.length - 1) * H_GAP;
+        const startX = (svgW - rowW) / 2;
+        const y = gi * (CARD_H + V_GAP) + PAD;
+        ids.forEach((id, i) => {
+          positions[id] = { x: startX + i * (CARD_W + H_GAP), y };
+        });
+      });
+
+      return { positions, svgW, svgH, marriages, parentLinks, spouseMap, childrenOfMap, parentOfMap };
+    }
+
+    // ===== SVG GENERATION =====
+    function escSvg(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function generateSVG(layout) {
+      const { positions, svgW, svgH, marriages, parentLinks, childrenOfMap } = layout;
+      const personMap = Object.fromEntries(persons.map(p => [p.id, p]));
+
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="font-family:'Hiragino Sans','Noto Sans JP',sans-serif;background:#fff">`;
+
+      // ── EDGES LAYER ──
+
+      // Marriage lines
+      for (const m of marriages) {
+        const pA = positions[m.from], pB = positions[m.to];
+        if (!pA || !pB) continue;
+
+        const leftP = pA.x <= pB.x ? pA : pB;
+        const rightP = pA.x <= pB.x ? pB : pA;
+        const x1 = leftP.x + CARD_W;
+        const x2 = rightP.x;
+        const y1 = leftP.y + CARD_H / 2;
+
+        // Marriage bar (thick horizontal line)
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y1}" stroke="#374151" stroke-width="3"/>`;
+
+        // Double-bar mark at center of the line
+        const mx = (x1 + x2) / 2;
+        svg += `<line x1="${mx - 2}" y1="${y1 - 7}" x2="${mx - 2}" y2="${y1 + 7}" stroke="#374151" stroke-width="2"/>`;
+        svg += `<line x1="${mx + 2}" y1="${y1 - 7}" x2="${mx + 2}" y2="${y1 + 7}" stroke="#374151" stroke-width="2"/>`;
+      }
+
+      // Parent-child connections
+      const drawnChildren = new Set();
+
+      // Married parents → common children
+      for (const m of marriages) {
+        const childA = new Set(childrenOfMap[m.from] || []);
+        const childB = new Set(childrenOfMap[m.to] || []);
+        const common = [...childA].filter(c => childB.has(c));
+        if (common.length === 0) continue;
+
+        const pA = positions[m.from], pB = positions[m.to];
+        if (!pA || !pB) continue;
+
+        const midX = (pA.x + pB.x) / 2 + CARD_W / 2;
+        const midY = pA.y + CARD_H / 2;
+
+        const childPositions = common.map(c => positions[c]).filter(Boolean);
+        if (childPositions.length === 0) continue;
+
+        const childY = childPositions[0].y;
+        const juncY = midY + (childY - midY) * 0.45;
+
+        // Drop from marriage midpoint
+        svg += `<line x1="${midX}" y1="${midY}" x2="${midX}" y2="${juncY}" stroke="#6b7280" stroke-width="2"/>`;
+
+        const childXs = common.map(c => positions[c] ? positions[c].x + CARD_W / 2 : null).filter(x => x !== null);
+
+        if (childXs.length === 1) {
+          const cx = childXs[0];
+          svg += `<polyline points="${midX},${juncY} ${cx},${juncY} ${cx},${childY}" fill="none" stroke="#6b7280" stroke-width="2"/>`;
+        } else {
+          const barY = childY - 24;
+          svg += `<line x1="${midX}" y1="${juncY}" x2="${midX}" y2="${barY}" stroke="#6b7280" stroke-width="2"/>`;
+          svg += `<line x1="${Math.min(...childXs)}" y1="${barY}" x2="${Math.max(...childXs)}" y2="${barY}" stroke="#6b7280" stroke-width="2"/>`;
+          for (const cx of childXs) {
+            svg += `<line x1="${cx}" y1="${barY}" x2="${cx}" y2="${childY}" stroke="#6b7280" stroke-width="2"/>`;
+          }
+        }
+
+        common.forEach(c => drawnChildren.add(c));
+      }
+
+      // Single parent connections (not yet drawn)
+      for (const lnk of parentLinks) {
+        if (drawnChildren.has(lnk.to)) continue;
+
+        const pp = positions[lnk.from];
+        const cp = positions[lnk.to];
+        if (!pp || !cp) continue;
+
+        const px = pp.x + CARD_W / 2;
+        const py = pp.y + CARD_H;
+        const cx = cp.x + CARD_W / 2;
+        const cy = cp.y;
+        const midY = (py + cy) / 2;
+        const dash = lnk.type === 'adoption' ? 'stroke-dasharray="6,4"' : '';
+
+        svg += `<polyline points="${px},${py} ${px},${midY} ${cx},${midY} ${cx},${cy}" fill="none" stroke="#6b7280" stroke-width="2" ${dash}/>`;
+        drawnChildren.add(lnk.to);
+      }
+
+      // ── PERSON BOXES LAYER ──
+      for (const p of persons) {
+        const pos = positions[p.id];
+        if (!pos) continue;
+        const { x, y } = pos;
+
+        const isPropositus = p.role === 'propositus';
+        const isHeir = p.role === 'heir';
+        const isRenounced = p.role === 'renounced';
+        const isDeceased = !!p.deathYear;
+
+        let fill = '#f9fafb', textFill = '#111827', stroke = '#d1d5db', sw = 1.5;
+        if (isPropositus)  { fill = '#dc2626'; textFill = '#fff'; stroke = '#991b1b'; sw = 2.5; }
+        else if (isHeir)   { fill = '#1e3a8a'; textFill = '#fff'; stroke = '#1e40af'; sw = 2; }
+        else if (isRenounced) { fill = '#6b7280'; textFill = '#fff'; stroke = '#4b5563'; sw = 2; }
+        else if (isDeceased)  { fill = '#e5e7eb'; textFill = '#9ca3af'; stroke = '#d1d5db'; }
+
+        // Shape: circle=female, diamond-like=unknown (use dashed), square=male
+        const isFemale = p.gender === 'F';
+        const isUnknown = p.gender === '?';
+        const rx = isFemale ? 36 : isUnknown ? 6 : 0;
+        const dashAttr = isUnknown ? 'stroke-dasharray="5,3"' : '';
+
+        svg += `<rect x="${x}" y="${y}" width="${CARD_W}" height="${CARD_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dashAttr}/>`;
+
+        // Diagonal cross for deceased (not propositus)
+        if (isDeceased && !isPropositus) {
+          svg += `<line x1="${x+4}" y1="${y+4}" x2="${x+CARD_W-4}" y2="${y+CARD_H-4}" stroke="#9ca3af" stroke-width="1.5" opacity="0.5"/>`;
+        }
+
+        // Role badge (tiny text top-left)
+        let badge = '';
+        if (isPropositus) badge = '被相続人';
+        else if (isHeir) badge = '相続人';
+        else if (isRenounced) badge = '放棄';
+        if (badge) {
+          const bfill = isPropositus ? '#fca5a5' : isHeir ? '#93c5fd' : '#d1d5db';
+          svg += `<text x="${x+6}" y="${y+13}" font-size="9" fill="${bfill}">${badge}</text>`;
+        }
+
+        // Name
+        const hasYears = p.birthYear || p.deathYear;
+        const nameY = hasYears ? y + 30 : y + CARD_H / 2 + 6;
+        svg += `<text x="${x + CARD_W/2}" y="${nameY}" text-anchor="middle" font-size="14" font-weight="bold" fill="${textFill}">${escSvg(p.name)}</text>`;
+
+        // Year text
+        if (hasYears) {
+          let yr = '';
+          if (p.birthYear && p.deathYear) yr = `${p.birthYear}〜${p.deathYear}`;
+          else if (p.birthYear) yr = `${p.birthYear}年生`;
+          else yr = `†${p.deathYear}`;
+          const yrFill = isPropositus ? '#fca5a5' : isHeir ? '#93c5fd' : '#9ca3af';
+          svg += `<text x="${x + CARD_W/2}" y="${nameY + 17}" text-anchor="middle" font-size="10" fill="${yrFill}">${escSvg(yr)}</text>`;
+        }
+
+        // Note below card
+        if (p.note) {
+          const note = p.note.length > 12 ? p.note.slice(0, 12) + '…' : p.note;
+          svg += `<text x="${x + CARD_W/2}" y="${y + CARD_H + 14}" text-anchor="middle" font-size="10" fill="#9ca3af">${escSvg(note)}</text>`;
+        }
+      }
+
+      svg += '</svg>';
+      return svg;
+    }
+
+    // ===== RENDER ALL =====
+    function renderAll() {
+      renderPersonList();
+      renderRelationList();
+      renderSelectOptions();
+      renderDiagram();
+    }
+
+    function renderPersonList() {
+      const list = document.getElementById('person-list');
+      document.getElementById('person-count').textContent = persons.length;
+
+      if (persons.length === 0) {
+        list.innerHTML = '<p class="text-gray-400 text-xs py-2">まだ人物が登録されていません</p>';
+        return;
+      }
+
+      const roleLabel = { propositus: '被相続人', heir: '相続人', renounced: '放棄', other: '' };
+      const roleColor = { propositus: 'bg-red-100 text-red-700', heir: 'bg-blue-100 text-blue-700', renounced: 'bg-gray-100 text-gray-600', other: '' };
+      const genderIcon = { M: '□', F: '○', '?': '◇' };
+
+      list.innerHTML = persons.map(p => `
+        <div class="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="text-gray-500 text-xs">${genderIcon[p.gender] || '□'}</span>
+            <span class="font-medium text-gray-800 truncate">${escHtml(p.name)}</span>
+            ${roleLabel[p.role] ? `<span class="text-[10px] px-1 py-0.5 rounded ${roleColor[p.role]}">${roleLabel[p.role]}</span>` : ''}
+            ${p.deathYear ? '<span class="text-[10px] text-gray-400">†</span>' : ''}
+          </div>
+          <button onclick="deletePerson('${p.id}')" class="text-red-400 hover:text-red-600 text-xs ml-2 flex-shrink-0">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function renderRelationList() {
+      const list = document.getElementById('relation-list');
+      const personMap = Object.fromEntries(persons.map(p => [p.id, p]));
+
+      if (relations.length === 0) {
+        list.innerHTML = '<p class="text-gray-400 text-xs py-1">関係なし</p>';
+        return;
+      }
+
+      const typeLabel = { marriage: '婚姻', 'parent-child': '親子', adoption: '養子縁組' };
+
+      list.innerHTML = relations.map(r => {
+        const fromName = personMap[r.from]?.name || '?';
+        const toName = personMap[r.to]?.name || '?';
+        return `
+          <div class="flex items-center justify-between py-0.5">
+            <span class="text-gray-600 truncate">${escHtml(fromName)} ─[${typeLabel[r.type]}]─ ${escHtml(toName)}</span>
+            <button onclick="deleteRelation('${r.id}')" class="text-red-400 hover:text-red-600 ml-1 flex-shrink-0">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSelectOptions() {
+      const fromSel = document.getElementById('inp-rel-from');
+      const toSel = document.getElementById('inp-rel-to');
+      const savedFrom = fromSel.value;
+      const savedTo = toSel.value;
+
+      const opts = '<option value="">-- 選択 --</option>' +
+        persons.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+
+      fromSel.innerHTML = opts;
+      toSel.innerHTML = opts;
+      if (savedFrom) fromSel.value = savedFrom;
+      if (savedTo) toSel.value = savedTo;
+    }
+
+    function renderDiagram() {
+      const placeholder = document.getElementById('diagram-placeholder');
+      const svgContainer = document.getElementById('diagram-svg');
+
+      if (persons.length === 0) {
+        placeholder.classList.remove('hidden');
+        svgContainer.classList.add('hidden');
+        return;
+      }
+
+      const layout = computeLayout();
+      if (!layout) return;
+
+      const svgMarkup = generateSVG(layout);
+      svgContainer.innerHTML = svgMarkup;
+      placeholder.classList.add('hidden');
+      svgContainer.classList.remove('hidden');
+    }
+
+    // ===== DOWNLOAD =====
+    function downloadSVG() {
+      const svgEl = document.querySelector('#diagram-svg svg');
+      if (!svgEl) { alert('先に人物を追加して図を生成してください'); return; }
+
+      const serializer = new XMLSerializer();
+      let svgStr = serializer.serializeToString(svgEl);
+      // Add BOM for Japanese text compatibility
+      const blob = new Blob(['﻿' + svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '家族関係図.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ===== RESET =====
+    function resetAll() {
+      if (!confirm('すべてのデータを削除してリセットしますか？')) return;
+      persons = [];
+      relations = [];
+      nextPersonId = 1;
+      nextRelId = 1;
+      saveData();
+      renderAll();
+    }
+
+    // ===== UTILS =====
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ===== INIT =====
+    loadData();
+    renderAll();
+
+    // Allow Enter key in name field
+    document.getElementById('inp-name').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addPerson();
+    });
+  </script>
+</Layout>
