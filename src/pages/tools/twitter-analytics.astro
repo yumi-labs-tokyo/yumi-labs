@@ -1,0 +1,516 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+---
+<Layout
+  title="Xアナリティクス代替分析 | yumi-Labs"
+  description="過去ツイートを貼り付けるだけで、伸びやすい時間帯・文字数・絵文字傾向を分析。"
+>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Xアナリティクス代替分析</h1>
+      <p class="text-gray-500 mt-1 text-sm">過去ツイートを貼り付けるだけで、伸びやすい時間帯・文字数・絵文字傾向を分析します。</p>
+    </div>
+
+    <!-- INPUT SECTION -->
+    <div class="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+
+      <!-- Tab -->
+      <div class="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+        <button id="tab-paste" onclick="switchTab('paste')"
+          class="tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors bg-white text-gray-800 shadow-sm">
+          📋 テキスト貼り付け
+        </button>
+        <button id="tab-archive" onclick="switchTab('archive')"
+          class="tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">
+          📦 アーカイブ読み込み
+        </button>
+      </div>
+
+      <!-- Paste mode -->
+      <div id="mode-paste">
+        <p class="text-xs text-gray-500 mb-2">
+          ツイートを1行1つ（または空行で区切り）で貼り付けてください。<br>
+          時間帯分析もしたい場合は先頭に <code class="bg-gray-100 px-1 rounded">YYYY-MM-DD HH:MM,</code> を付けると対応します。
+          <button onclick="showPasteExample()" class="text-blue-500 hover:underline ml-1">例を見る</button>
+        </p>
+        <div id="paste-example" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 text-xs text-gray-600 font-mono whitespace-pre-wrap">2024-01-15 09:30,おはようございます☀️ 今日も一日頑張りましょう！ #朝活
+2024-01-15 22:10,今日のまとめ。作業が捗った理由は早起きにあると思う。明日も続けてみる💪
+新しいツールを試したら想像以上に便利だった。もっと早く使えばよかった😂 #効率化 #ガジェット
+思考の整理には紙とペンが最強説。</div>
+        <textarea id="inp-paste" rows="10" placeholder="ここにツイートを貼り付け..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"></textarea>
+      </div>
+
+      <!-- Archive mode -->
+      <div id="mode-archive" class="hidden">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+          <p class="font-semibold mb-1">📥 Twitterデータのダウンロード手順</p>
+          <ol class="list-decimal list-inside space-y-1 text-xs">
+            <li>X (Twitter) の設定 → 「アカウント」→「データのアーカイブ」</li>
+            <li>「アーカイブをリクエスト」→ メールが届いたらダウンロード</li>
+            <li>解凍した <code class="bg-blue-100 px-1 rounded">data/tweets.js</code> をアップロード</li>
+          </ol>
+          <p class="text-xs mt-2 text-blue-600">※ファイルはブラウザ内で処理され、サーバーへの送信は一切ありません。</p>
+        </div>
+        <label class="block">
+          <span class="text-sm text-gray-700 font-medium">tweets.js をアップロード</span>
+          <input id="inp-file" type="file" accept=".js,.json" onchange="handleFileUpload(this)"
+            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+        </label>
+        <div id="archive-status" class="mt-2 text-xs text-gray-500"></div>
+      </div>
+
+      <!-- Options -->
+      <div class="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="checkbox" id="opt-exclude-rt" checked class="rounded text-blue-600" />
+          RTを除外する
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="checkbox" id="opt-exclude-reply" checked class="rounded text-blue-600" />
+          リプライを除外する
+        </label>
+        <button onclick="runAnalysis()"
+          class="ml-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg text-sm transition-colors">
+          📊 分析する
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULTS SECTION -->
+    <div id="results" class="hidden space-y-4">
+
+      <!-- Summary cards -->
+      <div id="res-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+      <!-- 伸びる投稿パターン (archive only) -->
+      <div id="res-pattern" class="hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+        <h2 class="font-bold text-blue-900 mb-3 flex items-center gap-2">🏆 「伸びる投稿」の傾向（上位25%分析）</h2>
+        <div id="res-pattern-body" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+      </div>
+
+      <!-- Time heatmap (archive only) -->
+      <div id="res-time" class="hidden bg-white border border-gray-200 rounded-xl p-5">
+        <h2 class="font-bold text-gray-800 mb-1 flex items-center gap-2">⏰ 投稿時間帯分析</h2>
+        <p class="text-xs text-gray-400 mb-4">JST（日本時間）換算</p>
+        <div id="res-hour-chart" class="mb-6"></div>
+        <h3 class="font-semibold text-gray-700 mb-3 text-sm">曜日別</h3>
+        <div id="res-weekday-chart"></div>
+      </div>
+
+      <!-- Length distribution -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">📏 文字数分布</h2>
+        <div id="res-length-chart" class="space-y-2"></div>
+        <p id="res-length-tip" class="mt-3 text-xs text-gray-500"></p>
+      </div>
+
+      <!-- Emoji ranking -->
+      <div id="res-emoji-wrap" class="bg-white border border-gray-200 rounded-xl p-5">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">😀 使用絵文字ランキング</h2>
+        <div id="res-emoji-chart" class="space-y-1.5"></div>
+        <p id="res-emoji-none" class="hidden text-gray-400 text-sm">絵文字が検出されませんでした。</p>
+      </div>
+
+      <!-- Hashtag ranking -->
+      <div id="res-hashtag-wrap" class="bg-white border border-gray-200 rounded-xl p-5">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2"># ハッシュタグランキング</h2>
+        <div id="res-hashtag-chart" class="space-y-1.5"></div>
+        <p id="res-hashtag-none" class="hidden text-gray-400 text-sm">ハッシュタグが検出されませんでした。</p>
+      </div>
+
+      <!-- Top tweets (archive only) -->
+      <div id="res-top" class="hidden bg-white border border-gray-200 rounded-xl p-5">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">❤️ いいね数トップ5</h2>
+        <div id="res-top-list" class="space-y-3"></div>
+      </div>
+
+    </div>
+
+    <!-- Error -->
+    <div id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm"></div>
+  </div>
+
+  <script is:inline>
+    let currentMode = 'paste';
+    let archiveTweets = null;
+
+    // ===== TAB SWITCH =====
+    function switchTab(mode) {
+      currentMode = mode;
+      document.getElementById('mode-paste').classList.toggle('hidden', mode !== 'paste');
+      document.getElementById('mode-archive').classList.toggle('hidden', mode !== 'archive');
+      document.getElementById('tab-paste').className =
+        mode === 'paste'
+          ? 'tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors bg-white text-gray-800 shadow-sm'
+          : 'tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700';
+      document.getElementById('tab-archive').className =
+        mode === 'archive'
+          ? 'tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors bg-white text-gray-800 shadow-sm'
+          : 'tab-btn px-4 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700';
+    }
+
+    function showPasteExample() {
+      const el = document.getElementById('paste-example');
+      el.classList.toggle('hidden');
+    }
+
+    // ===== FILE UPLOAD =====
+    function handleFileUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          archiveTweets = parseArchive(e.target.result);
+          document.getElementById('archive-status').textContent =
+            `✅ ${archiveTweets.length}件のツイートを読み込みました。「分析する」ボタンを押してください。`;
+          document.getElementById('archive-status').className = 'mt-2 text-xs text-emerald-600 font-medium';
+        } catch (err) {
+          document.getElementById('archive-status').textContent = `❌ 読み込み失敗: ${err.message}`;
+          document.getElementById('archive-status').className = 'mt-2 text-xs text-red-600';
+          archiveTweets = null;
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ===== PARSE =====
+    function parseArchive(text) {
+      const cleaned = text.replace(/^window\.YTD\.tweets\.\w+\s*=\s*/, '').trim().replace(/;$/, '');
+      const data = JSON.parse(cleaned);
+      return data.map(item => {
+        const t = item.tweet || item;
+        const date = new Date(t.created_at);
+        return makeTweet(
+          t.full_text || t.text || '',
+          isNaN(date) ? null : date,
+          parseInt(t.favorite_count || '0'),
+          parseInt(t.retweet_count || '0')
+        );
+      });
+    }
+
+    function parsePasted(rawText) {
+      const lines = rawText.split('\n');
+      const tweets = [];
+      let buf = [];
+
+      function flush() {
+        const joined = buf.join('\n').trim();
+        if (!joined) return;
+        // Try to parse "YYYY-MM-DD HH:MM,rest" format
+        const tsMatch = joined.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}),(.*)$/s);
+        if (tsMatch) {
+          const date = new Date(`${tsMatch[1]}T${tsMatch[2]}:00+09:00`);
+          tweets.push(makeTweet(tsMatch[3].trim(), isNaN(date) ? null : date, null, null));
+        } else {
+          tweets.push(makeTweet(joined, null, null, null));
+        }
+        buf = [];
+      }
+
+      for (const line of lines) {
+        if (line.trim() === '') {
+          flush();
+        } else {
+          buf.push(line);
+        }
+      }
+      flush();
+      return tweets;
+    }
+
+    function makeTweet(text, date, likes, retweets) {
+      const isRT = /^RT @/.test(text);
+      const isReply = /^@\w+/.test(text);
+      const emojis = extractEmojis(text);
+      const hashtags = (text.match(/#[\w぀-鿿゠-ヿ一-鿿]+/g) || [])
+        .map(h => h.toLowerCase());
+      return { text, date, likes, retweets, isRT, isReply, emojis, hashtags, length: [...text].length };
+    }
+
+    // ===== EMOJI EXTRACTION =====
+    function extractEmojis(text) {
+      const regex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}\u{1F000}-\u{1F0FF}\u{1F004}\u{1F0CF}]/gu;
+      return text.match(regex) || [];
+    }
+
+    // ===== ANALYSIS =====
+    function avg(arr) {
+      return arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length;
+    }
+
+    function analyze(tweets) {
+      const excRT = document.getElementById('opt-exclude-rt').checked;
+      const excReply = document.getElementById('opt-exclude-reply').checked;
+
+      let filtered = [...tweets];
+      if (excRT) filtered = filtered.filter(t => !t.isRT);
+      if (excReply) filtered = filtered.filter(t => !t.isReply);
+      if (filtered.length === 0) throw new Error('分析対象のツイートがありません（フィルタ後）。');
+
+      const hasTs = filtered.some(t => t.date !== null);
+      const hasEng = filtered.some(t => t.likes !== null);
+
+      // Length distribution
+      const buckets = [
+        { label: '1〜20字', min: 1, max: 20 },
+        { label: '21〜50字', min: 21, max: 50 },
+        { label: '51〜100字', min: 51, max: 100 },
+        { label: '101〜140字', min: 101, max: 140 },
+        { label: '141〜200字', min: 141, max: 200 },
+        { label: '201字以上', min: 201, max: Infinity },
+      ];
+      const lengthDist = buckets.map(b => {
+        const group = filtered.filter(t => t.length >= b.min && t.length <= b.max);
+        return {
+          label: b.label,
+          count: group.length,
+          avgLikes: hasEng && group.length > 0 ? Math.round(avg(group.map(t => t.likes))) : null,
+        };
+      });
+
+      // Emoji ranking
+      const emojiMap = {};
+      for (const t of filtered) for (const e of t.emojis) emojiMap[e] = (emojiMap[e] || 0) + 1;
+      const emojiRanking = Object.entries(emojiMap).sort((a, b) => b[1] - a[1]).slice(0, 15)
+        .map(([emoji, count]) => ({ emoji, count }));
+
+      // Hashtag ranking
+      const tagMap = {};
+      for (const t of filtered) for (const tag of t.hashtags) tagMap[tag] = (tagMap[tag] || 0) + 1;
+      const hashtagRanking = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 10)
+        .map(([tag, count]) => ({ tag, count }));
+
+      // Hourly & weekday (JST)
+      let hourlyDist = null, weekdayDist = null;
+      if (hasTs) {
+        const hourArr = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0, likesList: [] }));
+        const dayArr = ['日', '月', '火', '水', '木', '金', '土'].map((label, day) => ({ day, label, count: 0, likesList: [] }));
+        for (const t of filtered) {
+          if (!t.date) continue;
+          const jst = new Date(t.date.getTime() + 9 * 3600 * 1000);
+          const h = jst.getUTCHours();
+          const d = jst.getUTCDay();
+          hourArr[h].count++;
+          dayArr[d].count++;
+          if (t.likes !== null) { hourArr[h].likesList.push(t.likes); dayArr[d].likesList.push(t.likes); }
+        }
+        hourlyDist = hourArr.map(h => ({ ...h, avgLikes: h.likesList.length > 0 ? Math.round(avg(h.likesList)) : null }));
+        weekdayDist = dayArr.map(d => ({ ...d, avgLikes: d.likesList.length > 0 ? Math.round(avg(d.likesList)) : null }));
+      }
+
+      // Top tweets & patterns
+      let topTweets = null, highPatterns = null;
+      if (hasEng) {
+        const sorted = [...filtered].sort((a, b) => b.likes - a.likes);
+        topTweets = sorted.slice(0, 5);
+        const topN = sorted.slice(0, Math.max(1, Math.floor(sorted.length * 0.25)));
+        highPatterns = {
+          avgLength: Math.round(avg(topN.map(t => t.length))),
+          avgEmoji: +avg(topN.map(t => t.emojis.length)).toFixed(1),
+          emojiRate: Math.round(topN.filter(t => t.emojis.length > 0).length / topN.length * 100),
+          hashtagRate: Math.round(topN.filter(t => t.hashtags.length > 0).length / topN.length * 100),
+          avgLikes: Math.round(avg(topN.map(t => t.likes))),
+        };
+      }
+
+      return {
+        total: tweets.length,
+        filtered: filtered.length,
+        avgLength: Math.round(avg(filtered.map(t => t.length))),
+        emojiRate: Math.round(filtered.filter(t => t.emojis.length > 0).length / filtered.length * 100),
+        hashtagRate: Math.round(filtered.filter(t => t.hashtags.length > 0).length / filtered.length * 100),
+        lengthDist, emojiRanking, hashtagRanking,
+        hasTs, hasEng, hourlyDist, weekdayDist, topTweets, highPatterns,
+      };
+    }
+
+    // ===== RUN =====
+    function runAnalysis() {
+      hideError();
+      document.getElementById('results').classList.add('hidden');
+      let tweets = [];
+      try {
+        if (currentMode === 'paste') {
+          const raw = document.getElementById('inp-paste').value.trim();
+          if (!raw) { showError('テキストを貼り付けてください。'); return; }
+          tweets = parsePasted(raw);
+          if (tweets.length === 0) { showError('ツイートが検出されませんでした。'); return; }
+        } else {
+          if (!archiveTweets || archiveTweets.length === 0) { showError('先にファイルを読み込んでください。'); return; }
+          tweets = archiveTweets;
+        }
+        const result = analyze(tweets);
+        renderResults(result);
+        document.getElementById('results').classList.remove('hidden');
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    // ===== RENDER =====
+    function escH(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function statCard(emoji, label, value, sub) {
+      return `<div class="bg-white border border-gray-200 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-1">${emoji}</div>
+        <div class="text-2xl font-bold text-gray-900">${value}</div>
+        <div class="text-xs text-gray-500 mt-0.5">${label}</div>
+        ${sub ? `<div class="text-xs text-gray-400 mt-1">${sub}</div>` : ''}
+      </div>`;
+    }
+
+    function barRow(label, count, maxCount, color, suffix, subText) {
+      const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+      return `<div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500 w-20 text-right flex-shrink-0">${escH(label)}</span>
+        <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+          <div class="h-full rounded-full transition-all" style="width:${pct.toFixed(1)}%;background:${color}"></div>
+        </div>
+        <span class="text-xs font-medium text-gray-700 w-12 flex-shrink-0">${count}${suffix || ''}</span>
+        ${subText ? `<span class="text-xs text-gray-400 flex-shrink-0">${escH(subText)}</span>` : ''}
+      </div>`;
+    }
+
+    function renderResults(r) {
+      // Summary
+      document.getElementById('res-summary').innerHTML =
+        statCard('📝', '分析ツイート数', r.filtered.toLocaleString(), r.total !== r.filtered ? `（全${r.total}件中）` : '') +
+        statCard('📏', '平均文字数', r.avgLength + '字', '') +
+        statCard('😀', '絵文字使用率', r.emojiRate + '%', 'のツイートに絵文字') +
+        statCard('#', 'ハッシュタグ率', r.hashtagRate + '%', 'のツイートにタグ');
+
+      // Patterns (engagement)
+      if (r.hasEng && r.highPatterns) {
+        const p = r.highPatterns;
+        document.getElementById('res-pattern').classList.remove('hidden');
+        document.getElementById('res-pattern-body').innerHTML =
+          statCard('📏', '平均文字数（上位25%）', p.avgLength + '字', '') +
+          statCard('😀', '絵文字使用率（上位25%）', p.emojiRate + '%', '') +
+          statCard('😊', '平均絵文字数（上位25%）', p.avgEmoji + '個', '') +
+          statCard('❤️', '平均いいね数（上位25%）', p.avgLikes.toLocaleString(), '');
+      } else {
+        document.getElementById('res-pattern').classList.add('hidden');
+      }
+
+      // Time
+      if (r.hasTs && r.hourlyDist && r.weekdayDist) {
+        document.getElementById('res-time').classList.remove('hidden');
+        const maxH = Math.max(...r.hourlyDist.map(h => h.count), 1);
+
+        // Hour chart as mini vertical bars in SVG
+        const svgW = 560, svgH = 120, barW = 18, gap = 5;
+        const chartW = 24 * (barW + gap) - gap;
+        const offsetX = (svgW - chartW) / 2;
+        let hourSvg = `<svg viewBox="0 0 ${svgW} ${svgH}" class="w-full" style="max-height:120px">`;
+        for (const h of r.hourlyDist) {
+          const barH = maxH > 0 ? Math.round((h.count / maxH) * 70) : 0;
+          const x = offsetX + h.hour * (barW + gap);
+          const y = 80 - barH;
+          const color = h.avgLikes !== null
+            ? `hsl(${220 + Math.round((h.avgLikes / Math.max(...r.hourlyDist.map(hh => hh.avgLikes || 0), 1)) * 60)},70%,50%)`
+            : '#6366f1';
+          hourSvg += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${color}" opacity="0.85"/>`;
+          if (h.hour % 3 === 0) {
+            hourSvg += `<text x="${x + barW/2}" y="95" text-anchor="middle" font-size="9" fill="#9ca3af">${h.hour}</text>`;
+          }
+          if (h.count > 0) {
+            hourSvg += `<title>${h.hour}時: ${h.count}件${h.avgLikes !== null ? ` / 平均いいね${h.avgLikes}` : ''}</title>`;
+          }
+        }
+        hourSvg += `<text x="${offsetX - 5}" y="85" text-anchor="end" font-size="9" fill="#9ca3af">0</text>`;
+        hourSvg += `<text x="10" y="14" font-size="9" fill="#9ca3af">投稿数</text>`;
+        hourSvg += `</svg>`;
+
+        // Find peak hours
+        const sortedH = [...r.hourlyDist].sort((a, b) => b.count - a.count).slice(0, 3).filter(h => h.count > 0);
+        const peakText = sortedH.length > 0 ? `最多投稿時間帯: ${sortedH.map(h => h.hour + '時').join(' / ')}` : '';
+
+        document.getElementById('res-hour-chart').innerHTML =
+          `<div class="overflow-x-auto">${hourSvg}</div>` +
+          (peakText ? `<p class="text-xs text-indigo-600 font-medium mt-1">${peakText}</p>` : '');
+
+        const maxD = Math.max(...r.weekdayDist.map(d => d.count), 1);
+        document.getElementById('res-weekday-chart').innerHTML = r.weekdayDist.map(d => {
+          const engSub = d.avgLikes !== null ? `平均いいね ${d.avgLikes}` : '';
+          return barRow(d.label + '曜日', d.count, maxD, '#818cf8', '件', engSub);
+        }).join('');
+      } else {
+        document.getElementById('res-time').classList.add('hidden');
+      }
+
+      // Length distribution
+      const maxLen = Math.max(...r.lengthDist.map(b => b.count), 1);
+      document.getElementById('res-length-chart').innerHTML = r.lengthDist.map(b => {
+        const engSub = b.avgLikes !== null ? `平均いいね ${b.avgLikes}` : '';
+        return barRow(b.label, b.count, maxLen, '#3b82f6', '件', engSub);
+      }).join('');
+
+      const peakBucket = r.lengthDist.reduce((a, b) => a.count >= b.count ? a : b, r.lengthDist[0]);
+      document.getElementById('res-length-tip').textContent =
+        `最も多い文字数帯は「${peakBucket.label}」（${peakBucket.count}件）。` +
+        (r.hasEng ? ' いいね数の多い文字数帯に注目して投稿長を調整してみましょう。' : '');
+
+      // Emoji
+      if (r.emojiRanking.length > 0) {
+        const maxE = r.emojiRanking[0].count;
+        document.getElementById('res-emoji-chart').innerHTML = r.emojiRanking.map(e =>
+          barRow(e.emoji, e.count, maxE, '#f59e0b', '回', '')
+        ).join('');
+        document.getElementById('res-emoji-none').classList.add('hidden');
+      } else {
+        document.getElementById('res-emoji-chart').innerHTML = '';
+        document.getElementById('res-emoji-none').classList.remove('hidden');
+      }
+
+      // Hashtag
+      if (r.hashtagRanking.length > 0) {
+        const maxTag = r.hashtagRanking[0].count;
+        document.getElementById('res-hashtag-chart').innerHTML = r.hashtagRanking.map(h =>
+          barRow(h.tag, h.count, maxTag, '#10b981', '回', '')
+        ).join('');
+        document.getElementById('res-hashtag-none').classList.add('hidden');
+      } else {
+        document.getElementById('res-hashtag-chart').innerHTML = '';
+        document.getElementById('res-hashtag-none').classList.remove('hidden');
+      }
+
+      // Top tweets
+      if (r.topTweets && r.topTweets.length > 0) {
+        document.getElementById('res-top').classList.remove('hidden');
+        document.getElementById('res-top-list').innerHTML = r.topTweets.map((t, i) => `
+          <div class="border border-gray-100 rounded-lg p-3">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm text-gray-800 leading-relaxed flex-1">${escH(t.text.replace(/https?:\/\/\S+/g, '[URL]'))}</p>
+              <div class="flex-shrink-0 text-right">
+                <div class="text-sm font-bold text-red-500">❤️ ${(t.likes || 0).toLocaleString()}</div>
+                <div class="text-xs text-gray-400">🔁 ${(t.retweets || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div class="flex gap-3 mt-2 text-xs text-gray-400">
+              <span>${[...t.text].length}字</span>
+              ${t.emojis.length > 0 ? `<span>絵文字 ${t.emojis.join('')}</span>` : ''}
+              ${t.date ? `<span>${t.date.toLocaleDateString('ja-JP')}</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('res-top').classList.add('hidden');
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = '⚠️ ' + msg;
+      el.classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('error-msg').classList.add('hidden');
+    }
+  </script>
+</Layout>

@@ -155,7 +155,7 @@ export const tools: Tool[] = [
 		id: 21, slug: 'twitter-analytics',
 		name: 'Xアナリティクス代替分析',
 		description: '過去ツイートを貼るだけで伸びやすい時間帯・文字数・絵文字傾向を分析。',
-		emoji: '📊', category: 'creator', badge: '人気', status: 'coming-soon',
+		emoji: '📊', category: 'creator', badge: '人気', status: 'available',
 	},
 	{
 		id: 22, slug: 'vertical-text-image',
