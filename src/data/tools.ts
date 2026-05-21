@@ -349,7 +349,7 @@ export const tools: Tool[] = [
 		id: 53, slug: 'design-patterns',
 		name: 'デザインパターン学習カード（GoF 23種）',
 		description: '1日1つ、UML図＋TypeScriptコード例＋「使うべき場面」を表示。',
-		emoji: '🧩', category: 'learning', badge: 'New', status: 'coming-soon',
+		emoji: '🧩', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 54, slug: 'cyrillic-typing',

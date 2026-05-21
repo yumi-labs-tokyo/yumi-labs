@@ -1,0 +1,1126 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="デザインパターン学習カード（GoF 23種）" description="GoF 23種のデザインパターンをUML図＋TypeScriptコード例＋使うべき場面で学習。1日1パターン習得。">
+<style>
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 24px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* category tabs */
+  .cat-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+  .cat-btn {
+    padding: 7px 16px; border-radius: 20px; border: 1px solid #334155;
+    background: #1e293b; color: #64748b; cursor: pointer; font-size: 0.82rem; font-weight: 700;
+    transition: all .2s;
+  }
+  .cat-btn.creational { color: #86efac; }
+  .cat-btn.structural  { color: #93c5fd; }
+  .cat-btn.behavioral  { color: #c4b5fd; }
+  .cat-btn.active      { border-color: currentColor; background: #0f172a; }
+
+  /* pattern grid */
+  .pattern-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 24px; }
+  .pattern-chip {
+    padding: 8px 10px; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; cursor: pointer; text-align: center; transition: all .2s;
+  }
+  .pattern-chip:hover { border-color: #6366f1; }
+  .pattern-chip.active { border-color: #6366f1; background: #1e1b4b; }
+  .pattern-chip.learned { border-color: #4ade80; background: #052e16; }
+  .chip-name { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; }
+  .chip-cat  { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
+  .chip-check{ font-size: 0.7rem; }
+
+  /* today badge */
+  .today-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .today-badge {
+    padding: 5px 14px; border-radius: 99px; background: #1c1407; border: 1px solid #f59e0b;
+    color: #fbbf24; font-size: 0.78rem; font-weight: 700;
+  }
+  .progress-label { font-size: 0.8rem; color: #64748b; }
+  .progress-bar-wrap { flex: 1; background: #1e293b; border-radius: 99px; height: 6px; overflow: hidden; min-width: 100px; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#4ade80,#22d3ee); border-radius: 99px; transition: width .4s; }
+
+  /* card */
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; }
+  .card-header { padding: 18px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .card-cat-badge {
+    padding: 3px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 700;
+  }
+  .cat-creational { background: #052e16; color: #4ade80; border: 1px solid #4ade80; }
+  .cat-structural  { background: #0c1a2e; color: #38bdf8; border: 1px solid #38bdf8; }
+  .cat-behavioral  { background: #1c0533; color: #c4b5fd; border: 1px solid #a78bfa; }
+  .card-name { font-size: 1.4rem; font-weight: 800; color: #e2e8f0; }
+  .card-en   { font-size: 0.85rem; color: #64748b; }
+  .card-learn-btn {
+    margin-left: auto; padding: 6px 16px; border-radius: 8px; border: 1px solid #4ade80;
+    background: transparent; color: #4ade80; cursor: pointer; font-size: 0.8rem; font-weight: 700;
+    transition: all .2s;
+  }
+  .card-learn-btn.learned { background: #052e16; }
+  .card-learn-btn:hover { background: #052e16; }
+
+  .card-body { padding: 20px; }
+
+  /* intent */
+  .intent-box { background: #0f172a; border-left: 3px solid #6366f1; border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 16px; color: #94a3b8; font-size: 0.9rem; line-height: 1.7; }
+
+  /* UML */
+  .uml-section { margin-bottom: 16px; }
+  .section-title { font-size: 0.78rem; font-weight: 700; color: #64748b; letter-spacing: .06em; margin-bottom: 8px; text-transform: uppercase; }
+  .uml-wrap { background: #0f172a; border-radius: 10px; padding: 16px; overflow-x: auto; }
+  .uml-svg-wrap { min-height: 80px; display: flex; align-items: center; justify-content: center; }
+
+  /* code */
+  .code-section { margin-bottom: 16px; }
+  .code-block {
+    background: #0f172a; border-radius: 10px; padding: 16px;
+    font-family: 'Courier New', monospace; font-size: 0.82rem; line-height: 1.7;
+    overflow-x: auto; position: relative; color: #e2e8f0;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    padding: 3px 10px; border-radius: 6px; border: 1px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.7rem;
+  }
+  .copy-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+  /* syntax */
+  .kw  { color: #c4b5fd; }
+  .ty  { color: #38bdf8; }
+  .st  { color: #86efac; }
+  .cm  { color: #475569; font-style: italic; }
+  .fn  { color: #fbbf24; }
+
+  /* when to use */
+  .when-section { margin-bottom: 8px; }
+  .when-list { list-style: none; padding: 0; margin: 0; }
+  .when-list li { display: flex; gap: 8px; color: #94a3b8; font-size: 0.88rem; line-height: 1.6; margin-bottom: 6px; }
+  .when-list li::before { content: '✅'; flex-shrink: 0; }
+
+  /* pros cons */
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  @media(max-width:500px){ .pros-cons { grid-template-columns: 1fr; } }
+  .pros-box { background: #052e16; border: 1px solid #4ade80; border-radius: 10px; padding: 12px; }
+  .cons-box { background: #450a0a; border: 1px solid #f87171; border-radius: 10px; padding: 12px; }
+  .pc-title { font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; }
+  .pc-title.pro { color: #4ade80; }
+  .pc-title.con { color: #f87171; }
+  .pc-item { font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; line-height: 1.5; }
+
+  /* related */
+  .related-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .related-chip {
+    padding: 3px 10px; border-radius: 6px; background: #1e293b; border: 1px solid #334155;
+    color: #64748b; font-size: 0.75rem; cursor: pointer; transition: all .15s;
+  }
+  .related-chip:hover { border-color: #6366f1; color: #a5b4fc; }
+
+  /* nav */
+  .nav-row { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .nav-btn {
+    padding: 9px 20px; border-radius: 10px; border: 1px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.88rem; font-weight: 700;
+    transition: all .2s;
+  }
+  .nav-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+  .nav-btn.primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; border: none; }
+
+  .empty-state { text-align: center; padding: 40px; color: #475569; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">🧩 デザインパターン学習カード</div>
+    <div class="hero-sub">GoF 23種 — UML図 + TypeScriptコード + 使うべき場面</div>
+  </div>
+
+  <!-- progress -->
+  <div class="today-row">
+    <div class="today-badge" id="today-badge">📅 今日のパターン</div>
+    <div class="progress-label" id="progress-label">0 / 23 習得</div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- category filter -->
+  <div class="cat-row">
+    <button class="cat-btn active" onclick="filterCat('all')" id="cat-all">すべて</button>
+    <button class="cat-btn creational" onclick="filterCat('creational')" id="cat-creational">生成 (5)</button>
+    <button class="cat-btn structural"  onclick="filterCat('structural')"  id="cat-structural">構造 (7)</button>
+    <button class="cat-btn behavioral"  onclick="filterCat('behavioral')"  id="cat-behavioral">振る舞い (11)</button>
+  </div>
+
+  <!-- pattern chips -->
+  <div class="pattern-grid" id="pattern-grid"></div>
+
+  <!-- main card -->
+  <div class="card" id="main-card">
+    <div id="card-inner"></div>
+  </div>
+
+  <!-- nav -->
+  <div class="nav-row">
+    <button class="nav-btn" onclick="prevPattern()">← 前へ</button>
+    <button class="nav-btn primary" onclick="markLearned()">✅ 習得済みにする</button>
+    <button class="nav-btn" onclick="nextPattern()">次へ →</button>
+  </div>
+</div>
+
+<script is:inline>
+// ======= PATTERNS DATA =======
+const PATTERNS = [
+  // ── 生成パターン ──
+  {
+    id: 'singleton', name: 'Singleton', ja: 'シングルトン', cat: 'creational',
+    intent: 'クラスのインスタンスが必ずひとつだけ存在することを保証し、そのインスタンスへのグローバルなアクセスポイントを提供する。',
+    uml: `<svg viewBox="0 0 320 100" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="80" y="10" width="160" height="80" rx="4" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="160" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#e2e8f0">Singleton</text>
+      <line x1="80" y1="40" x2="240" y2="40" stroke="#334155"/>
+      <text x="90" y="58" font-size="10" fill="#94a3b8">- instance: Singleton</text>
+      <line x1="80" y1="65" x2="240" y2="65" stroke="#334155"/>
+      <text x="90" y="82" font-size="10" fill="#fbbf24">+ getInstance(): Singleton</text>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">Singleton</span> {
+  <span class="kw">private static</span> instance: <span class="ty">Singleton</span>;
+
+  <span class="kw">private constructor</span>() {} <span class="cm">// 外部からnew不可</span>
+
+  <span class="kw">static</span> <span class="fn">getInstance</span>(): <span class="ty">Singleton</span> {
+    <span class="kw">if</span> (!<span class="ty">Singleton</span>.instance) {
+      <span class="ty">Singleton</span>.instance = <span class="kw">new</span> <span class="ty">Singleton</span>();
+    }
+    <span class="kw">return</span> <span class="ty">Singleton</span>.instance;
+  }
+}
+
+<span class="cm">// 使い方</span>
+<span class="kw">const</span> a = <span class="ty">Singleton</span>.<span class="fn">getInstance</span>();
+<span class="kw">const</span> b = <span class="ty">Singleton</span>.<span class="fn">getInstance</span>();
+console.<span class="fn">log</span>(a === b); <span class="cm">// true</span>`,
+    when: ['設定管理クラス（AppConfig）を1つだけ持ちたい', 'DBコネクションプールを共有したい', 'ロガーをグローバルに1つ管理したい'],
+    pros: ['インスタンスが1つに保証される', 'グローバルアクセスポイントが明確'],
+    cons: ['テストが難しくなる（モック困難）', 'グローバル状態による副作用リスク'],
+    related: ['Factory Method', 'Prototype'],
+  },
+  {
+    id: 'factory-method', name: 'Factory Method', ja: 'ファクトリーメソッド', cat: 'creational',
+    intent: 'オブジェクトを生成するためのインターフェースを定義するが、どのクラスをインスタンス化するかはサブクラスに決めさせる。',
+    uml: `<svg viewBox="0 0 340 130" width="100%" style="max-width:340px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="140" height="55" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="80" y="30" text-anchor="middle" font-size="11" fill="#86efac">«interface»</text>
+      <text x="80" y="46" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Creator</text>
+      <text x="20" y="58" font-size="10" fill="#fbbf24">+ createProduct()</text>
+      <rect x="190" y="10" width="140" height="55" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="260" y="30" text-anchor="middle" font-size="11" fill="#86efac">«interface»</text>
+      <text x="260" y="46" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Product</text>
+      <rect x="30" y="90" width="100" height="35" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="80" y="112" text-anchor="middle" font-size="11" fill="#94a3b8">ConcreteCreator</text>
+      <rect x="210" y="90" width="100" height="35" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="260" y="112" text-anchor="middle" font-size="11" fill="#94a3b8">ConcreteProduct</text>
+      <line x1="80" y1="65" x2="80" y2="90" stroke="#4ade80" stroke-dasharray="4"/>
+      <line x1="260" y1="65" x2="260" y2="90" stroke="#4ade80" stroke-dasharray="4"/>
+      <line x1="150" y1="37" x2="190" y2="37" stroke="#6366f1" stroke-dasharray="4" marker-end="url(#arr)"/>
+      <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Button</span> { <span class="fn">render</span>(): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">WindowsButton</span> <span class="kw">implements</span> <span class="ty">Button</span> {
+  <span class="fn">render</span>() { console.<span class="fn">log</span>(<span class="st">"Windows ボタン"</span>); }
+}
+<span class="kw">class</span> <span class="ty">MacButton</span> <span class="kw">implements</span> <span class="ty">Button</span> {
+  <span class="fn">render</span>() { console.<span class="fn">log</span>(<span class="st">"Mac ボタン"</span>); }
+}
+
+<span class="kw">abstract class</span> <span class="ty">Dialog</span> {
+  <span class="kw">abstract</span> <span class="fn">createButton</span>(): <span class="ty">Button</span>; <span class="cm">// Factory Method</span>
+  <span class="fn">render</span>() { <span class="kw">this</span>.<span class="fn">createButton</span>().<span class="fn">render</span>(); }
+}
+
+<span class="kw">class</span> <span class="ty">WindowsDialog</span> <span class="kw">extends</span> <span class="ty">Dialog</span> {
+  <span class="fn">createButton</span>() { <span class="kw">return new</span> <span class="ty">WindowsButton</span>(); }
+}`,
+    when: ['生成するオブジェクトの型を事前に確定できない', 'サブクラスにオブジェクト生成を委譲したい', 'プラグインや拡張可能なフレームワークを作る'],
+    pros: ['生成と利用を分離できる', 'Open/Closed 原則に従いやすい'],
+    cons: ['クラス数が増える', 'シンプルな場合は過剰設計になりがち'],
+    related: ['Abstract Factory', 'Template Method'],
+  },
+  {
+    id: 'abstract-factory', name: 'Abstract Factory', ja: 'アブストラクトファクトリー', cat: 'creational',
+    intent: '関連するオブジェクト群を、具体的なクラスを指定せずに生成するためのインターフェースを提供する。',
+    uml: `<svg viewBox="0 0 320 80" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="130" height="60" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="75" y="32" text-anchor="middle" font-size="10" fill="#86efac">«interface»</text>
+      <text x="75" y="48" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">AbstractFactory</text>
+      <text x="20" y="64" font-size="9" fill="#fbbf24">+createA() +createB()</text>
+      <rect x="180" y="10" width="130" height="60" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="245" y="36" text-anchor="middle" font-size="12" font-weight="700" fill="#94a3b8">ConcreteFactory</text>
+      <text x="190" y="54" font-size="9" fill="#94a3b8">overrides createA, createB</text>
+      <line x1="140" y1="40" x2="180" y2="40" stroke="#4ade80" stroke-dasharray="4" marker-end="url(#arr2)"/>
+      <defs><marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#4ade80"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">UIFactory</span> {
+  <span class="fn">createButton</span>(): <span class="ty">Button</span>;
+  <span class="fn">createCheckbox</span>(): <span class="ty">Checkbox</span>;
+}
+
+<span class="kw">class</span> <span class="ty">MacFactory</span> <span class="kw">implements</span> <span class="ty">UIFactory</span> {
+  <span class="fn">createButton</span>()   { <span class="kw">return new</span> <span class="ty">MacButton</span>(); }
+  <span class="fn">createCheckbox</span>() { <span class="kw">return new</span> <span class="ty">MacCheckbox</span>(); }
+}
+
+<span class="kw">class</span> <span class="ty">WinFactory</span> <span class="kw">implements</span> <span class="ty">UIFactory</span> {
+  <span class="fn">createButton</span>()   { <span class="kw">return new</span> <span class="ty">WinButton</span>(); }
+  <span class="fn">createCheckbox</span>() { <span class="kw">return new</span> <span class="ty">WinCheckbox</span>(); }
+}
+
+<span class="cm">// 使い方</span>
+<span class="kw">const</span> factory: <span class="ty">UIFactory</span> = isMac ? <span class="kw">new</span> <span class="ty">MacFactory</span>() : <span class="kw">new</span> <span class="ty">WinFactory</span>();
+factory.<span class="fn">createButton</span>().<span class="fn">render</span>();`,
+    when: ['OS/テーマ別に一貫したUIコンポーネント群を切り替えたい', '製品ファミリー全体を交換したい', 'DB種別ごとにDAOの実装を切り替えたい'],
+    pros: ['製品ファミリーの一貫性が保てる', '具体クラスへの依存を排除できる'],
+    cons: ['新製品追加時にインターフェース変更が必要', 'クラス数が多くなる'],
+    related: ['Factory Method', 'Builder', 'Prototype'],
+  },
+  {
+    id: 'builder', name: 'Builder', ja: 'ビルダー', cat: 'creational',
+    intent: '複雑なオブジェクトの構築をその表現から分離し、同じ構築プロセスで異なる表現を生成できるようにする。',
+    uml: `<svg viewBox="0 0 320 90" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="100" height="55" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="60" y="40" text-anchor="middle" font-size="11" fill="#86efac">Director</text>
+      <text x="20" y="58" font-size="9" fill="#fbbf24">+construct()</text>
+      <rect x="150" y="10" width="120" height="70" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="210" y="30" text-anchor="middle" font-size="10" fill="#86efac">«interface»</text>
+      <text x="210" y="46" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Builder</text>
+      <text x="160" y="62" font-size="9" fill="#fbbf24">+buildStep1()</text>
+      <text x="160" y="74" font-size="9" fill="#fbbf24">+buildStep2()</text>
+      <line x1="110" y1="47" x2="150" y2="47" stroke="#6366f1" marker-end="url(#arr3)"/>
+      <defs><marker id="arr3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">QueryBuilder</span> {
+  <span class="kw">private</span> query = <span class="st">""</span>;
+
+  <span class="fn">select</span>(cols: <span class="ty">string</span>) { <span class="kw">this</span>.query += <span class="st">`SELECT \${cols} `</span>; <span class="kw">return this</span>; }
+  <span class="fn">from</span>(tbl: <span class="ty">string</span>)   { <span class="kw">this</span>.query += <span class="st">`FROM \${tbl} `</span>;   <span class="kw">return this</span>; }
+  <span class="fn">where</span>(cond: <span class="ty">string</span>) { <span class="kw">this</span>.query += <span class="st">`WHERE \${cond}`</span>; <span class="kw">return this</span>; }
+  <span class="fn">build</span>() { <span class="kw">return this</span>.query.trim(); }
+}
+
+<span class="cm">// メソッドチェーンで直感的に構築</span>
+<span class="kw">const</span> sql = <span class="kw">new</span> <span class="ty">QueryBuilder</span>()
+  .<span class="fn">select</span>(<span class="st">"*"</span>)
+  .<span class="fn">from</span>(<span class="st">"users"</span>)
+  .<span class="fn">where</span>(<span class="st">"age > 18"</span>)
+  .<span class="fn">build</span>();`,
+    when: ['オプションパラメータが多いオブジェクトを生成したい', 'SQLビルダー・HTTPリクエストビルダーなど段階的構築が必要', '同じ構築手順で異なる表現を作りたい'],
+    pros: ['コンストラクタの引数爆発を防げる', 'メソッドチェーンで可読性が高い', 'オブジェクトの構築を段階的に制御できる'],
+    cons: ['Builderクラスが必要になりコード量が増える'],
+    related: ['Abstract Factory', 'Composite'],
+  },
+  {
+    id: 'prototype', name: 'Prototype', ja: 'プロトタイプ', cat: 'creational',
+    intent: 'コピー可能なプロトタイプとして既存オブジェクトを指定し、それをクローンして新しいオブジェクトを生成する。',
+    uml: `<svg viewBox="0 0 280 80" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="80" y="10" width="140" height="60" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="150" y="32" text-anchor="middle" font-size="10" fill="#86efac">«interface»</text>
+      <text x="150" y="48" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Prototype</text>
+      <text x="90" y="64" font-size="10" fill="#fbbf24">+ clone(): Prototype</text>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Cloneable</span>&lt;<span class="ty">T</span>&gt; { <span class="fn">clone</span>(): <span class="ty">T</span>; }
+
+<span class="kw">class</span> <span class="ty">Shape</span> <span class="kw">implements</span> <span class="ty">Cloneable</span>&lt;<span class="ty">Shape</span>&gt; {
+  <span class="kw">constructor</span>(<span class="kw">public</span> color: <span class="ty">string</span>, <span class="kw">public</span> x: <span class="ty">number</span>) {}
+
+  <span class="fn">clone</span>(): <span class="ty">Shape</span> {
+    <span class="kw">return new</span> <span class="ty">Shape</span>(<span class="kw">this</span>.color, <span class="kw">this</span>.x); <span class="cm">// ディープコピー</span>
+  }
+}
+
+<span class="kw">const</span> original = <span class="kw">new</span> <span class="ty">Shape</span>(<span class="st">"red"</span>, 10);
+<span class="kw">const</span> copy = original.<span class="fn">clone</span>();
+copy.color = <span class="st">"blue"</span>; <span class="cm">// original に影響しない</span>`,
+    when: ['オブジェクトの生成コストが高い（DB読み込みなど）', '初期化済みオブジェクトをテンプレートとして複製したい', '具体クラスを知らずにオブジェクトをコピーしたい'],
+    pros: ['new より高速にオブジェクトを生成できる', '具体クラスへの依存を減らせる'],
+    cons: ['循環参照を持つオブジェクトのクローンが複雑', 'ディープコピーの実装が難しい場合がある'],
+    related: ['Abstract Factory', 'Decorator'],
+  },
+
+  // ── 構造パターン ──
+  {
+    id: 'adapter', name: 'Adapter', ja: 'アダプター', cat: 'structural',
+    intent: 'あるクラスのインターフェースを、クライアントが期待する別のインターフェースへ変換する。互換性のないインターフェースを持つクラス同士を連携させる。',
+    uml: `<svg viewBox="0 0 320 80" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="80" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="50" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Client</text>
+      <rect x="130" y="10" width="80" height="60" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="170" y="36" text-anchor="middle" font-size="10" fill="#93c5fd">«interface»</text>
+      <text x="170" y="52" text-anchor="middle" font-size="11" font-weight="700" fill="#e2e8f0">Target</text>
+      <rect x="240" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="275" y="44" text-anchor="middle" font-size="11" fill="#94a3b8">Adaptee</text>
+      <line x1="90" y1="40" x2="130" y2="40" stroke="#6366f1" marker-end="url(#arr4)"/>
+      <line x1="210" y1="40" x2="240" y2="40" stroke="#f59e0b" stroke-dasharray="4"/>
+      <defs><marker id="arr4" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="cm">// 既存の互換性のないクラス</span>
+<span class="kw">class</span> <span class="ty">LegacyLogger</span> {
+  <span class="fn">writeLog</span>(msg: <span class="ty">string</span>) { console.<span class="fn">log</span>(<span class="st">`[OLD] \${msg}`</span>); }
+}
+
+<span class="cm">// 新しいインターフェース</span>
+<span class="kw">interface</span> <span class="ty">Logger</span> { <span class="fn">log</span>(msg: <span class="ty">string</span>): <span class="ty">void</span>; }
+
+<span class="cm">// アダプター：LegacyLogger を Logger として使えるようにする</span>
+<span class="kw">class</span> <span class="ty">LoggerAdapter</span> <span class="kw">implements</span> <span class="ty">Logger</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> legacy: <span class="ty">LegacyLogger</span>) {}
+  <span class="fn">log</span>(msg: <span class="ty">string</span>) { <span class="kw">this</span>.legacy.<span class="fn">writeLog</span>(msg); }
+}`,
+    when: ['サードパーティライブラリのインターフェースを変換したい', 'レガシーコードを新しいシステムに統合したい', '互換性のない2つのクラスを接続したい'],
+    pros: ['既存クラスを変更せずに再利用できる', 'Single Responsibility 原則を守れる'],
+    cons: ['アダプタークラスが増えて複雑になる場合がある'],
+    related: ['Bridge', 'Decorator', 'Proxy'],
+  },
+  {
+    id: 'decorator', name: 'Decorator', ja: 'デコレーター', cat: 'structural',
+    intent: 'オブジェクトに対して動的に責務を追加する。サブクラス化よりも柔軟な機能拡張を実現する。',
+    uml: `<svg viewBox="0 0 300 100" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="100" y="5" width="100" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="150" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Component</text>
+      <rect x="10" y="60" width="100" height="35" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="60" y="82" text-anchor="middle" font-size="11" fill="#94a3b8">Concrete</text>
+      <rect x="190" y="60" width="100" height="35" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="240" y="82" text-anchor="middle" font-size="11" fill="#93c5fd">Decorator</text>
+      <line x1="60" y1="60" x2="130" y2="45" stroke="#4ade80" stroke-dasharray="4"/>
+      <line x1="240" y1="60" x2="180" y2="45" stroke="#4ade80" stroke-dasharray="4"/>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Coffee</span> { <span class="fn">cost</span>(): <span class="ty">number</span>; <span class="fn">desc</span>(): <span class="ty">string</span>; }
+
+<span class="kw">class</span> <span class="ty">SimpleCoffee</span> <span class="kw">implements</span> <span class="ty">Coffee</span> {
+  <span class="fn">cost</span>() { <span class="kw">return</span> 300; }
+  <span class="fn">desc</span>() { <span class="kw">return</span> <span class="st">"コーヒー"</span>; }
+}
+
+<span class="kw">class</span> <span class="ty">MilkDecorator</span> <span class="kw">implements</span> <span class="ty">Coffee</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> coffee: <span class="ty">Coffee</span>) {}
+  <span class="fn">cost</span>() { <span class="kw">return this</span>.coffee.<span class="fn">cost</span>() + 50; }
+  <span class="fn">desc</span>() { <span class="kw">return this</span>.coffee.<span class="fn">desc</span>() + <span class="st">" + ミルク"</span>; }
+}
+
+<span class="kw">let</span> c: <span class="ty">Coffee</span> = <span class="kw">new</span> <span class="ty">SimpleCoffee</span>();
+c = <span class="kw">new</span> <span class="ty">MilkDecorator</span>(c);
+console.<span class="fn">log</span>(c.<span class="fn">cost</span>(), c.<span class="fn">desc</span>()); <span class="cm">// 350, "コーヒー + ミルク"</span>`,
+    when: ['継承なしでオブジェクトに機能を動的に追加したい', '機能の組み合わせが爆発的に多くなる場合', 'I/Oストリームの変換・暗号化・圧縮を重ねて適用'],
+    pros: ['サブクラス爆発を防げる', '実行時に機能を組み合わせられる'],
+    cons: ['多重デコレートでデバッグが難しくなる', '順序依存が生じる場合がある'],
+    related: ['Composite', 'Strategy', 'Adapter'],
+  },
+  {
+    id: 'composite', name: 'Composite', ja: 'コンポジット', cat: 'structural',
+    intent: 'オブジェクトをツリー構造に構成し、個別オブジェクトとオブジェクトの合成を同一視できるようにする。',
+    uml: `<svg viewBox="0 0 300 90" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="100" y="5" width="100" height="35" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="150" y="27" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Component</text>
+      <rect x="10" y="60" width="80" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="50" y="79" text-anchor="middle" font-size="11" fill="#94a3b8">Leaf</text>
+      <rect x="210" y="60" width="80" height="30" rx="4" fill="#1e293b" stroke="#38bdf8"/>
+      <text x="250" y="79" text-anchor="middle" font-size="11" fill="#93c5fd">Composite</text>
+      <line x1="50" y1="60" x2="130" y2="40" stroke="#4ade80" stroke-dasharray="4"/>
+      <line x1="250" y1="60" x2="180" y2="40" stroke="#4ade80" stroke-dasharray="4"/>
+      <path d="M290,75 Q310,75 310,50 Q310,25 250,25" stroke="#6366f1" fill="none" stroke-dasharray="3"/>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">FileSystem</span> { <span class="fn">getSize</span>(): <span class="ty">number</span>; <span class="fn">print</span>(indent?: <span class="ty">string</span>): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">File</span> <span class="kw">implements</span> <span class="ty">FileSystem</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> name: <span class="ty">string</span>, <span class="kw">private</span> size: <span class="ty">number</span>) {}
+  <span class="fn">getSize</span>() { <span class="kw">return this</span>.size; }
+  <span class="fn">print</span>(i = <span class="st">""</span>) { console.<span class="fn">log</span>(<span class="st">`\${i}📄 \${this.name}`</span>); }
+}
+
+<span class="kw">class</span> <span class="ty">Folder</span> <span class="kw">implements</span> <span class="ty">FileSystem</span> {
+  <span class="kw">private</span> children: <span class="ty">FileSystem</span>[] = [];
+  <span class="kw">constructor</span>(<span class="kw">private</span> name: <span class="ty">string</span>) {}
+  <span class="fn">add</span>(c: <span class="ty">FileSystem</span>) { <span class="kw">this</span>.children.<span class="fn">push</span>(c); }
+  <span class="fn">getSize</span>() { <span class="kw">return this</span>.children.<span class="fn">reduce</span>((s,c) => s+c.<span class="fn">getSize</span>(), 0); }
+  <span class="fn">print</span>(i = <span class="st">""</span>) { console.<span class="fn">log</span>(<span class="st">`\${i}📁 \${this.name}`</span>); <span class="kw">this</span>.children.<span class="fn">forEach</span>(c=>c.<span class="fn">print</span>(i+<span class="st">"  "</span>)); }
+}`,
+    when: ['ファイルシステム・メニュー・UIコンポーネントツリーなど階層構造を扱う', '葉と枝を同一のインターフェースで操作したい', 'ツリー構造を再帰的に処理したい'],
+    pros: ['ツリー操作が単純なコードで書ける', '新しいコンポーネント追加が容易'],
+    cons: ['コンポーネントの型制限が難しい', '設計が過度に汎用になりすぎる場合がある'],
+    related: ['Decorator', 'Iterator', 'Visitor'],
+  },
+  {
+    id: 'facade', name: 'Facade', ja: 'ファサード', cat: 'structural',
+    intent: 'サブシステムにある一連のインターフェースに対して、統合されたインターフェースを提供する。サブシステムの使用を容易にする高レベルのインターフェースを定義する。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="45" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Client</text>
+      <rect x="120" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="155" y="44" text-anchor="middle" font-size="12" font-weight="700" fill="#93c5fd">Facade</text>
+      <rect x="230" y="5" width="60" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="260" y="22" text-anchor="middle" font-size="9" fill="#64748b">SubsysA</text>
+      <rect x="230" y="35" width="60" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="260" y="52" text-anchor="middle" font-size="9" fill="#64748b">SubsysB</text>
+      <rect x="230" y="60" width="60" height="15" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="260" y="72" text-anchor="middle" font-size="9" fill="#64748b">SubsysC</text>
+      <line x1="80" y1="40" x2="120" y2="40" stroke="#6366f1" marker-end="url(#arr5)"/>
+      <line x1="190" y1="30" x2="230" y2="20" stroke="#475569" stroke-dasharray="3"/>
+      <line x1="190" y1="40" x2="230" y2="45" stroke="#475569" stroke-dasharray="3"/>
+      <line x1="190" y1="50" x2="230" y2="67" stroke="#475569" stroke-dasharray="3"/>
+      <defs><marker id="arr5" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="cm">// 複雑なサブシステム群</span>
+<span class="kw">class</span> <span class="ty">VideoDecoder</span> { <span class="fn">decode</span>(file: <span class="ty">string</span>) { <span class="cm">/* ... */</span> } }
+<span class="kw">class</span> <span class="ty">AudioMixer</span>   { <span class="fn">mix</span>()          { <span class="cm">/* ... */</span> } }
+<span class="kw">class</span> <span class="ty">Codec</span>         { <span class="fn">compress</span>()    { <span class="cm">/* ... */</span> } }
+
+<span class="cm">// シンプルな窓口</span>
+<span class="kw">class</span> <span class="ty">VideoConverter</span> {
+  <span class="kw">private</span> decoder = <span class="kw">new</span> <span class="ty">VideoDecoder</span>();
+  <span class="kw">private</span> mixer   = <span class="kw">new</span> <span class="ty">AudioMixer</span>();
+  <span class="kw">private</span> codec   = <span class="kw">new</span> <span class="ty">Codec</span>();
+
+  <span class="fn">convert</span>(file: <span class="ty">string</span>) {
+    <span class="kw">this</span>.decoder.<span class="fn">decode</span>(file);
+    <span class="kw">this</span>.mixer.<span class="fn">mix</span>();
+    <span class="kw">this</span>.codec.<span class="fn">compress</span>();
+  }
+}`,
+    when: ['複雑なサブシステムに対してシンプルなAPIを提供したい', 'レイヤー間の依存を最小化したい', 'SDKや外部ライブラリのラッパーを作る'],
+    pros: ['クライアントコードがシンプルになる', 'サブシステムとクライアントを疎結合に保てる'],
+    cons: ['ファサードが神クラス化するリスク'],
+    related: ['Adapter', 'Mediator'],
+  },
+  {
+    id: 'proxy', name: 'Proxy', ja: 'プロキシ', cat: 'structural',
+    intent: '他のオブジェクトへの代理または窓口となるオブジェクトを提供し、そのオブジェクトへのアクセスを制御する。',
+    uml: `<svg viewBox="0 0 320 80" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="45" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Client</text>
+      <rect x="120" y="10" width="80" height="60" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="160" y="35" text-anchor="middle" font-size="10" fill="#93c5fd">«interface»</text>
+      <text x="160" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Subject</text>
+      <rect x="240" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="275" y="44" text-anchor="middle" font-size="11" fill="#94a3b8">Proxy</text>
+      <line x1="80" y1="40" x2="120" y2="40" stroke="#6366f1" marker-end="url(#arr6)"/>
+      <defs><marker id="arr6" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Image</span> { <span class="fn">display</span>(): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">RealImage</span> <span class="kw">implements</span> <span class="ty">Image</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> filename: <span class="ty">string</span>) {
+    console.<span class="fn">log</span>(<span class="st">`Loading \${filename}...`</span>); <span class="cm">// 重い処理</span>
+  }
+  <span class="fn">display</span>() { console.<span class="fn">log</span>(<span class="st">`Displaying \${this.filename}`</span>); }
+}
+
+<span class="cm">// 遅延読み込みプロキシ</span>
+<span class="kw">class</span> <span class="ty">ProxyImage</span> <span class="kw">implements</span> <span class="ty">Image</span> {
+  <span class="kw">private</span> real?: <span class="ty">RealImage</span>;
+  <span class="kw">constructor</span>(<span class="kw">private</span> filename: <span class="ty">string</span>) {}
+  <span class="fn">display</span>() {
+    <span class="kw">if</span> (!<span class="kw">this</span>.real) <span class="kw">this</span>.real = <span class="kw">new</span> <span class="ty">RealImage</span>(<span class="kw">this</span>.filename);
+    <span class="kw">this</span>.real.<span class="fn">display</span>();
+  }
+}`,
+    when: ['遅延初期化（重いオブジェクトを必要になるまで生成しない）', 'キャッシュプロキシ・ロギングプロキシを追加したい', 'アクセス制御（認証チェックなど）を透過的に挟みたい'],
+    pros: ['クライアントに知られずに処理を追加できる', 'Open/Closed原則に従える'],
+    cons: ['レスポンスが遅延することがある', 'コードの流れが追いにくくなる'],
+    related: ['Adapter', 'Decorator'],
+  },
+  {
+    id: 'bridge', name: 'Bridge', ja: 'ブリッジ', cat: 'structural',
+    intent: '抽象化をその実装から分離して、両者を独立して変化させられるようにする。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="120" height="60" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="70" y="35" text-anchor="middle" font-size="11" fill="#93c5fd">Abstraction</text>
+      <text x="70" y="58" font-size="9" fill="#64748b">  impl: Implementor</text>
+      <rect x="170" y="10" width="120" height="60" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="230" y="30" text-anchor="middle" font-size="10" fill="#86efac">«interface»</text>
+      <text x="230" y="48" text-anchor="middle" font-size="11" fill="#e2e8f0">Implementor</text>
+      <line x1="130" y1="40" x2="170" y2="40" stroke="#f59e0b" stroke-width="2" marker-end="url(#arr7)"/>
+      <defs><marker id="arr7" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#f59e0b"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Renderer</span> { <span class="fn">render</span>(shape: <span class="ty">string</span>): <span class="ty">void</span>; }
+<span class="kw">class</span> <span class="ty">SVGRenderer</span>  <span class="kw">implements</span> <span class="ty">Renderer</span> { <span class="fn">render</span>(s: <span class="ty">string</span>) { console.<span class="fn">log</span>(<span class="st">`SVG: \${s}`</span>); } }
+<span class="kw">class</span> <span class="ty">CanvasRenderer</span> <span class="kw">implements</span> <span class="ty">Renderer</span> { <span class="fn">render</span>(s: <span class="ty">string</span>) { console.<span class="fn">log</span>(<span class="st">`Canvas: \${s}`</span>); } }
+
+<span class="kw">abstract class</span> <span class="ty">Shape</span> {
+  <span class="kw">constructor</span>(<span class="kw">protected</span> renderer: <span class="ty">Renderer</span>) {}
+  <span class="kw">abstract</span> <span class="fn">draw</span>(): <span class="ty">void</span>;
+}
+<span class="kw">class</span> <span class="ty">Circle</span> <span class="kw">extends</span> <span class="ty">Shape</span> {
+  <span class="fn">draw</span>() { <span class="kw">this</span>.renderer.<span class="fn">render</span>(<span class="st">"circle"</span>); }
+}
+
+<span class="cm">// 抽象（Circle）と実装（SVG/Canvas）を独立に変更可能</span>
+<span class="kw">new</span> <span class="ty">Circle</span>(<span class="kw">new</span> <span class="ty">SVGRenderer</span>()).<span class="fn">draw</span>();`,
+    when: ['抽象と実装を独立して拡張したい', 'プラットフォーム固有の実装を切り替えたい', '実装の詳細をクライアントコードから隠したい'],
+    pros: ['抽象と実装を独立して変更できる', 'サブクラス数を抑制できる'],
+    cons: ['抽象化レイヤーが増えてコードが複雑になる'],
+    related: ['Abstract Factory', 'Adapter'],
+  },
+  {
+    id: 'flyweight', name: 'Flyweight', ja: 'フライウェイト', cat: 'structural',
+    intent: '多数の細粒度のオブジェクトを効率的にサポートするために共有を使用する。',
+    uml: `<svg viewBox="0 0 280 80" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="100" height="40" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="60" y="44" text-anchor="middle" font-size="11" fill="#93c5fd">FlyweightFactory</text>
+      <rect x="170" y="20" width="100" height="40" rx="4" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="220" y="44" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Flyweight</text>
+      <line x1="110" y1="40" x2="170" y2="40" stroke="#6366f1" marker-end="url(#arr8)"/>
+      <defs><marker id="arr8" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">TreeType</span> { <span class="cm">// 共有される固有状態</span>
+  <span class="kw">constructor</span>(<span class="kw">public</span> name: <span class="ty">string</span>, <span class="kw">public</span> color: <span class="ty">string</span>) {}
+}
+
+<span class="kw">class</span> <span class="ty">TreeFactory</span> {
+  <span class="kw">private static</span> cache = <span class="kw">new</span> <span class="ty">Map</span>&lt;<span class="ty">string</span>, <span class="ty">TreeType</span>&gt;();
+
+  <span class="kw">static</span> <span class="fn">getType</span>(name: <span class="ty">string</span>, color: <span class="ty">string</span>): <span class="ty">TreeType</span> {
+    <span class="kw">const</span> key = <span class="st">`\${name}-\${color}`</span>;
+    <span class="kw">if</span> (!<span class="kw">this</span>.cache.<span class="fn">has</span>(key))
+      <span class="kw">this</span>.cache.<span class="fn">set</span>(key, <span class="kw">new</span> <span class="ty">TreeType</span>(name, color));
+    <span class="kw">return this</span>.cache.<span class="fn">get</span>(key)!;
+  }
+}`,
+    when: ['大量の類似オブジェクトでメモリを圧迫している', 'ゲームの木・粒子・文字などを大量描画する', '共有可能な不変状態（固有状態）を分離できる'],
+    pros: ['メモリ使用量を大幅に削減できる'],
+    cons: ['固有状態と外在状態の分離がトレードオフを生む', 'コードが複雑になる'],
+    related: ['Composite', 'Singleton'],
+  },
+
+  // ── 振る舞いパターン ──
+  {
+    id: 'observer', name: 'Observer', ja: 'オブザーバー', cat: 'behavioral',
+    intent: 'オブジェクト間の1対多の依存関係を定義する。あるオブジェクトの状態が変化すると、それに依存するすべてのオブジェクトが自動的に通知され更新される。',
+    uml: `<svg viewBox="0 0 320 90" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="130" height="70" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="75" y="30" text-anchor="middle" font-size="11" fill="#c4b5fd">Subject</text>
+      <text x="20" y="48" font-size="9" fill="#fbbf24">+subscribe(o)</text>
+      <text x="20" y="62" font-size="9" fill="#fbbf24">+notify()</text>
+      <rect x="200" y="10" width="110" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="255" y="28" text-anchor="middle" font-size="10" fill="#c4b5fd">«interface»</text>
+      <text x="255" y="44" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Observer</text>
+      <text x="210" y="57" font-size="9" fill="#fbbf24">+update()</text>
+      <line x1="140" y1="40" x2="200" y2="40" stroke="#6366f1" marker-end="url(#arr9)"/>
+      <defs><marker id="arr9" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Observer</span> { <span class="fn">update</span>(data: <span class="ty">string</span>): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">EventEmitter</span> {
+  <span class="kw">private</span> observers: <span class="ty">Observer</span>[] = [];
+  <span class="fn">subscribe</span>(o: <span class="ty">Observer</span>) { <span class="kw">this</span>.observers.<span class="fn">push</span>(o); }
+  <span class="fn">notify</span>(data: <span class="ty">string</span>) { <span class="kw">this</span>.observers.<span class="fn">forEach</span>(o => o.<span class="fn">update</span>(data)); }
+}
+
+<span class="kw">class</span> <span class="ty">Logger</span> <span class="kw">implements</span> <span class="ty">Observer</span> {
+  <span class="fn">update</span>(data: <span class="ty">string</span>) { console.<span class="fn">log</span>(<span class="st">`[LOG] \${data}`</span>); }
+}
+
+<span class="kw">const</span> emitter = <span class="kw">new</span> <span class="ty">EventEmitter</span>();
+emitter.<span class="fn">subscribe</span>(<span class="kw">new</span> <span class="ty">Logger</span>());
+emitter.<span class="fn">notify</span>(<span class="st">"click"</span>); <span class="cm">// → [LOG] click</span>`,
+    when: ['イベントシステムを実装したい（DOM、Redux）', '状態変化を複数のUIコンポーネントに伝播したい', 'Pub/Sub メッセージングを構築したい'],
+    pros: ['発行者と購読者を疎結合に保てる', 'サブスクライバーを動的に追加・削除できる'],
+    cons: ['通知順が予測しにくい', 'メモリリーク（購読解除忘れ）のリスク'],
+    related: ['Mediator', 'Singleton', 'Strategy'],
+  },
+  {
+    id: 'strategy', name: 'Strategy', ja: 'ストラテジー', cat: 'behavioral',
+    intent: 'アルゴリズムのファミリーを定義してそれぞれをカプセル化し、互いに交換可能にする。クライアントとは独立してアルゴリズムを変化させられるようにする。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="100" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="60" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Context</text>
+      <rect x="180" y="10" width="110" height="60" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="235" y="30" text-anchor="middle" font-size="10" fill="#c4b5fd">«interface»</text>
+      <text x="235" y="48" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Strategy</text>
+      <text x="190" y="64" font-size="9" fill="#fbbf24">+execute()</text>
+      <line x1="110" y1="40" x2="180" y2="40" stroke="#f59e0b" stroke-width="2" marker-end="url(#arra)"/>
+      <defs><marker id="arra" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#f59e0b"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">SortStrategy</span> { <span class="fn">sort</span>(data: <span class="ty">number</span>[]): <span class="ty">number</span>[]; }
+
+<span class="kw">class</span> <span class="ty">BubbleSort</span> <span class="kw">implements</span> <span class="ty">SortStrategy</span> {
+  <span class="fn">sort</span>(data: <span class="ty">number</span>[]) { <span class="cm">/* バブルソート */</span> <span class="kw">return</span> data; }
+}
+<span class="kw">class</span> <span class="ty">QuickSort</span> <span class="kw">implements</span> <span class="ty">SortStrategy</span> {
+  <span class="fn">sort</span>(data: <span class="ty">number</span>[]) { <span class="kw">return</span> [...data].<span class="fn">sort</span>((a,b) => a-b); }
+}
+
+<span class="kw">class</span> <span class="ty">Sorter</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> strategy: <span class="ty">SortStrategy</span>) {}
+  <span class="fn">setStrategy</span>(s: <span class="ty">SortStrategy</span>) { <span class="kw">this</span>.strategy = s; }
+  <span class="fn">sort</span>(data: <span class="ty">number</span>[]) { <span class="kw">return this</span>.strategy.<span class="fn">sort</span>(data); }
+}`,
+    when: ['複数のアルゴリズムを切り替えたい', '条件分岐の多いif/switchをなくしたい', 'ソート・検索・バリデーション・圧縮などを交換可能にしたい'],
+    pros: ['アルゴリズムを独立してテスト・変更できる', 'if/else の増殖を防げる'],
+    cons: ['策略クラスが多くなりすぎる場合がある', '単純なケースでは過剰設計'],
+    related: ['State', 'Template Method', 'Decorator'],
+  },
+  {
+    id: 'command', name: 'Command', ja: 'コマンド', cat: 'behavioral',
+    intent: 'リクエストをオブジェクトとしてカプセル化することで、リクエストのパラメータ化、キュー、ログ、元に戻す操作などを実現する。',
+    uml: `<svg viewBox="0 0 320 80" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="70" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="45" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Invoker</text>
+      <rect x="130" y="10" width="80" height="60" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="170" y="30" text-anchor="middle" font-size="10" fill="#c4b5fd">«interface»</text>
+      <text x="170" y="48" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Command</text>
+      <text x="140" y="64" font-size="9" fill="#fbbf24">+execute() +undo()</text>
+      <rect x="260" y="20" width="50" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="285" y="44" text-anchor="middle" font-size="10" fill="#94a3b8">Receiver</text>
+      <line x1="80" y1="40" x2="130" y2="40" stroke="#6366f1" marker-end="url(#arrb)"/>
+      <line x1="210" y1="40" x2="260" y2="40" stroke="#475569" stroke-dasharray="3"/>
+      <defs><marker id="arrb" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Command</span> { <span class="fn">execute</span>(): <span class="ty">void</span>; <span class="fn">undo</span>(): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">TextEditor</span> {
+  <span class="kw">private</span> text = <span class="st">""</span>;
+  <span class="fn">insert</span>(s: <span class="ty">string</span>) { <span class="kw">this</span>.text += s; }
+  <span class="fn">delete</span>(n: <span class="ty">number</span>) { <span class="kw">this</span>.text = <span class="kw">this</span>.text.<span class="fn">slice</span>(0, -n); }
+  <span class="fn">getText</span>() { <span class="kw">return this</span>.text; }
+}
+
+<span class="kw">class</span> <span class="ty">InsertCommand</span> <span class="kw">implements</span> <span class="ty">Command</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> editor: <span class="ty">TextEditor</span>, <span class="kw">private</span> text: <span class="ty">string</span>) {}
+  <span class="fn">execute</span>() { <span class="kw">this</span>.editor.<span class="fn">insert</span>(<span class="kw">this</span>.text); }
+  <span class="fn">undo</span>()    { <span class="kw">this</span>.editor.<span class="fn">delete</span>(<span class="kw">this</span>.text.length); }
+}`,
+    when: ['Undo/Redo機能を実装したい', 'コマンドをキューに入れたり遅延実行したい', 'GUIボタン・メニューアクションをオブジェクト化したい'],
+    pros: ['Undo/Redoが容易に実装できる', 'コマンドをログ・シリアライズできる'],
+    cons: ['コマンドクラスが増えてコード量が膨らむ'],
+    related: ['Memento', 'Strategy', 'Chain of Responsibility'],
+  },
+  {
+    id: 'template-method', name: 'Template Method', ja: 'テンプレートメソッド', cat: 'behavioral',
+    intent: 'アルゴリズムのスケルトンを操作の中に定義し、いくつかのステップをサブクラスに先送りする。サブクラスはアルゴリズムの構造を変えずに特定のステップを再定義できる。',
+    uml: `<svg viewBox="0 0 280 80" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="60" y="5" width="160" height="70" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="140" y="25" text-anchor="middle" font-size="11" fill="#c4b5fd">AbstractClass</text>
+      <text x="70" y="42" font-size="9" fill="#fbbf24">+templateMethod() {final}</text>
+      <text x="70" y="56" font-size="9" fill="#86efac">+step1() {abstract}</text>
+      <text x="70" y="70" font-size="9" fill="#86efac">+step2() {abstract}</text>
+    </svg>`,
+    code: `<span class="kw">abstract class</span> <span class="ty">DataParser</span> {
+  <span class="cm">// テンプレートメソッド：手順は固定</span>
+  <span class="fn">parse</span>(data: <span class="ty">string</span>) {
+    <span class="kw">const</span> raw = <span class="kw">this</span>.<span class="fn">readData</span>(data);
+    <span class="kw">const</span> parsed = <span class="kw">this</span>.<span class="fn">parseData</span>(raw);
+    <span class="kw">this</span>.<span class="fn">output</span>(parsed);
+  }
+  <span class="kw">protected abstract</span> <span class="fn">readData</span>(data: <span class="ty">string</span>): <span class="ty">string</span>;
+  <span class="kw">protected abstract</span> <span class="fn">parseData</span>(raw: <span class="ty">string</span>): <span class="ty">object</span>;
+  <span class="kw">protected abstract</span> <span class="fn">output</span>(data: <span class="ty">object</span>): <span class="ty">void</span>;
+}
+
+<span class="kw">class</span> <span class="ty">JSONParser</span> <span class="kw">extends</span> <span class="ty">DataParser</span> {
+  <span class="kw">protected</span> <span class="fn">readData</span>(d: <span class="ty">string</span>) { <span class="kw">return</span> d; }
+  <span class="kw">protected</span> <span class="fn">parseData</span>(r: <span class="ty">string</span>) { <span class="kw">return</span> JSON.<span class="fn">parse</span>(r); }
+  <span class="kw">protected</span> <span class="fn">output</span>(d: <span class="ty">object</span>) { console.<span class="fn">log</span>(d); }
+}`,
+    when: ['手順の骨格は同じで一部のステップだけ変えたい', 'フレームワークがアルゴリズムの構造を定義し、拡張者がステップを実装する', 'コードの重複を親クラスに集約したい'],
+    pros: ['共通処理を1箇所にまとめられる', 'フックメソッドで柔軟な拡張が可能'],
+    cons: ['継承に依存するため疎結合にしにくい', 'サブクラスが多いとメンテが大変'],
+    related: ['Strategy', 'Factory Method'],
+  },
+  {
+    id: 'state', name: 'State', ja: 'ステート', cat: 'behavioral',
+    intent: 'オブジェクトの内部状態が変化したとき、そのオブジェクトの振る舞いが変わるようにする。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="100" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="60" y="44" text-anchor="middle" font-size="11" fill="#e2e8f0">Context</text>
+      <rect x="175" y="10" width="110" height="60" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="230" y="30" text-anchor="middle" font-size="10" fill="#c4b5fd">«interface»</text>
+      <text x="230" y="48" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">State</text>
+      <text x="185" y="64" font-size="9" fill="#fbbf24">+handle(context)</text>
+      <line x1="110" y1="40" x2="175" y2="40" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrc)"/>
+      <defs><marker id="arrc" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#f59e0b"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">State</span> { <span class="fn">handle</span>(ctx: <span class="ty">TrafficLight</span>): <span class="ty">void</span>; }
+
+<span class="kw">class</span> <span class="ty">RedState</span> <span class="kw">implements</span> <span class="ty">State</span> {
+  <span class="fn">handle</span>(ctx: <span class="ty">TrafficLight</span>) {
+    console.<span class="fn">log</span>(<span class="st">"🔴 停止"</span>);
+    ctx.<span class="fn">setState</span>(<span class="kw">new</span> <span class="ty">GreenState</span>());
+  }
+}
+<span class="kw">class</span> <span class="ty">GreenState</span> <span class="kw">implements</span> <span class="ty">State</span> {
+  <span class="fn">handle</span>(ctx: <span class="ty">TrafficLight</span>) {
+    console.<span class="fn">log</span>(<span class="st">"🟢 進め"</span>);
+    ctx.<span class="fn">setState</span>(<span class="kw">new</span> <span class="ty">RedState</span>());
+  }
+}
+<span class="kw">class</span> <span class="ty">TrafficLight</span> {
+  <span class="kw">private</span> state: <span class="ty">State</span> = <span class="kw">new</span> <span class="ty">RedState</span>();
+  <span class="fn">setState</span>(s: <span class="ty">State</span>) { <span class="kw">this</span>.state = s; }
+  <span class="fn">tick</span>() { <span class="kw">this</span>.state.<span class="fn">handle</span>(<span class="kw">this</span>); }
+}`,
+    when: ['状態によって振る舞いが変わり、if/switch が肥大化している', '有限状態機械（FSM）を実装したい', 'ログイン状態・支払いフロー・注文ステータスを管理したい'],
+    pros: ['状態ごとのコードを独立させられる', 'Open/Closed 原則に従い状態を追加できる'],
+    cons: ['シンプルな状態遷移では過剰設計'],
+    related: ['Strategy', 'Singleton'],
+  },
+  {
+    id: 'iterator', name: 'Iterator', ja: 'イテレーター', cat: 'behavioral',
+    intent: '集約オブジェクトの内部表現を公開せずにその要素に順番にアクセスする方法を提供する。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="15" width="120" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="70" y="35" text-anchor="middle" font-size="11" fill="#c4b5fd">Iterable</text>
+      <text x="20" y="58" font-size="9" fill="#fbbf24">+[Symbol.iterator]()</text>
+      <rect x="180" y="15" width="110" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="235" y="35" text-anchor="middle" font-size="11" fill="#c4b5fd">Iterator</text>
+      <text x="190" y="58" font-size="9" fill="#fbbf24">+next(): {value, done}</text>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">Range</span> <span class="kw">implements</span> Iterable&lt;<span class="ty">number</span>&gt; {
+  <span class="kw">constructor</span>(<span class="kw">private</span> start: <span class="ty">number</span>, <span class="kw">private</span> end: <span class="ty">number</span>) {}
+
+  [Symbol.iterator]() {
+    <span class="kw">let</span> current = <span class="kw">this</span>.start;
+    <span class="kw">const</span> end = <span class="kw">this</span>.end;
+    <span class="kw">return</span> {
+      <span class="fn">next</span>() {
+        <span class="kw">return</span> current <= end
+          ? { value: current++, done: <span class="kw">false</span> }
+          : { value: <span class="kw">undefined</span>, done: <span class="kw">true</span> };
+      }
+    };
+  }
+}
+
+<span class="kw">for</span> (<span class="kw">const</span> n <span class="kw">of new</span> <span class="ty">Range</span>(1, 5)) console.<span class="fn">log</span>(n); <span class="cm">// 1 2 3 4 5</span>`,
+    when: ['コレクションの内部構造を隠しながら要素を走査したい', 'カスタムデータ構造をfor...ofで使えるようにしたい', '複数の走査アルゴリズムを提供したい'],
+    pros: ['コレクション実装と走査を分離できる', 'for...of構文が使えるようになる'],
+    cons: ['単純な配列に使うには過剰な場合がある'],
+    related: ['Composite', 'Factory Method'],
+  },
+  {
+    id: 'chain-of-responsibility', name: 'Chain of Responsibility', ja: '責任の連鎖', cat: 'behavioral',
+    intent: 'リクエストの送信者と受信者の結合を避けるために、複数のオブジェクトにリクエストを処理する機会を与える。受信するオブジェクトをチェーンにつないでリクエストをチェーンに沿って渡す。',
+    uml: `<svg viewBox="0 0 300 60" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="80" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="50" y="34" text-anchor="middle" font-size="10" fill="#e2e8f0">Handler A</text>
+      <rect x="110" y="10" width="80" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="150" y="34" text-anchor="middle" font-size="10" fill="#e2e8f0">Handler B</text>
+      <rect x="210" y="10" width="80" height="40" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="250" y="34" text-anchor="middle" font-size="10" fill="#e2e8f0">Handler C</text>
+      <line x1="90" y1="30" x2="110" y2="30" stroke="#6366f1" marker-end="url(#arrd)"/>
+      <line x1="190" y1="30" x2="210" y2="30" stroke="#6366f1" marker-end="url(#arrd)"/>
+      <defs><marker id="arrd" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">abstract class</span> <span class="ty">Handler</span> {
+  <span class="kw">protected</span> next?: <span class="ty">Handler</span>;
+  <span class="fn">setNext</span>(h: <span class="ty">Handler</span>) { <span class="kw">this</span>.next = h; <span class="kw">return</span> h; }
+  <span class="kw">abstract</span> <span class="fn">handle</span>(req: <span class="ty">number</span>): <span class="ty">string</span> | <span class="kw">null</span>;
+}
+
+<span class="kw">class</span> <span class="ty">LevelOneSupport</span> <span class="kw">extends</span> <span class="ty">Handler</span> {
+  <span class="fn">handle</span>(req: <span class="ty">number</span>) {
+    <span class="kw">if</span> (req < 10) <span class="kw">return</span> <span class="st">"Lv1 解決"</span>;
+    <span class="kw">return this</span>.next?.<span class="fn">handle</span>(req) ?? <span class="kw">null</span>;
+  }
+}
+
+<span class="cm">// チェーン構築</span>
+<span class="kw">const</span> l1 = <span class="kw">new</span> <span class="ty">LevelOneSupport</span>();
+l1.<span class="fn">setNext</span>(<span class="kw">new</span> <span class="ty">LevelOneSupport</span>()); <span class="cm">// Lv2, Lv3...</span>`,
+    when: ['複数のハンドラーが順番にリクエストを処理するミドルウェア', 'サポートレベル（Lv1→Lv2→Lv3）の問い合わせ対応', '認証・ロギング・バリデーションパイプライン'],
+    pros: ['ハンドラーを動的に追加・変更できる', '送信者と受信者を疎結合にできる'],
+    cons: ['リクエストが処理されない場合がある', 'デバッグが難しい'],
+    related: ['Decorator', 'Command'],
+  },
+  {
+    id: 'mediator', name: 'Mediator', ja: 'メディエーター', cat: 'behavioral',
+    intent: 'オブジェクト群の相互作用をカプセル化するオブジェクトを定義する。オブジェクト同士が直接参照し合う状況をなくし、疎結合にする。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="110" y="5" width="80" height="35" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="150" y="26" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Mediator</text>
+      <rect x="10" y="55" width="70" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="45" y="71" text-anchor="middle" font-size="10" fill="#94a3b8">Component A</text>
+      <rect x="220" y="55" width="70" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="255" y="71" text-anchor="middle" font-size="10" fill="#94a3b8">Component B</text>
+      <line x1="45" y1="55" x2="130" y2="40" stroke="#6366f1" stroke-dasharray="3"/>
+      <line x1="255" y1="55" x2="180" y2="40" stroke="#6366f1" stroke-dasharray="3"/>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">ChatRoom</span> { <span class="cm">// Mediator</span>
+  <span class="kw">private</span> users: <span class="ty">User</span>[] = [];
+  <span class="fn">join</span>(u: <span class="ty">User</span>) { <span class="kw">this</span>.users.<span class="fn">push</span>(u); }
+  <span class="fn">send</span>(msg: <span class="ty">string</span>, sender: <span class="ty">User</span>) {
+    <span class="kw">this</span>.users
+      .<span class="fn">filter</span>(u => u !== sender)
+      .<span class="fn">forEach</span>(u => u.<span class="fn">receive</span>(msg));
+  }
+}
+
+<span class="kw">class</span> <span class="ty">User</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> name: <span class="ty">string</span>, <span class="kw">private</span> room: <span class="ty">ChatRoom</span>) {}
+  <span class="fn">send</span>(msg: <span class="ty">string</span>) { <span class="kw">this</span>.room.<span class="fn">send</span>(msg, <span class="kw">this</span>); }
+  <span class="fn">receive</span>(msg: <span class="ty">string</span>) { console.<span class="fn">log</span>(<span class="st">`\${this.name}: \${msg}`</span>); }
+}`,
+    when: ['多数のオブジェクトが複雑に相互参照してスパゲッティ化している', 'チャットルーム・ATC・UIコントロール間の調整', 'コンポーネント間の依存を1箇所に集約したい'],
+    pros: ['M×N の依存を M+N に減らせる', 'コンポーネントを再利用しやすくなる'],
+    cons: ['メディエーター自体が神クラス化するリスク'],
+    related: ['Facade', 'Observer'],
+  },
+  {
+    id: 'memento', name: 'Memento', ja: 'メメント', cat: 'behavioral',
+    intent: 'カプセル化を破壊せずに、オブジェクトの内部状態を捉えて外部化し、後でそのオブジェクトをこの状態に戻せるようにする。',
+    uml: `<svg viewBox="0 0 320 80" width="100%" style="max-width:320px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="15" width="90" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="55" y="38" text-anchor="middle" font-size="11" fill="#e2e8f0">Originator</text>
+      <text x="20" y="58" font-size="9" fill="#fbbf24">+save() +restore()</text>
+      <rect x="150" y="15" width="80" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="190" y="44" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">Memento</text>
+      <rect x="280" y="15" width="30" height="50" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="295" y="44" text-anchor="middle" font-size="9" fill="#94a3b8">History</text>
+      <line x1="100" y1="40" x2="150" y2="40" stroke="#6366f1" marker-end="url(#arre)"/>
+      <defs><marker id="arre" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">class</span> <span class="ty">Memento</span> {
+  <span class="kw">constructor</span>(<span class="kw">readonly</span> state: <span class="ty">string</span>) {}
+}
+
+<span class="kw">class</span> <span class="ty">Editor</span> {
+  <span class="kw">private</span> content = <span class="st">""</span>;
+  <span class="fn">type</span>(text: <span class="ty">string</span>) { <span class="kw">this</span>.content += text; }
+  <span class="fn">save</span>()    { <span class="kw">return new</span> <span class="ty">Memento</span>(<span class="kw">this</span>.content); }
+  <span class="fn">restore</span>(m: <span class="ty">Memento</span>) { <span class="kw">this</span>.content = m.state; }
+  <span class="fn">getText</span>() { <span class="kw">return this</span>.content; }
+}
+
+<span class="kw">const</span> editor = <span class="kw">new</span> <span class="ty">Editor</span>();
+editor.<span class="fn">type</span>(<span class="st">"Hello"</span>);
+<span class="kw">const</span> snapshot = editor.<span class="fn">save</span>(); <span class="cm">// スナップショット</span>
+editor.<span class="fn">type</span>(<span class="st">" World"</span>);
+editor.<span class="fn">restore</span>(snapshot);       <span class="cm">// Undoして"Hello"に戻る</span>`,
+    when: ['Undo/Redo を実装したい', 'ゲームのセーブ/ロード機能', 'トランザクションのロールバック'],
+    pros: ['カプセル化を破壊せずにスナップショットを取れる', 'Originatorのコードが簡潔になる'],
+    cons: ['頻繁な保存でメモリを大量消費する可能性'],
+    related: ['Command', 'Iterator'],
+  },
+  {
+    id: 'visitor', name: 'Visitor', ja: 'ビジター', cat: 'behavioral',
+    intent: 'オブジェクト構造の要素に対して実行される操作を表現する。要素のクラスを変えずに新しい操作を定義できるようにする。',
+    uml: `<svg viewBox="0 0 300 80" width="100%" style="max-width:300px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="15" width="120" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="70" y="35" text-anchor="middle" font-size="11" fill="#c4b5fd">Element</text>
+      <text x="20" y="55" font-size="9" fill="#fbbf24">+accept(visitor)</text>
+      <rect x="170" y="15" width="120" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="230" y="35" text-anchor="middle" font-size="11" fill="#c4b5fd">Visitor</text>
+      <text x="180" y="55" font-size="9" fill="#fbbf24">+visit(element)</text>
+      <line x1="130" y1="40" x2="170" y2="40" stroke="#6366f1" marker-end="url(#arrf)"/>
+      <defs><marker id="arrf" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6366f1"/></marker></defs>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Visitor</span> {
+  <span class="fn">visitCircle</span>(c: <span class="ty">Circle</span>): <span class="ty">void</span>;
+  <span class="fn">visitRect</span>(r: <span class="ty">Rectangle</span>): <span class="ty">void</span>;
+}
+
+<span class="kw">class</span> <span class="ty">Circle</span> {
+  <span class="kw">constructor</span>(<span class="kw">public</span> radius: <span class="ty">number</span>) {}
+  <span class="fn">accept</span>(v: <span class="ty">Visitor</span>) { v.<span class="fn">visitCircle</span>(<span class="kw">this</span>); }
+}
+<span class="kw">class</span> <span class="ty">Rectangle</span> {
+  <span class="kw">constructor</span>(<span class="kw">public</span> w: <span class="ty">number</span>, <span class="kw">public</span> h: <span class="ty">number</span>) {}
+  <span class="fn">accept</span>(v: <span class="ty">Visitor</span>) { v.<span class="fn">visitRect</span>(<span class="kw">this</span>); }
+}
+
+<span class="kw">class</span> <span class="ty">AreaCalculator</span> <span class="kw">implements</span> <span class="ty">Visitor</span> {
+  <span class="fn">visitCircle</span>(c: <span class="ty">Circle</span>) { console.<span class="fn">log</span>(Math.PI * c.radius ** 2); }
+  <span class="fn">visitRect</span>(r: <span class="ty">Rectangle</span>) { console.<span class="fn">log</span>(r.w * r.h); }
+}`,
+    when: ['オブジェクト構造を変えずに新しい操作を追加したい', 'ASTやドキュメントツリーに複数の処理を適用したい', '要素クラスが安定していて操作のみ増える場合'],
+    pros: ['Open/Closed原則に従って操作を追加できる', '関連する操作をVisitorクラスに集約できる'],
+    cons: ['新しい要素クラスを追加するたびにVisitorを変更が必要'],
+    related: ['Composite', 'Iterator'],
+  },
+  {
+    id: 'interpreter', name: 'Interpreter', ja: 'インタープリター', cat: 'behavioral',
+    intent: '言語の文法を定義し、その文法にしたがってセンテンスを解釈するインタープリターを定義する。',
+    uml: `<svg viewBox="0 0 280 70" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+      <rect x="80" y="10" width="120" height="50" rx="4" fill="#1e293b" stroke="#c4b5fd" stroke-width="1.5"/>
+      <text x="140" y="30" text-anchor="middle" font-size="11" fill="#c4b5fd">Expression</text>
+      <text x="90" y="50" font-size="10" fill="#fbbf24">+interpret(ctx): bool</text>
+    </svg>`,
+    code: `<span class="kw">interface</span> <span class="ty">Expr</span> { <span class="fn">interpret</span>(ctx: Record&lt;<span class="ty">string</span>, <span class="ty">boolean</span>&gt;): <span class="ty">boolean</span>; }
+
+<span class="kw">class</span> <span class="ty">Var</span> <span class="kw">implements</span> <span class="ty">Expr</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> name: <span class="ty">string</span>) {}
+  <span class="fn">interpret</span>(ctx: Record&lt;<span class="ty">string</span>, <span class="ty">boolean</span>&gt;) { <span class="kw">return</span> ctx[<span class="kw">this</span>.name]; }
+}
+<span class="kw">class</span> <span class="ty">And</span> <span class="kw">implements</span> <span class="ty">Expr</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> l: <span class="ty">Expr</span>, <span class="kw">private</span> r: <span class="ty">Expr</span>) {}
+  <span class="fn">interpret</span>(ctx: Record&lt;<span class="ty">string</span>, <span class="ty">boolean</span>&gt;) {
+    <span class="kw">return this</span>.l.<span class="fn">interpret</span>(ctx) && <span class="kw">this</span>.r.<span class="fn">interpret</span>(ctx);
+  }
+}
+
+<span class="kw">const</span> expr = <span class="kw">new</span> <span class="ty">And</span>(<span class="kw">new</span> <span class="ty">Var</span>(<span class="st">"a"</span>), <span class="kw">new</span> <span class="ty">Var</span>(<span class="st">"b"</span>));
+expr.<span class="fn">interpret</span>({ a: <span class="kw">true</span>, b: <span class="kw">false</span> }); <span class="cm">// false</span>`,
+    when: ['DSL（ドメイン固有言語）を解釈したい', '数式・検索クエリ・設定ファイルのパーサーを作る', '文法が比較的シンプルな場合'],
+    pros: ['文法を追加・変更しやすい'],
+    cons: ['文法が複雑になるとクラス数が爆発する', 'パフォーマンスが悪い場合がある'],
+    related: ['Composite', 'Iterator', 'Visitor'],
+  },
+];
+
+// ======= STATE =======
+let currentIdx = 0;
+let catFilter = 'all';
+let learned = JSON.parse(localStorage.getItem('dp_learned_v1') || '[]');
+
+// ======= TODAY PATTERN =======
+function getTodayIdx() {
+  const day = Math.floor(Date.now() / 86400000);
+  return day % PATTERNS.length;
+}
+
+// ======= BUILD GRID =======
+function buildGrid() {
+  const filtered = catFilter === 'all' ? PATTERNS : PATTERNS.filter(p => p.cat === catFilter);
+  document.getElementById('pattern-grid').innerHTML = filtered.map(p => {
+    const isLearned = learned.includes(p.id);
+    const isActive = PATTERNS[currentIdx].id === p.id;
+    return `<div class="pattern-chip${isActive ? ' active' : ''}${isLearned ? ' learned' : ''}"
+      onclick="selectById('${p.id}')">
+      <div class="chip-name">${p.name}</div>
+      <div class="chip-cat">${p.ja}</div>
+      ${isLearned ? '<div class="chip-check">✅</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function filterCat(cat) {
+  catFilter = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('cat-' + cat).classList.add('active');
+  buildGrid();
+}
+
+function selectById(id) {
+  const idx = PATTERNS.findIndex(p => p.id === id);
+  if (idx >= 0) { currentIdx = idx; renderCard(); buildGrid(); }
+}
+
+// ======= RENDER CARD =======
+function renderCard() {
+  const p = PATTERNS[currentIdx];
+  const isLearned = learned.includes(p.id);
+  const catLabel = { creational: '生成', structural: '構造', behavioral: '振る舞い' };
+  const catCls   = { creational: 'cat-creational', structural: 'cat-structural', behavioral: 'cat-behavioral' };
+
+  const whenItems = p.when.map(w => `<li>${w}</li>`).join('');
+  const prosItems = p.pros.map(pr => `<div class="pc-item">• ${pr}</div>`).join('');
+  const consItems = p.cons.map(co => `<div class="pc-item">• ${co}</div>`).join('');
+  const related   = p.related.map(r => `<span class="related-chip" onclick="selectByName('${r}')">${r}</span>`).join('');
+
+  document.getElementById('card-inner').innerHTML = `
+    <div class="card-header">
+      <div class="card-cat-badge ${catCls[p.cat]}">${catLabel[p.cat]}</div>
+      <div>
+        <div class="card-name">${p.name}</div>
+        <div class="card-en">${p.ja}</div>
+      </div>
+      <button class="card-learn-btn${isLearned ? ' learned' : ''}" onclick="toggleLearned('${p.id}')">
+        ${isLearned ? '✅ 習得済み' : '○ 未習得'}
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="section-title">意図</div>
+      <div class="intent-box">${p.intent}</div>
+
+      <div class="uml-section">
+        <div class="section-title">UML 構造図</div>
+        <div class="uml-wrap"><div class="uml-svg-wrap">${p.uml}</div></div>
+      </div>
+
+      <div class="code-section">
+        <div class="section-title">TypeScript コード例</div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(${currentIdx})">コピー</button>
+          ${p.code}
+        </div>
+      </div>
+
+      <div class="when-section">
+        <div class="section-title">使うべき場面</div>
+        <ul class="when-list">${whenItems}</ul>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros-box">
+          <div class="pc-title pro">👍 メリット</div>
+          ${prosItems}
+        </div>
+        <div class="cons-box">
+          <div class="pc-title con">👎 デメリット</div>
+          ${consItems}
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:14px">関連パターン</div>
+      <div class="related-row">${related}</div>
+    </div>`;
+
+  updateProgress();
+}
+
+function selectByName(name) {
+  const idx = PATTERNS.findIndex(p => p.name === name);
+  if (idx >= 0) { currentIdx = idx; catFilter = 'all'; filterCat('all'); renderCard(); }
+}
+
+function prevPattern() {
+  currentIdx = (currentIdx - 1 + PATTERNS.length) % PATTERNS.length;
+  renderCard(); buildGrid();
+  document.getElementById('main-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function nextPattern() {
+  currentIdx = (currentIdx + 1) % PATTERNS.length;
+  renderCard(); buildGrid();
+  document.getElementById('main-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function markLearned() {
+  const id = PATTERNS[currentIdx].id;
+  if (!learned.includes(id)) {
+    learned.push(id);
+    localStorage.setItem('dp_learned_v1', JSON.stringify(learned));
+    renderCard(); buildGrid();
+  }
+}
+function toggleLearned(id) {
+  if (learned.includes(id)) {
+    learned = learned.filter(l => l !== id);
+  } else {
+    learned.push(id);
+  }
+  localStorage.setItem('dp_learned_v1', JSON.stringify(learned));
+  renderCard(); buildGrid();
+}
+
+function updateProgress() {
+  const pct = Math.round(learned.length / PATTERNS.length * 100);
+  document.getElementById('progress-label').textContent = `${learned.length} / ${PATTERNS.length} 習得`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  const todayIdx = getTodayIdx();
+  const todayP = PATTERNS[todayIdx];
+  document.getElementById('today-badge').textContent = `📅 今日: ${todayP.name}`;
+}
+
+function copyCode(idx) {
+  // strip HTML tags
+  const raw = PATTERNS[idx].code.replace(/<[^>]+>/g, '');
+  navigator.clipboard.writeText(raw).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    if (btn) { btn.textContent = '✓ コピー済'; setTimeout(() => btn.textContent = 'コピー', 1500); }
+  });
+}
+
+// init: start with today's pattern
+currentIdx = getTodayIdx();
+buildGrid();
+renderCard();
+</script>
+</BaseLayout>
