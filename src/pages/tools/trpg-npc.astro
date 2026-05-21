@@ -1,0 +1,275 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="TRPG用「即興NPC」ジェネレーター" description="種族・職業をランダム生成＋性格・口癖＋セッション中の動機まで。">
+<main class="npc-wrap">
+  <div class="npc-header">
+    <div class="npc-title">🎲 TRPG 即興NPCジェネレーター</div>
+    <div class="npc-sub">セッション中に即使えるNPCをワンクリックで生成</div>
+  </div>
+
+  <div class="npc-body">
+    <div class="npc-left">
+      <div class="npc-controls">
+        <div class="npc-card-title">生成設定</div>
+        <div class="npc-ctrl-row">
+          <div class="npc-cg">
+            <label class="npc-label">種族</label>
+            <select id="raceFilter" class="npc-select">
+              <option value="random">ランダム</option>
+              <option value="human">人間</option>
+              <option value="elf">エルフ</option>
+              <option value="dwarf">ドワーフ</option>
+              <option value="halfling">ハーフリング</option>
+              <option value="orc">オーク</option>
+              <option value="undead">アンデッド</option>
+              <option value="beast">獣人</option>
+            </select>
+          </div>
+          <div class="npc-cg">
+            <label class="npc-label">職業</label>
+            <select id="classFilter" class="npc-select">
+              <option value="random">ランダム</option>
+              <option value="merchant">商人</option>
+              <option value="guard">衛兵・兵士</option>
+              <option value="mage">魔法使い</option>
+              <option value="thief">盗賊</option>
+              <option value="cleric">聖職者</option>
+              <option value="farmer">農民</option>
+              <option value="noble">貴族</option>
+              <option value="innkeeper">宿屋主人</option>
+              <option value="blacksmith">鍛冶屋</option>
+            </select>
+          </div>
+          <div class="npc-cg">
+            <label class="npc-label">性別</label>
+            <select id="genderFilter" class="npc-select">
+              <option value="random">ランダム</option>
+              <option value="male">男性</option>
+              <option value="female">女性</option>
+              <option value="none">不明</option>
+            </select>
+          </div>
+          <div class="npc-cg">
+            <label class="npc-label">雰囲気</label>
+            <select id="vibeFilter" class="npc-select">
+              <option value="random">ランダム</option>
+              <option value="friendly">友好的</option>
+              <option value="suspicious">怪しい</option>
+              <option value="hostile">敵対的</option>
+              <option value="neutral">無関心</option>
+            </select>
+          </div>
+        </div>
+        <button class="npc-gen-btn" onclick="generateNPC()">🎲 NPCを生成する</button>
+      </div>
+
+      <div class="npc-saved">
+        <div class="npc-card-title">保存したNPC</div>
+        <div id="savedList" class="saved-list"><div style="color:var(--gray-500);font-size:.82rem">まだ保存されていません</div></div>
+      </div>
+    </div>
+
+    <div class="npc-right">
+      <div class="npc-card" id="npcCard">
+        <div style="text-align:center;color:var(--gray-400);padding:2rem">「NPCを生成する」ボタンを押してください</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const DATA = {
+  races: {
+    human: { name:'人間', emoji:'👤', traits:['適応力が高い','野心的','短命ゆえに焦りを感じる'] },
+    elf: { name:'エルフ', emoji:'🧝', traits:['長命で物事を長期的に見る','自然や魔術を重んじる','人間を見下すことがある'] },
+    dwarf: { name:'ドワーフ', emoji:'⛏️', traits:['職人気質','頑固で意地っ張り','仲間への絆が強い'] },
+    halfling: { name:'ハーフリング', emoji:'🦶', traits:['好奇心旺盛','運が良い','目立つことを避ける'] },
+    orc: { name:'オーク', emoji:'💚', traits:['力を重んじる','直情的','部族への忠誠心が強い'] },
+    undead: { name:'アンデッド', emoji:'💀', traits:['生への渇望がある','過去に縛られている','常人とは感覚が違う'] },
+    beast: { name:'獣人', emoji:'🐾', traits:['本能的','縄張り意識がある','嗅覚が鋭い'] },
+  },
+  classes: {
+    merchant: { name:'商人', emoji:'💰', skills:['交渉術','相場に詳しい','情報通'] },
+    guard: { name:'衛兵', emoji:'⚔️', skills:['戦闘訓練','規律を重んじる','命令に従う'] },
+    mage: { name:'魔法使い', emoji:'🔮', skills:['魔法の知識','研究熱心','秘密を持つ'] },
+    thief: { name:'盗賊', emoji:'🗡️', skills:['隠密行動','錠前破り','嘘が上手い'] },
+    cleric: { name:'聖職者', emoji:'✝️', skills:['癒しの力','信仰心が強い','道徳的判断'] },
+    farmer: { name:'農民', emoji:'🌾', skills:['土地に詳しい','逞しい','素朴で正直'] },
+    noble: { name:'貴族', emoji:'👑', skills:['政治的影響力','礼儀作法','隠された権力'] },
+    innkeeper: { name:'宿屋主人', emoji:'🍺', skills:['情報収集','人脈が広い','料理が得意'] },
+    blacksmith: { name:'鍛冶屋', emoji:'🔨', skills:['武具の知識','頑固','誠実な職人'] },
+  },
+  genders: { male:'男性', female:'女性', none:'不明' },
+  vibes: {
+    friendly: { label:'友好的', emoji:'😊', desc:'PCに対して好意的で助けようとする' },
+    suspicious: { label:'怪しい', emoji:'🤔', desc:'何かを隠している雰囲気。秘密を持つ' },
+    hostile: { label:'敵対的', emoji:'😠', desc:'PCを信用せず、関わりを嫌がる' },
+    neutral: { label:'無関心', emoji:'😐', desc:'PCに特別な感情はなく、淡々としている' },
+  },
+  maleNames: ['アルド','ベルン','コルト','デイン','エルム','フォルク','グレン','ハルト','イアン','ヤック','カーン','レム'],
+  femaleNames: ['アリア','ベラ','セラ','ダナ','エリス','フィア','グロリア','ヘラ','イリス','ジュナ','カラ','ルーナ'],
+  personalities: ['几帳面','おっちょこちょい','慎重','大胆','内向的','外向的','楽観的','悲観的','意地悪','思いやりがある','頑固','柔軟'],
+  catchphrases: [
+    '「まったく、どいつもこいつも…」','「うむ、それは良い話だ」','「お前を信用するのは難しいな」',
+    '「昔はこんなことなかったのに」','「任せとけ、必ず解決してやる」','「金さえあれば何でもできる」',
+    '「神のご加護があらんことを」','「黙って聞け、話はそれからだ」','「やってみなきゃわからんだろ」',
+    '「それは私には関係ない話だ」','「面白い…もっと聞かせてくれ」','「はぁ…また面倒なことに」',
+  ],
+  motivations: [
+    '行方不明の家族を探している','借金を返すために必死に働いている','ある組織のスパイとして情報を集めている',
+    '過去の過ちを償おうとしている','大切な人への贈り物を用意しようとしている','自分の出生の秘密を追っている',
+    '街を脅かす何かから守ろうとしている','ある人物への復讐を計画している','失われた遺産を取り戻そうとしている',
+    '単純に今日一日を生き延びることで精一杯','夢の実現のために資金を貯めている','秘密結社の指示を遂行している',
+  ],
+  secrets: [
+    '実は貴族の隠し子である','ギルドのメンバーに借金がある','過去に殺人を犯したことがある',
+    '実は魔法の力を隠している','組織の二重スパイである','大切な人が行方不明になっている',
+    '実は変装した有名人である','ある呪いにかかっている','大きな秘密を目撃してしまった',
+    '実は別の街から追われている','昔の仲間を裏切った過去がある','禁じられた知識を持っている',
+  ],
+};
+
+let savedNPCs = [];
+try { savedNPCs = JSON.parse(localStorage.getItem('trpg_npcs') || '[]'); } catch(e) {}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pickKey(obj, filter) {
+  const keys = Object.keys(obj);
+  if (filter && filter !== 'random' && obj[filter]) return filter;
+  return pick(keys);
+}
+
+function generateNPC() {
+  const raceKey = pickKey(DATA.races, document.getElementById('raceFilter').value);
+  const classKey = pickKey(DATA.classes, document.getElementById('classFilter').value);
+  const genderVal = document.getElementById('genderFilter').value === 'random' ? pick(['male','female','none']) : document.getElementById('genderFilter').value;
+  const vibeVal = document.getElementById('vibeFilter').value === 'random' ? pick(['friendly','suspicious','hostile','neutral']) : document.getElementById('vibeFilter').value;
+
+  const race = DATA.races[raceKey];
+  const cls = DATA.classes[classKey];
+  const vibe = DATA.vibes[vibeVal];
+  const name = genderVal === 'female' ? pick(DATA.femaleNames) : genderVal === 'male' ? pick(DATA.maleNames) : pick([...DATA.maleNames, ...DATA.femaleNames]);
+  const personality = pick(DATA.personalities);
+  const catchphrase = pick(DATA.catchphrases);
+  const motivation = pick(DATA.motivations);
+  const secret = pick(DATA.secrets);
+  const age = Math.floor(Math.random() * 50) + 20;
+  const hp = Math.floor(Math.random() * 20) + 10;
+
+  const npc = { id: Date.now(), name, race: raceKey, class: classKey, gender: genderVal, vibe: vibeVal, personality, catchphrase, motivation, secret, age, hp };
+
+  document.getElementById('npcCard').innerHTML = `
+    <div class="npc-sheet">
+      <div class="npc-sheet-header">
+        <div class="npc-name-big">${race.emoji} ${name}</div>
+        <div class="npc-tags">
+          <span class="npc-tag race">${race.name}</span>
+          <span class="npc-tag class">${cls.emoji} ${cls.name}</span>
+          <span class="npc-tag gender">${DATA.genders[genderVal]}</span>
+          <span class="npc-tag vibe">${vibe.emoji} ${vibe.label}</span>
+        </div>
+        <div class="npc-basics">年齢: ${age}歳 ／ HP: ${hp}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">性格・特性</div>
+        <div class="npc-sec-body">【${personality}】 ${race.traits[Math.floor(Math.random() * race.traits.length)]}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">スキル・特技</div>
+        <div class="npc-sec-body">${cls.skills.join(' ／ ')}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">口癖</div>
+        <div class="npc-sec-body quote">${catchphrase}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">現在の動機</div>
+        <div class="npc-sec-body">${motivation}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">🔒 隠れた秘密（GM用）</div>
+        <div class="npc-sec-body secret">${secret}</div>
+      </div>
+      <div class="npc-section">
+        <div class="npc-sec-title">PCへの態度</div>
+        <div class="npc-sec-body">${vibe.desc}</div>
+      </div>
+      <div class="npc-actions">
+        <button class="npc-save-btn" onclick="saveNPC(${JSON.stringify(npc).replace(/"/g,'&quot;')})">💾 保存する</button>
+        <button class="npc-regen-btn" onclick="generateNPC()">🔄 再生成</button>
+      </div>
+    </div>
+  `;
+}
+
+function saveNPC(npc) {
+  if (typeof npc === 'string') npc = JSON.parse(npc);
+  savedNPCs.unshift(npc);
+  if (savedNPCs.length > 20) savedNPCs.pop();
+  try { localStorage.setItem('trpg_npcs', JSON.stringify(savedNPCs)); } catch(e) {}
+  renderSaved();
+}
+
+function deleteNPC(id) {
+  savedNPCs = savedNPCs.filter(n => n.id !== id);
+  try { localStorage.setItem('trpg_npcs', JSON.stringify(savedNPCs)); } catch(e) {}
+  renderSaved();
+}
+
+function renderSaved() {
+  const el = document.getElementById('savedList');
+  if (!savedNPCs.length) { el.innerHTML = '<div style="color:var(--gray-500);font-size:.82rem">まだ保存されていません</div>'; return; }
+  el.innerHTML = savedNPCs.map(n => {
+    const race = DATA.races[n.race]; const cls = DATA.classes[n.class];
+    return `<div class="saved-item">
+      <div class="si-name">${race?.emoji} ${n.name}</div>
+      <div class="si-sub">${race?.name} ${cls?.name} / ${DATA.vibes[n.vibe]?.label}</div>
+      <button class="si-del" onclick="deleteNPC(${n.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+renderSaved();
+</script>
+
+<style>
+.npc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.npc-header { text-align: center; margin-bottom: 2rem; }
+.npc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.npc-sub { color: var(--gray-400); margin-top: .3rem; }
+.npc-body { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
+@media (max-width: 750px) { .npc-body { grid-template-columns: 1fr; } }
+.npc-controls, .npc-saved, .npc-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.npc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.npc-ctrl-row { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .8rem; }
+.npc-cg { display: flex; flex-direction: column; gap: .25rem; }
+.npc-label { font-size: .75rem; color: var(--gray-400); }
+.npc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .6rem; font-size: .85rem; }
+.npc-gen-btn { width: 100%; padding: .7rem; background: #7c3aed; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 1rem; }
+.npc-gen-btn:hover { background: #6d28d9; }
+.saved-list { display: flex; flex-direction: column; gap: .4rem; max-height: 300px; overflow-y: auto; }
+.saved-item { display: flex; align-items: center; gap: .5rem; padding: .4rem .6rem; background: var(--gray-900); border-radius: 8px; }
+.si-name { font-weight: 700; color: var(--gray-200); font-size: .85rem; flex: 1; }
+.si-sub { font-size: .72rem; color: var(--gray-400); }
+.si-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.si-del:hover { color: #ef4444; }
+.npc-sheet-header { text-align: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--gray-700); }
+.npc-name-big { font-size: 1.8rem; font-weight: 800; color: var(--gray-100); margin-bottom: .5rem; }
+.npc-tags { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-bottom: .4rem; }
+.npc-tag { padding: .2rem .7rem; border-radius: 20px; font-size: .78rem; }
+.npc-tag.race { background: #1e1b4b; color: #818cf8; }
+.npc-tag.class { background: #14532d; color: #4ade80; }
+.npc-tag.gender { background: #1e293b; color: #94a3b8; }
+.npc-tag.vibe { background: #7c2d12; color: #fb923c; }
+.npc-basics { font-size: .82rem; color: var(--gray-400); }
+.npc-section { margin-bottom: .8rem; }
+.npc-sec-title { font-size: .78rem; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.npc-sec-body { background: var(--gray-900); border-radius: 8px; padding: .6rem .8rem; font-size: .88rem; color: var(--gray-200); }
+.npc-sec-body.quote { font-style: italic; color: #fbbf24; }
+.npc-sec-body.secret { color: #f87171; border-left: 3px solid #ef4444; }
+.npc-actions { display: flex; gap: .6rem; margin-top: 1rem; }
+.npc-save-btn { flex: 1; padding: .5rem; background: #16a34a; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.npc-regen-btn { flex: 1; padding: .5rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+</style>
+</BaseLayout>

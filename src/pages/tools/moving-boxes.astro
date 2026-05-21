@@ -1,0 +1,199 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="引越しダンボール最適個数予測" description="家族構成・部屋数・荷物量を入れるとサイズ別必要数を計算。">
+<main class="mb-wrap">
+  <div class="mb-header">
+    <div class="mb-title">📦 引越しダンボール予測</div>
+    <div class="mb-sub">荷物量からダンボールの必要個数を計算</div>
+  </div>
+
+  <div class="mb-body">
+    <div class="mb-left">
+      <div class="mb-card">
+        <div class="mb-card-title">基本情報</div>
+        <div class="mb-form-row">
+          <div class="mb-fg">
+            <label class="mb-label">人数</label>
+            <select id="people" class="mb-select" onchange="calc()">
+              <option value="1">1人</option>
+              <option value="2" selected>2人</option>
+              <option value="3">3人</option>
+              <option value="4">4人</option>
+              <option value="5">5人以上</option>
+            </select>
+          </div>
+          <div class="mb-fg">
+            <label class="mb-label">間取り</label>
+            <select id="rooms" class="mb-select" onchange="calc()">
+              <option value="1">1K / 1R</option>
+              <option value="2" selected>1LDK / 2K</option>
+              <option value="3">2LDK / 3K</option>
+              <option value="4">3LDK / 4K</option>
+              <option value="5">4LDK以上</option>
+            </select>
+          </div>
+          <div class="mb-fg">
+            <label class="mb-label">荷物量</label>
+            <select id="stuff" class="mb-select" onchange="calc()">
+              <option value="light">少なめ（ミニマリスト）</option>
+              <option value="normal" selected>普通</option>
+              <option value="heavy">多め（趣味・コレクション多い）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-card">
+        <div class="mb-card-title">部屋別の荷物チェック</div>
+        <div class="mb-checklist" id="checklistArea"></div>
+      </div>
+    </div>
+
+    <div class="mb-right">
+      <div class="mb-result">
+        <div class="mb-card-title">必要なダンボール数</div>
+        <div id="resultBoxes"></div>
+        <div class="mb-total" id="resultTotal"></div>
+      </div>
+
+      <div class="mb-tips">
+        <div class="mb-card-title">💡 ダンボールのコツ</div>
+        <div class="tip-list">
+          <div class="tip-item"><strong>大箱</strong>は軽いもの（衣類・枕・タオル等）に。重くなりすぎると運べない。</div>
+          <div class="tip-item"><strong>小箱・中箱</strong>は本・食器・電子機器など重いものに。</div>
+          <div class="tip-item">食器は<strong>1枚ずつ新聞紙</strong>で包んで縦置きに。重ねると割れやすい。</div>
+          <div class="tip-item">電子機器は<strong>元の箱</strong>があれば使う。なければ中箱に緩衝材と一緒に。</div>
+          <div class="tip-item">引越し業者から<strong>無料でもらう</strong>か、スーパーやドラッグストアで入手可能。</div>
+          <div class="tip-item">ダンボール1箱の目安重量は<strong>15〜20kg以下</strong>に収める。</div>
+        </div>
+      </div>
+
+      <div class="mb-size-guide">
+        <div class="mb-card-title">ダンボールサイズ目安</div>
+        <table class="size-table">
+          <thead><tr><th>サイズ</th><th>目安寸法</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>小</td><td>縦30×横40×高30cm</td><td>本・食器・細かいもの</td></tr>
+            <tr><td>中</td><td>縦40×横50×高40cm</td><td>衣類・雑貨・鍋</td></tr>
+            <tr><td>大</td><td>縦50×横60×高50cm</td><td>衣類・枕・軽いもの</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const ROOMS_CHECKLIST = [
+  { room: 'リビング', items: ['本・漫画', 'CD・DVD', 'ゲーム・コントローラー', '雑貨・小物', 'クッション・枕', '植物・花瓶'] },
+  { room: 'キッチン', items: ['食器・コップ', '調理器具・鍋', '食品・調味料', '家電（炊飯器等）', 'カトラリー'] },
+  { room: '寝室・衣類', items: ['衣類・下着', '靴・バッグ', '寝具・タオル', 'アクセサリー'] },
+  { room: '書斎・デスク', items: ['書類・ファイル', '文房具', 'PC周辺機器', 'ケーブル類'] },
+  { room: '趣味・その他', items: ['スポーツ用品', '楽器', 'コレクション品', '工具・DIY用品'] },
+];
+
+const checked = {};
+
+function initChecklist() {
+  const area = document.getElementById('checklistArea');
+  area.innerHTML = ROOMS_CHECKLIST.map(({ room, items }) => `
+    <div class="cl-room">
+      <div class="cl-room-title">${room}</div>
+      <div class="cl-items">
+        ${items.map(item => `
+          <label class="cl-item">
+            <input type="checkbox" onchange="toggleItem('${item}',this.checked);calc()" />
+            <span>${item}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleItem(item, isChecked) {
+  checked[item] = isChecked;
+}
+
+function calc() {
+  const people = parseInt(document.getElementById('people').value);
+  const rooms = parseInt(document.getElementById('rooms').value);
+  const stuff = document.getElementById('stuff').value;
+  const stuffMul = { light: 0.7, normal: 1.0, heavy: 1.4 }[stuff];
+
+  // Base boxes per room type
+  const baseSmall = Math.round((people * 3 + rooms * 2) * stuffMul);
+  const baseMedium = Math.round((people * 4 + rooms * 3) * stuffMul);
+  const baseLarge = Math.round((people * 2 + rooms * 1) * stuffMul);
+
+  // Bonus from checklist
+  const checkedCount = Object.values(checked).filter(Boolean).length;
+  const bonus = Math.floor(checkedCount / 3);
+
+  const small = baseSmall + Math.floor(bonus * 0.5);
+  const medium = baseMedium + Math.floor(bonus * 0.3);
+  const large = baseLarge + Math.floor(bonus * 0.2);
+  const total = small + medium + large;
+
+  document.getElementById('resultBoxes').innerHTML = `
+    <div class="box-row">
+      <div class="box-card small">
+        <div class="box-size">小</div>
+        <div class="box-count">${small}<span>個</span></div>
+        <div class="box-desc">本・食器</div>
+      </div>
+      <div class="box-card medium">
+        <div class="box-size">中</div>
+        <div class="box-count">${medium}<span>個</span></div>
+        <div class="box-desc">衣類・雑貨</div>
+      </div>
+      <div class="box-card large">
+        <div class="box-size">大</div>
+        <div class="box-count">${large}<span>個</span></div>
+        <div class="box-desc">軽いもの</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('resultTotal').innerHTML = `合計: <strong>${total}個</strong>（余裕を見て+10%推奨: <strong>${Math.ceil(total * 1.1)}個</strong>）`;
+}
+
+initChecklist();
+calc();
+</script>
+
+<style>
+.mb-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.mb-header { text-align: center; margin-bottom: 2rem; }
+.mb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.mb-sub { color: var(--gray-400); margin-top: .3rem; }
+.mb-body { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+@media (max-width: 750px) { .mb-body { grid-template-columns: 1fr; } }
+.mb-card, .mb-result, .mb-tips, .mb-size-guide { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.mb-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.mb-form-row { display: grid; grid-template-columns: repeat(3,1fr); gap: .6rem; }
+.mb-fg { display: flex; flex-direction: column; gap: .3rem; }
+.mb-label { font-size: .75rem; color: var(--gray-400); }
+.mb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.cl-room { margin-bottom: .8rem; }
+.cl-room-title { font-size: .82rem; font-weight: 700; color: var(--gray-300); margin-bottom: .4rem; }
+.cl-items { display: flex; flex-wrap: wrap; gap: .3rem; }
+.cl-item { display: flex; align-items: center; gap: .3rem; background: var(--gray-900); border-radius: 6px; padding: .25rem .6rem; font-size: .78rem; color: var(--gray-300); cursor: pointer; }
+.box-row { display: flex; gap: .8rem; margin-bottom: .8rem; }
+.box-card { flex: 1; background: var(--gray-900); border-radius: 10px; padding: .8rem; text-align: center; }
+.box-card.small { border-top: 3px solid #818cf8; }
+.box-card.medium { border-top: 3px solid #34d399; }
+.box-card.large { border-top: 3px solid #fbbf24; }
+.box-size { font-size: .75rem; color: var(--gray-400); }
+.box-count { font-size: 2rem; font-weight: 800; color: var(--gray-100); }
+.box-count span { font-size: .9rem; color: var(--gray-400); }
+.box-desc { font-size: .7rem; color: var(--gray-500); }
+.mb-total { font-size: .9rem; color: var(--gray-300); text-align: center; }
+.mb-total strong { color: #fbbf24; }
+.tip-list { display: flex; flex-direction: column; gap: .5rem; }
+.tip-item { font-size: .82rem; color: var(--gray-300); padding: .4rem .6rem; background: var(--gray-900); border-radius: 6px; }
+.size-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.size-table th { background: var(--gray-700); padding: .4rem .6rem; color: var(--gray-200); text-align: left; }
+.size-table td { padding: .35rem .6rem; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+</style>
+</BaseLayout>

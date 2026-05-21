@@ -1,0 +1,251 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="結婚式お車代相場計算機" description="距離・新幹線/飛行機の有無を入れると相場＋ご祝儀袋の表書き提案。">
+<main class="wt-wrap">
+  <div class="wt-header">
+    <div class="wt-title">💒 結婚式お車代計算機</div>
+    <div class="wt-sub">ゲストの交通費から適切なお車代の相場を計算</div>
+  </div>
+
+  <div class="wt-body">
+    <div class="wt-left">
+      <div class="wt-card">
+        <div class="wt-card-title">ゲスト情報</div>
+        <div class="wt-fg">
+          <label class="wt-label">ゲストの名前（メモ用）</label>
+          <input type="text" id="guestName" class="wt-input" placeholder="例：山田太郎さん" />
+        </div>
+        <div class="wt-fg" style="margin-top:.6rem">
+          <label class="wt-label">交通手段</label>
+          <div class="wt-radio-group" id="transportType">
+            <label class="wt-radio"><input type="radio" name="transport" value="local" checked onchange="calc()"> <span>近距離（車・バス・電車）</span></label>
+            <label class="wt-radio"><input type="radio" name="transport" value="shinkansen" onchange="calc()"> <span>新幹線</span></label>
+            <label class="wt-radio"><input type="radio" name="transport" value="plane" onchange="calc()"> <span>飛行機</span></label>
+            <label class="wt-radio"><input type="radio" name="transport" value="night" onchange="calc()"> <span>宿泊必要（遠方）</span></label>
+          </div>
+        </div>
+        <div class="wt-fg" style="margin-top:.6rem" id="distanceGroup">
+          <label class="wt-label">おおよその往復交通費（円）</label>
+          <input type="number" id="actualCost" class="wt-input" placeholder="例：8000" min="0" step="500" oninput="calc()" />
+        </div>
+        <div class="wt-fg" style="margin-top:.6rem">
+          <label class="wt-label">関係性</label>
+          <select id="relation" class="wt-select" onchange="calc()">
+            <option value="friend">友人・同僚</option>
+            <option value="family">親族（いとこ等）</option>
+            <option value="important">主賓・スピーチ担当</option>
+            <option value="far_friend">遠方からの友人（特別扱い）</option>
+          </select>
+        </div>
+        <div class="wt-fg" style="margin-top:.6rem">
+          <label class="wt-label">ご祝儀の目安</label>
+          <select id="gift" class="wt-select" onchange="calc()">
+            <option value="30000">3万円（一般的）</option>
+            <option value="50000">5万円（親しい友人）</option>
+            <option value="70000">7万円（特別な友人）</option>
+            <option value="100000">10万円（親族）</option>
+          </select>
+        </div>
+
+        <button class="wt-add-btn" onclick="addGuest()">＋ リストに追加</button>
+      </div>
+
+      <div class="wt-presets">
+        <div class="wt-card-title">交通費の目安</div>
+        <div class="wt-preset-list">
+          <div class="preset-row" onclick="setPreset(2000,'local')"><span>近距離（電車・バス）</span><span class="preset-val">〜5,000円</span></div>
+          <div class="preset-row" onclick="setPreset(10000,'shinkansen')"><span>東京↔大阪（新幹線）</span><span class="preset-val">約28,000円</span></div>
+          <div class="preset-row" onclick="setPreset(15000,'shinkansen')"><span>東京↔博多（新幹線）</span><span class="preset-val">約44,000円</span></div>
+          <div class="preset-row" onclick="setPreset(20000,'plane')"><span>東京↔札幌（飛行機）</span><span class="preset-val">約30,000円〜</span></div>
+          <div class="preset-row" onclick="setPreset(25000,'plane')"><span>東京↔沖縄（飛行機）</span><span class="preset-val">約40,000円〜</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wt-right">
+      <div class="wt-result" id="resultCard">
+        <div class="wt-card-title">お車代の提案</div>
+        <div id="resultContent"><div style="color:var(--gray-400);font-size:.9rem">左のフォームで情報を入力してください</div></div>
+      </div>
+
+      <div class="wt-etiquette">
+        <div class="wt-card-title">💡 お車代のマナー</div>
+        <div class="etiquette-list">
+          <div class="etiquette-item">
+            <div class="etiquette-title">金額の目安</div>
+            <div class="etiquette-desc">一般的に実費の「半額〜全額」が相場。主賓・スピーチ担当は多めに。</div>
+          </div>
+          <div class="etiquette-item">
+            <div class="etiquette-title">渡し方</div>
+            <div class="etiquette-desc">白い封筒または「御車代」と表書きしたのし袋に。当日受付や式前に手渡し。</div>
+          </div>
+          <div class="etiquette-item">
+            <div class="etiquette-title">金額のキリ</div>
+            <div class="etiquette-desc">5,000円・10,000円・20,000円など切りの良い数字に丸める。</div>
+          </div>
+          <div class="etiquette-item">
+            <div class="etiquette-title">遠方ゲスト</div>
+            <div class="etiquette-desc">宿泊が必要な場合は「御宿泊代」として別途用意するか、宿をこちらで手配するのが親切。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wt-guest-list-card" id="guestListCard" style="display:none">
+        <div class="wt-card-title">ゲストリスト</div>
+        <div id="guestList"></div>
+        <div class="wt-total" id="guestTotal"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+let guests = [];
+
+function setPreset(cost, type) {
+  document.getElementById('actualCost').value = cost;
+  document.querySelector(`input[name="transport"][value="${type}"]`).checked = true;
+  calc();
+}
+
+function getTransport() {
+  return document.querySelector('input[name="transport"]:checked')?.value || 'local';
+}
+
+function calc() {
+  const transport = getTransport();
+  const actualCost = parseFloat(document.getElementById('actualCost').value) || 0;
+  const relation = document.getElementById('relation').value;
+  const giftAmount = parseInt(document.getElementById('gift').value) || 30000;
+
+  let minAmount, maxAmount, note;
+
+  if (transport === 'local') {
+    if (actualCost < 2000) { minAmount = 0; maxAmount = 2000; note = '近距離は省略する場合も多い'; }
+    else { minAmount = Math.round(actualCost * 0.5 / 1000) * 1000; maxAmount = actualCost; note = '実費の半額〜全額が目安'; }
+  } else if (transport === 'shinkansen') {
+    minAmount = Math.round(actualCost * 0.5 / 5000) * 5000;
+    maxAmount = Math.round(actualCost / 5000) * 5000;
+    note = '新幹線は実費の半額〜全額。主賓は全額以上も';
+  } else if (transport === 'plane') {
+    minAmount = Math.round(actualCost * 0.5 / 5000) * 5000;
+    maxAmount = Math.round(actualCost / 5000) * 5000;
+    note = '飛行機は実費の半額〜全額。ただし10万超は別途相談';
+  } else {
+    minAmount = Math.round(actualCost * 0.5 / 5000) * 5000;
+    maxAmount = actualCost + 20000;
+    note = '宿泊費込みの場合、宿の手配も検討を';
+  }
+
+  if (relation === 'important') { minAmount = Math.round(minAmount * 1.2 / 5000) * 5000; maxAmount = Math.round(maxAmount * 1.5 / 5000) * 5000; }
+  if (relation === 'far_friend') { minAmount = Math.round(minAmount * 1.1 / 5000) * 5000; }
+
+  const recommended = Math.round((minAmount + maxAmount) / 2 / 1000) * 1000;
+  const envelopeLabel = relation === 'important' ? '御車代（または御礼）' : '御車代';
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="res-amount-range">
+      <span class="ra-min">¥${minAmount.toLocaleString()}</span>
+      <span class="ra-sep">〜</span>
+      <span class="ra-max">¥${maxAmount.toLocaleString()}</span>
+    </div>
+    <div class="res-recommended">推奨: <strong>¥${recommended.toLocaleString()}</strong></div>
+    <div class="res-note">${note}</div>
+    <div class="res-envelope">
+      <div class="env-label">のし袋の表書き</div>
+      <div class="env-text">「${envelopeLabel}」</div>
+    </div>
+    ${giftAmount < maxAmount ? '<div class="res-warn">⚠️ お車代がご祝儀を上回る可能性があります。交通費の一部負担や宿の手配も検討を。</div>' : ''}
+  `;
+}
+
+function addGuest() {
+  const name = document.getElementById('guestName').value.trim() || 'ゲスト';
+  const transport = getTransport();
+  const actualCost = parseFloat(document.getElementById('actualCost').value) || 0;
+  const relation = document.getElementById('relation').value;
+
+  let recommended;
+  if (transport === 'local' && actualCost < 2000) recommended = 0;
+  else {
+    let base = Math.round(actualCost * (relation === 'important' ? 1.0 : 0.7) / 1000) * 1000;
+    recommended = Math.max(base, transport === 'local' ? 0 : 5000);
+  }
+
+  guests.push({ name, transport, actualCost, relation, recommended, id: Date.now() });
+  document.getElementById('guestName').value = '';
+  renderGuestList();
+}
+
+function removeGuest(id) {
+  guests = guests.filter(g => g.id !== id);
+  renderGuestList();
+}
+
+function renderGuestList() {
+  const card = document.getElementById('guestListCard');
+  if (!guests.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const transportLabels = {local:'近距離', shinkansen:'新幹線', plane:'飛行機', night:'遠方宿泊'};
+  const relationLabels = {friend:'友人', family:'親族', important:'主賓', far_friend:'遠方友人'};
+  const total = guests.reduce((s, g) => s + g.recommended, 0);
+
+  document.getElementById('guestList').innerHTML = guests.map(g => `
+    <div class="gl-row">
+      <div class="gl-name">${g.name}</div>
+      <div class="gl-tag">${transportLabels[g.transport]} / ${relationLabels[g.relation]}</div>
+      <div class="gl-amount">¥${g.recommended.toLocaleString()}</div>
+      <button class="gl-del" onclick="removeGuest(${g.id})">×</button>
+    </div>
+  `).join('');
+  document.getElementById('guestTotal').innerHTML = `合計お車代: <strong>¥${total.toLocaleString()}</strong>（${guests.length}名）`;
+}
+
+calc();
+</script>
+
+<style>
+.wt-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.wt-header { text-align: center; margin-bottom: 2rem; }
+.wt-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.wt-sub { color: var(--gray-400); margin-top: .3rem; }
+.wt-body { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; }
+@media (max-width: 750px) { .wt-body { grid-template-columns: 1fr; } }
+.wt-card, .wt-presets, .wt-result, .wt-etiquette, .wt-guest-list-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.wt-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.wt-fg { display: flex; flex-direction: column; gap: .3rem; }
+.wt-label { font-size: .75rem; color: var(--gray-400); }
+.wt-input, .wt-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
+.wt-radio-group { display: flex; flex-direction: column; gap: .4rem; }
+.wt-radio { display: flex; align-items: center; gap: .5rem; color: var(--gray-200); font-size: .9rem; cursor: pointer; }
+.wt-add-btn { width: 100%; margin-top: 1rem; padding: .6rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.wt-preset-list { display: flex; flex-direction: column; gap: .4rem; }
+.preset-row { display: flex; justify-content: space-between; padding: .45rem .7rem; background: var(--gray-900); border-radius: 8px; font-size: .85rem; color: var(--gray-300); cursor: pointer; }
+.preset-row:hover { background: var(--gray-700); }
+.preset-val { color: #818cf8; font-weight: 600; }
+.res-amount-range { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: 1.5rem; font-weight: 800; }
+.ra-min, .ra-max { color: #fbbf24; }
+.ra-sep { color: var(--gray-400); font-size: 1rem; }
+.res-recommended { font-size: 1rem; color: var(--gray-300); margin-bottom: .4rem; }
+.res-recommended strong { color: #34d399; font-size: 1.2rem; }
+.res-note { font-size: .8rem; color: var(--gray-400); margin-bottom: .8rem; }
+.res-envelope { background: var(--gray-900); border-radius: 8px; padding: .7rem; margin-bottom: .5rem; }
+.env-label { font-size: .75rem; color: var(--gray-400); }
+.env-text { font-size: 1.1rem; font-weight: 700; color: var(--gray-100); margin-top: .2rem; }
+.res-warn { background: #7c2d12; color: #fb923c; border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; }
+.etiquette-list { display: flex; flex-direction: column; gap: .6rem; }
+.etiquette-item { background: var(--gray-900); border-radius: 8px; padding: .6rem .8rem; }
+.etiquette-title { font-weight: 700; color: var(--gray-200); font-size: .85rem; }
+.etiquette-desc { font-size: .8rem; color: var(--gray-400); margin-top: .2rem; }
+.gl-row { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-bottom: 1px solid var(--gray-700); font-size: .85rem; }
+.gl-row:last-child { border-bottom: none; }
+.gl-name { flex: 1; color: var(--gray-200); }
+.gl-tag { font-size: .75rem; color: var(--gray-400); }
+.gl-amount { font-weight: 700; color: #fbbf24; white-space: nowrap; }
+.gl-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.gl-del:hover { color: #ef4444; }
+.wt-total { margin-top: .8rem; font-size: .95rem; color: var(--gray-200); text-align: right; }
+.wt-total strong { color: #fbbf24; font-size: 1.1rem; }
+</style>
+</BaseLayout>

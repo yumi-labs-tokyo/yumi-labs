@@ -1,0 +1,240 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="食品ロス防止アプリ" description="食材の賞味期限を記録。近づいたら通知＋レシピ提案。">
+<main class="fw-wrap">
+  <div class="fw-header">
+    <div class="fw-title">🥗 食品ロス防止アプリ</div>
+    <div class="fw-sub">食材を登録して賞味期限を管理、ロスを減らそう</div>
+  </div>
+
+  <div class="fw-add-section">
+    <div class="fw-add-card">
+      <div class="fw-card-title">食材を追加</div>
+      <div class="fw-add-row">
+        <input type="text" id="foodName" class="fw-input" placeholder="食材名（例：卵、牛乳）" list="foodSuggestions" />
+        <datalist id="foodSuggestions">
+          <option value="卵">
+          <option value="牛乳">
+          <option value="豆腐">
+          <option value="納豆">
+          <option value="ヨーグルト">
+          <option value="バター">
+          <option value="チーズ">
+          <option value="鶏肉">
+          <option value="豚肉">
+          <option value="牛肉">
+          <option value="魚（切り身）">
+          <option value="にんじん">
+          <option value="キャベツ">
+          <option value="玉ねぎ">
+          <option value="じゃがいも">
+          <option value="トマト">
+        </datalist>
+        <select id="foodCat" class="fw-select">
+          <option value="dairy">乳製品・卵</option>
+          <option value="meat">肉・魚</option>
+          <option value="veggie">野菜・果物</option>
+          <option value="grain">穀物・パン</option>
+          <option value="processed">加工食品</option>
+          <option value="other">その他</option>
+        </select>
+        <input type="date" id="foodExpiry" class="fw-input" />
+        <input type="number" id="foodQty" class="fw-input" placeholder="個数" min="1" max="99" value="1" style="max-width:80px" />
+        <button class="fw-btn green" onclick="addFood()">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fw-filter-bar">
+    <button class="fw-filter active" onclick="setFilter('all',this)">すべて</button>
+    <button class="fw-filter" onclick="setFilter('urgent',this)">🚨 今日・明日</button>
+    <button class="fw-filter" onclick="setFilter('week',this)">⚠️ 今週中</button>
+    <button class="fw-filter" onclick="setFilter('safe',this)">✅ 余裕あり</button>
+    <button class="fw-filter" onclick="setFilter('expired',this)">❌ 期限切れ</button>
+    <div class="fw-stats" id="statsBar"></div>
+  </div>
+
+  <div id="foodList" class="fw-food-list"></div>
+
+  <div class="fw-suggest-section" id="suggestSection" style="display:none">
+    <div class="fw-card-title">🍳 使い切りレシピのヒント</div>
+    <div id="suggestList" class="fw-suggest-list"></div>
+  </div>
+</main>
+
+<script is:inline>
+let foods = [];
+try { foods = JSON.parse(localStorage.getItem('fw_foods') || '[]'); } catch(e) {}
+
+let currentFilter = 'all';
+
+const CAT_COLORS = { dairy:'#818cf8', meat:'#f87171', veggie:'#4ade80', grain:'#fbbf24', processed:'#fb923c', other:'#94a3b8' };
+const CAT_LABELS = { dairy:'乳製品・卵', meat:'肉・魚', veggie:'野菜・果物', grain:'穀物・パン', processed:'加工食品', other:'その他' };
+
+// Tip recipes based on ingredient name patterns
+const RECIPE_HINTS = [
+  { keywords:['卵'], hints:['卵かけご飯', '目玉焼き', '茶碗蒸し', 'オムレツ'] },
+  { keywords:['牛乳'], hints:['シチュー', 'ホワイトソース', 'スープ', 'パンケーキ'] },
+  { keywords:['豆腐'], hints:['麻婆豆腐', '冷奴', '味噌汁', '豆腐チャンプルー'] },
+  { keywords:['鶏','チキン'], hints:['から揚げ', '親子丼', 'チキン南蛮', 'ゆで鶏'] },
+  { keywords:['豚'], hints:['生姜焼き', '豚汁', '回鍋肉', 'ポークソテー'] },
+  { keywords:['ほうれん草','小松菜'], hints:['お浸し', '炒め物', '卵とじ'] },
+  { keywords:['じゃがいも'], hints:['肉じゃが', 'ポテトサラダ', 'コロッケ', 'ジャーマンポテト'] },
+  { keywords:['キャベツ'], hints:['お好み焼き', 'ロールキャベツ', 'コールスロー', '回鍋肉'] },
+  { keywords:['トマト'], hints:['パスタ', 'スープ', 'サラダ', 'チキントマト煮'] },
+  { keywords:['ヨーグルト'], hints:['スムージー', 'タンドリーチキン（漬け込み）', 'デザート'] },
+];
+
+document.getElementById('foodExpiry').value = (() => {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().split('T')[0];
+})();
+
+function save() { try { localStorage.setItem('fw_foods', JSON.stringify(foods)); } catch(e) {} }
+
+function getDaysLeft(expiry) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(expiry); exp.setHours(0,0,0,0);
+  return Math.round((exp - today) / 86400000);
+}
+
+function getStatus(days) {
+  if (days < 0) return { label:'期限切れ', cls:'expired', emoji:'❌' };
+  if (days === 0) return { label:'今日まで', cls:'today', emoji:'🚨' };
+  if (days === 1) return { label:'明日まで', cls:'urgent', emoji:'🚨' };
+  if (days <= 3) return { label: days + '日後', cls:'warning', emoji:'⚠️' };
+  if (days <= 7) return { label: days + '日後', cls:'soon', emoji:'🟡' };
+  return { label: days + '日後', cls:'safe', emoji:'✅' };
+}
+
+function addFood() {
+  const name = document.getElementById('foodName').value.trim();
+  const cat = document.getElementById('foodCat').value;
+  const expiry = document.getElementById('foodExpiry').value;
+  const qty = parseInt(document.getElementById('foodQty').value) || 1;
+  if (!name || !expiry) { alert('食材名と賞味期限を入力してください'); return; }
+  foods.push({ id: Date.now(), name, cat, expiry, qty, added: new Date().toISOString().split('T')[0] });
+  foods.sort((a, b) => a.expiry.localeCompare(b.expiry));
+  save();
+  document.getElementById('foodName').value = '';
+  document.getElementById('foodQty').value = 1;
+  render();
+}
+
+function removeFood(id) {
+  foods = foods.filter(f => f.id !== id);
+  save(); render();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fw-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let filtered = foods;
+  if (currentFilter === 'urgent') filtered = foods.filter(f => { const d = getDaysLeft(f.expiry); return d >= 0 && d <= 1; });
+  else if (currentFilter === 'week') filtered = foods.filter(f => { const d = getDaysLeft(f.expiry); return d >= 2 && d <= 7; });
+  else if (currentFilter === 'safe') filtered = foods.filter(f => getDaysLeft(f.expiry) > 7);
+  else if (currentFilter === 'expired') filtered = foods.filter(f => getDaysLeft(f.expiry) < 0);
+
+  const urgent = foods.filter(f => { const d = getDaysLeft(f.expiry); return d >= 0 && d <= 1; }).length;
+  const expired = foods.filter(f => getDaysLeft(f.expiry) < 0).length;
+  document.getElementById('statsBar').innerHTML = `
+    <span class="stat-chip expired">${expired}件期限切れ</span>
+    <span class="stat-chip urgent">${urgent}件要注意</span>
+    <span class="stat-chip total">${foods.length}件登録中</span>
+  `;
+
+  const list = document.getElementById('foodList');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="fw-empty">${foods.length === 0 ? '食材を追加してください' : 'この条件の食材はありません'}</div>`;
+  } else {
+    list.innerHTML = filtered.map(f => {
+      const days = getDaysLeft(f.expiry);
+      const st = getStatus(days);
+      const color = CAT_COLORS[f.cat] || '#94a3b8';
+      return `<div class="food-card ${st.cls}">
+        <div class="fc-cat" style="background:${color}20;color:${color}">${CAT_LABELS[f.cat]}</div>
+        <div class="fc-name">${f.name}</div>
+        <div class="fc-qty">${f.qty}個</div>
+        <div class="fc-expiry">${f.expiry}</div>
+        <div class="fc-status ${st.cls}">${st.emoji} ${st.label}</div>
+        <button class="fc-del" onclick="removeFood(${f.id})">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Recipe hints for urgent items
+  const urgentFoods = foods.filter(f => { const d = getDaysLeft(f.expiry); return d >= 0 && d <= 3; });
+  const section = document.getElementById('suggestSection');
+  if (urgentFoods.length) {
+    section.style.display = 'block';
+    const hints = [];
+    urgentFoods.forEach(f => {
+      RECIPE_HINTS.forEach(r => {
+        if (r.keywords.some(k => f.name.includes(k))) {
+          hints.push({ food: f.name, recipes: r.hints });
+        }
+      });
+    });
+    document.getElementById('suggestList').innerHTML = hints.length
+      ? hints.map(h => `<div class="suggest-item"><span class="suggest-food">${h.food}</span>: ${h.recipes.join(' / ')}</div>`).join('')
+      : '<div style="color:var(--gray-400);font-size:.85rem">レシピヒントはありません</div>';
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+render();
+</script>
+
+<style>
+.fw-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.fw-header { text-align: center; margin-bottom: 2rem; }
+.fw-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.fw-sub { color: var(--gray-400); margin-top: .3rem; }
+.fw-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.fw-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.fw-add-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.fw-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; flex: 1; min-width: 120px; }
+.fw-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.fw-btn { padding: .5rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.fw-btn.green { background: #16a34a; color: #fff; }
+.fw-filter-bar { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: 1rem; }
+.fw-filter { padding: .35rem .8rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .82rem; cursor: pointer; }
+.fw-filter.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.fw-stats { margin-left: auto; display: flex; gap: .4rem; flex-wrap: wrap; }
+.stat-chip { padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; }
+.stat-chip.expired { background: #7f1d1d; color: #f87171; }
+.stat-chip.urgent { background: #7c2d12; color: #fb923c; }
+.stat-chip.total { background: var(--gray-700); color: var(--gray-300); }
+.fw-food-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .8rem; margin-bottom: 1.5rem; }
+.food-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.food-card.expired { border-color: #7f1d1d; }
+.food-card.today, .food-card.urgent { border-color: #7c2d12; }
+.food-card.warning { border-color: #78350f; }
+.fc-cat { padding: .15rem .5rem; border-radius: 20px; font-size: .7rem; }
+.fc-name { font-weight: 700; color: var(--gray-100); flex: 1; }
+.fc-qty { font-size: .8rem; color: var(--gray-400); }
+.fc-expiry { font-size: .78rem; color: var(--gray-400); }
+.fc-status { font-size: .82rem; font-weight: 700; }
+.fc-status.expired { color: #f87171; }
+.fc-status.today, .fc-status.urgent { color: #fb923c; }
+.fc-status.warning { color: #fbbf24; }
+.fc-status.soon { color: #a3e635; }
+.fc-status.safe { color: #4ade80; }
+.fc-del { background: none; border: none; color: var(--gray-500); cursor: pointer; margin-left: auto; }
+.fc-del:hover { color: #ef4444; }
+.fw-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+.fw-suggest-section { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.fw-suggest-list { display: flex; flex-direction: column; gap: .4rem; }
+.suggest-item { background: var(--gray-900); border-radius: 8px; padding: .5rem .8rem; font-size: .85rem; color: var(--gray-200); }
+.suggest-food { font-weight: 700; color: #4ade80; }
+</style>
+</BaseLayout>

@@ -489,31 +489,31 @@ export const tools: Tool[] = [
 		id: 76, slug: 'parallel-parking',
 		name: '縦列駐車シミュレーター',
 		description: '車サイズ・駐車スペース寸法でハンドル切り角度をSVGアニメ表示。',
-		emoji: '🅿️', category: 'life', badge: 'New', status: 'coming-soon',
+		emoji: '🅿️', category: 'life', badge: 'New', status: 'available',
 	},
 	{
 		id: 77, slug: 'wedding-transport',
 		name: '結婚式お車代相場計算機',
 		description: '距離・新幹線/飛行機の有無を入れると相場＋ご祝儀袋の表書き提案。',
-		emoji: '💒', category: 'life', status: 'coming-soon',
+		emoji: '💒', category: 'life', badge: 'New', status: 'available',
 	},
 	{
 		id: 78, slug: 'moving-boxes',
 		name: '引越しダンボール「最適個数」予測',
 		description: '家族構成・部屋数・荷物量を入れるとサイズ別必要数を計算。',
-		emoji: '📦', category: 'life', status: 'coming-soon',
+		emoji: '📦', category: 'life', badge: 'New', status: 'available',
 	},
 	{
 		id: 79, slug: 'bath-cost',
 		name: '追い焚き vs 入れ替えコスト比較',
 		description: 'ガス代・水道代を入れて、何時間で追い焚きの方が損になるか計算。',
-		emoji: '🛁', category: 'life', badge: 'New', status: 'coming-soon',
+		emoji: '🛁', category: 'life', badge: 'New', status: 'available',
 	},
 	{
 		id: 80, slug: 'food-waste',
 		name: '食品ロス防止アプリ',
 		description: '食材の賞味期限を記録。近づいたら通知＋レシピ提案。',
-		emoji: '🥗', category: 'life', status: 'coming-soon',
+		emoji: '🥗', category: 'life', badge: 'New', status: 'available',
 	},
 
 	// 🎮 エンタメ・ニッチ趣味 (81-100)

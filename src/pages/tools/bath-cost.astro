@@ -1,0 +1,268 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="追い焚き vs 入れ替えコスト比較" description="ガス代・水道代を入れて、何時間で追い焚きの方が損になるか計算。">
+<main class="bc-wrap">
+  <div class="bc-header">
+    <div class="bc-title">🛁 追い焚き vs 入れ替えコスト比較</div>
+    <div class="bc-sub">お湯の入れ替えと追い焚き、どちらがお得か計算します</div>
+  </div>
+
+  <div class="bc-body">
+    <div class="bc-left">
+      <div class="bc-card">
+        <div class="bc-card-title">お風呂の設定</div>
+        <div class="bc-form-grid">
+          <div class="bc-fg">
+            <label class="bc-label">浴槽容量（L）</label>
+            <input type="number" id="bathVol" class="bc-input" value="200" min="100" max="400" step="10" oninput="calc()" />
+          </div>
+          <div class="bc-fg">
+            <label class="bc-label">設定温度（℃）</label>
+            <input type="number" id="tempSet" class="bc-input" value="41" min="38" max="45" step="1" oninput="calc()" />
+          </div>
+          <div class="bc-fg">
+            <label class="bc-label">水温（℃）</label>
+            <input type="number" id="tempWater" class="bc-input" value="15" min="5" max="30" step="1" oninput="calc()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="bc-card">
+        <div class="bc-card-title">光熱費の設定</div>
+        <div class="bc-form-grid">
+          <div class="bc-fg">
+            <label class="bc-label">ガス単価（円/m³）</label>
+            <input type="number" id="gasPrice" class="bc-input" value="150" min="50" max="400" step="10" oninput="calc()" />
+          </div>
+          <div class="bc-fg">
+            <label class="bc-label">水道単価（円/m³）</label>
+            <input type="number" id="waterPrice" class="bc-input" value="200" min="50" max="500" step="10" oninput="calc()" />
+          </div>
+          <div class="bc-fg">
+            <label class="bc-label">追い焚き効率（%）</label>
+            <input type="number" id="efficiency" class="bc-input" value="80" min="50" max="95" step="5" oninput="calc()" />
+          </div>
+        </div>
+
+        <div class="bc-presets">
+          <div class="bc-label">地域別ガス料金プリセット</div>
+          <div class="bc-preset-grid">
+            <button class="bc-pbtn" onclick="setGas(120)">東京ガス<br><small>〜¥120/m³</small></button>
+            <button class="bc-pbtn" onclick="setGas(140)">大阪ガス<br><small>〜¥140/m³</small></button>
+            <button class="bc-pbtn" onclick="setGas(160)">東邦ガス<br><small>〜¥160/m³</small></button>
+            <button class="bc-pbtn" onclick="setGas(200)">LPガス<br><small>〜¥200/m³</small></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bc-card">
+        <div class="bc-card-title">追い焚きの条件</div>
+        <div class="bc-form-grid">
+          <div class="bc-fg">
+            <label class="bc-label">湯冷め温度（℃）</label>
+            <input type="number" id="tempCool" class="bc-input" value="37" min="30" max="41" step="1" oninput="calc()" />
+            <span class="bc-hint">追い焚き開始時の温度</span>
+          </div>
+          <div class="bc-fg">
+            <label class="bc-label">放置時間（時間）</label>
+            <input type="number" id="coolHours" class="bc-input" value="2" min="0.5" max="12" step="0.5" oninput="calc()" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bc-right">
+      <div class="bc-result">
+        <div class="bc-card-title">コスト比較</div>
+        <div id="resultContent"></div>
+      </div>
+
+      <div class="bc-chart-card">
+        <div class="bc-card-title">時間別コスト推移</div>
+        <svg id="costChart" viewBox="0 0 300 200" style="width:100%;max-height:200px;background:var(--gray-900);border-radius:8px"></svg>
+        <div class="bc-chart-note">横軸: 放置時間（時間）/ 縦軸: コスト（円）</div>
+      </div>
+
+      <div class="bc-advice" id="adviceCard"></div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+function setGas(price) {
+  document.getElementById('gasPrice').value = price;
+  calc();
+}
+
+// Specific heat of water: 4.186 kJ/(kg·℃)
+// 1 m³ of gas ≈ 10,500 kcal = 43,960 kJ
+const GAS_KJ_PER_M3 = 43960;
+const WATER_KJ_PER_KG_DEG = 4.186;
+
+function calcReheatCost(vol, fromTemp, toTemp, gasPrice, eff) {
+  const dT = toTemp - fromTemp;
+  if (dT <= 0) return 0;
+  const kj = vol * WATER_KJ_PER_KG_DEG * dT / (eff / 100);
+  const m3 = kj / GAS_KJ_PER_M3;
+  return m3 * gasPrice;
+}
+
+function calcFillCost(vol, fromTemp, toTemp, gasPrice, waterPrice, eff) {
+  const waterCostM3 = waterPrice;
+  const waterCost = (vol / 1000) * waterCostM3;
+  const gasCost = calcReheatCost(vol, fromTemp, toTemp, gasPrice, eff);
+  return { total: waterCost + gasCost, water: waterCost, gas: gasCost };
+}
+
+function calc() {
+  const bathVol = parseFloat(document.getElementById('bathVol').value) || 200;
+  const tempSet = parseFloat(document.getElementById('tempSet').value) || 41;
+  const tempWater = parseFloat(document.getElementById('tempWater').value) || 15;
+  const gasPrice = parseFloat(document.getElementById('gasPrice').value) || 150;
+  const waterPrice = parseFloat(document.getElementById('waterPrice').value) || 200;
+  const efficiency = parseFloat(document.getElementById('efficiency').value) || 80;
+  const tempCool = parseFloat(document.getElementById('tempCool').value) || 37;
+  const coolHours = parseFloat(document.getElementById('coolHours').value) || 2;
+
+  const reheatCost = calcReheatCost(bathVol, tempCool, tempSet, gasPrice, efficiency);
+  const fill = calcFillCost(bathVol, tempWater, tempSet, gasPrice, waterPrice, efficiency);
+
+  const breakEvenHours = fill.water / (0.5 * 10); // simplified breakeven
+  const isCheaper = reheatCost < fill.total;
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="cmp-row header-row">
+      <div class="cmp-col">項目</div>
+      <div class="cmp-col">追い焚き</div>
+      <div class="cmp-col">新しく入れる</div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-col label">ガス代</div>
+      <div class="cmp-col ${isCheaper ? 'win' : ''}">${reheatCost.toFixed(1)}円</div>
+      <div class="cmp-col">${fill.gas.toFixed(1)}円</div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-col label">水道代</div>
+      <div class="cmp-col">—</div>
+      <div class="cmp-col">${fill.water.toFixed(1)}円</div>
+    </div>
+    <div class="cmp-row total-row">
+      <div class="cmp-col label">合計</div>
+      <div class="cmp-col ${isCheaper ? 'win' : 'lose'}">${reheatCost.toFixed(1)}円</div>
+      <div class="cmp-col ${!isCheaper ? 'win' : 'lose'}">${fill.total.toFixed(1)}円</div>
+    </div>
+    <div class="cmp-row">
+      <div class="cmp-col label">差額</div>
+      <div class="cmp-col" style="grid-column:span 2;text-align:center;color:#fbbf24;font-weight:700">
+        ${isCheaper ? '追い焚きが' : '入れ替えが'} ${Math.abs(fill.total - reheatCost).toFixed(1)}円お得
+      </div>
+    </div>
+    <div class="cmp-conditions">
+      ※放置時間 ${coolHours}時間後 (${tempCool}℃) から ${tempSet}℃に温め直す場合
+    </div>
+  `;
+
+  drawChart(bathVol, tempSet, tempWater, tempCool, gasPrice, waterPrice, efficiency);
+
+  const advice = isCheaper
+    ? `💡 ${coolHours}時間以内の追い焚きは<strong>経済的</strong>です。ただし長時間放置すると細菌も増えるため、4時間を超える場合は衛生面から入れ替えを推奨。`
+    : `💡 この条件では<strong>お湯の入れ替えの方がお得</strong>です。追い焚きが有利になるのは水道代が高く、ガス代が安い場合です。`;
+  document.getElementById('adviceCard').innerHTML = `<div class="advice-text">${advice}</div>`;
+}
+
+function drawChart(vol, tempSet, tempWater, tempCool, gasPrice, waterPrice, eff) {
+  const svg = document.getElementById('costChart');
+  svg.innerHTML = '';
+  const W = 300, H = 200, PL = 45, PR = 15, PT = 15, PB = 30;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Data: cost at each hour of waiting (0.5 to 8)
+  const hours = [];
+  const reheatCosts = [], fillCosts = [];
+  const fill = calcFillCost(vol, tempWater, tempSet, gasPrice, waterPrice, eff);
+
+  for (let h = 0; h <= 8; h += 0.5) {
+    hours.push(h);
+    // Reheat cost increases slightly with time due to more heat loss
+    const tempAtH = Math.max(tempWater + 5, tempCool - h * 1.5);
+    reheatCosts.push(calcReheatCost(vol, Math.max(25, tempAtH), tempSet, gasPrice, eff));
+    fillCosts.push(fill.total);
+  }
+
+  const maxCost = Math.max(...reheatCosts, ...fillCosts);
+  const cW = W - PL - PR, cH = H - PT - PB;
+  function x(i) { return PL + (i / (hours.length - 1)) * cW; }
+  function y(v) { return PT + cH - (v / maxCost) * cH; }
+
+  function el(tag, attrs, txt) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Grid lines
+  [0, 0.25, 0.5, 0.75, 1.0].forEach(f => {
+    const yy = PT + cH * (1 - f);
+    svg.appendChild(el('line', {x1:PL, x2:W-PR, y1:yy, y2:yy, stroke:'#374151', 'stroke-width':'0.5'}));
+    svg.appendChild(el('text', {x:PL-4, y:yy+3, 'font-size':'8', fill:'#6b7280', 'text-anchor':'end'}, Math.round(maxCost * f) + '円'));
+  });
+
+  // Reheat line (blue)
+  const rPath = reheatCosts.map((c, i) => (i===0?'M':'L') + x(i) + ' ' + y(c)).join(' ');
+  svg.appendChild(el('path', {d:rPath, stroke:'#60a5fa', 'stroke-width':'2', fill:'none'}));
+
+  // Fill line (orange)
+  const fPath = fillCosts.map((c, i) => (i===0?'M':'L') + x(i) + ' ' + y(c)).join(' ');
+  svg.appendChild(el('path', {d:fPath, stroke:'#fb923c', 'stroke-width':'2', fill:'none', 'stroke-dasharray':'6,3'}));
+
+  // X-axis labels
+  [0, 2, 4, 6, 8].forEach(h => {
+    const i = h * 2;
+    svg.appendChild(el('text', {x:x(i), y:H-PB+12, 'font-size':'8', fill:'#6b7280', 'text-anchor':'middle'}, h + 'h'));
+  });
+
+  // Legend
+  svg.appendChild(el('rect', {x:PL, y:PT, width:10, height:4, fill:'#60a5fa'}));
+  svg.appendChild(el('text', {x:PL+13, y:PT+4, 'font-size':'8', fill:'#60a5fa'}, '追い焚き'));
+  svg.appendChild(el('rect', {x:PL+60, y:PT, width:10, height:4, fill:'#fb923c'}));
+  svg.appendChild(el('text', {x:PL+73, y:PT+4, 'font-size':'8', fill:'#fb923c'}, '入れ替え'));
+}
+
+calc();
+</script>
+
+<style>
+.bc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.bc-header { text-align: center; margin-bottom: 2rem; }
+.bc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.bc-sub { color: var(--gray-400); margin-top: .3rem; }
+.bc-body { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
+@media (max-width: 750px) { .bc-body { grid-template-columns: 1fr; } }
+.bc-card, .bc-result, .bc-chart-card, .bc-advice { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.bc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.bc-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: .6rem; }
+.bc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.bc-label { font-size: .75rem; color: var(--gray-400); }
+.bc-hint { font-size: .7rem; color: var(--gray-500); }
+.bc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
+.bc-presets { margin-top: .6rem; }
+.bc-preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; margin-top: .4rem; }
+.bc-pbtn { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .35rem .2rem; font-size: .72rem; cursor: pointer; color: var(--gray-300); line-height: 1.4; }
+.bc-pbtn:hover { border-color: #7c3aed; }
+.bc-pbtn small { color: var(--gray-500); }
+.cmp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .5rem; padding: .45rem .3rem; border-bottom: 1px solid var(--gray-700); font-size: .85rem; }
+.cmp-row:last-child { border-bottom: none; }
+.header-row { font-weight: 700; color: var(--gray-400); font-size: .8rem; }
+.total-row { font-weight: 700; color: var(--gray-200); }
+.cmp-col { color: var(--gray-300); }
+.cmp-col.label { color: var(--gray-400); }
+.cmp-col.win { color: #4ade80; font-weight: 700; }
+.cmp-col.lose { color: var(--gray-500); }
+.cmp-conditions { font-size: .75rem; color: var(--gray-500); margin-top: .6rem; }
+.bc-chart-note { font-size: .72rem; color: var(--gray-500); margin-top: .4rem; }
+.advice-text { font-size: .85rem; color: var(--gray-200); line-height: 1.7; }
+.advice-text strong { color: #fbbf24; }
+</style>
+</BaseLayout>
