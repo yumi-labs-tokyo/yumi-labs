@@ -488,4 +488,31 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     document.getElementById('start-time').value =
       new Date(defaultStart.getTime() - offset * 60000).toISOString().slice(0, 16);
   </script>
+
+<section class="tool-seo">
+  <div class="seo-inner">
+    <div class="seo-block">
+      <div class="seo-h2">📌 ツールの概要・特徴</div>
+      <p class="seo-p">このツールは、飲酒後の血中アルコール濃度の推移をシミュレーションし、運転可能になる目安時間を計算できる無料Webアプリです。体重・性別・飲んだお酒の種類と量を入力するとウィドマーク式で計算され、翌朝の飲酒運転リスク確認にも活用できます。</p>
+    </div>
+    <div class="seo-block">
+      <div class="seo-h2">📖 詳しい使い方・手順</div>
+      <ol class="seo-ol">
+        <li>体重・性別を入力します。</li>
+        <li>飲んだお酒の種類（ビール・日本酒・ワイン・焼酎等）と量（ml）を追加します。</li>
+        <li>飲み始めた時刻を入力します。</li>
+        <li>「計算する」を押すと時間ごとの血中アルコール濃度グラフが表示されます。</li>
+        <li>アルコールが抜ける推定時刻と、翌朝の状態が一目でわかります。</li>
+      </ol>
+    </div>
+    <div class="seo-block">
+      <div class="seo-h2">👤 こんな人におすすめ</div>
+      <p class="seo-p">翌朝に車で出かける予定がある方、飲み会後に自転車・バイクを使う機会がある方に最適です。お酒に強い・弱いに関わらず、科学的な根拠に基づいてアルコールが抜ける時間を知りたい方、「まだ飲んでもいいか」の判断に迷う方にもおすすめします。</p>
+    </div>
+    <div class="seo-block">
+      <div class="seo-h2">🛠️ 制作の背景・こだわり</div>
+      <p class="seo-p">「一夜明ければ大丈夫」という勘違いが飲酒運転事故の一因になっています。実際には睡眠中もアルコールは一定速度でしか分解されず、翌朝でも残っていることがあります。このツールは「絶対安全」の保証ではなく、あくまで目安として活用いただき、少しでも迷ったら運転しないことを促す啓発目的で開発しました。</p>
+    </div>
+  </div>
+</section>
 </BaseLayout>
