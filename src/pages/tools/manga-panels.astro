@@ -1,0 +1,453 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="漫画ネーム用コマ割りテンプレ | yumi Labs">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">📖</div>
+      <div class="text-3xl font-bold text-white mb-2">漫画ネーム用コマ割りテンプレ</div>
+      <div class="text-gray-400 text-sm">ページ数と起承転結スライダーを設定するとSVGコマ割りを自動生成・ダウンロード</div>
+    </div>
+
+    <div class="flex flex-col xl:flex-row gap-6">
+
+      <!-- Left: Settings -->
+      <div class="xl:w-[340px] flex-shrink-0 space-y-5">
+
+        <!-- Page count -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">総ページ数</div>
+          <div class="grid grid-cols-4 gap-2" id="pageCountGrid"></div>
+        </div>
+
+        <!-- Story sliders -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">起承転結のページ配分・強度</div>
+
+          <div class="space-y-4" id="sliderGroup">
+            <!-- KI -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-5 h-5 rounded text-center text-xs font-bold flex items-center justify-center" style="background:#1e40af;color:#93c5fd;">起</span>
+                  <span class="text-xs text-gray-300">導入・状況説明</span>
+                </div>
+                <span class="text-xs font-mono text-blue-300" id="kiVal">3</span>
+              </div>
+              <input type="range" id="sliderKi" min="1" max="5" value="3" step="1"
+                class="w-full accent-blue-400" oninput="onSlider('ki',this.value)" />
+              <div class="flex justify-between text-xs text-gray-600 mt-0.5"><span>シンプル</span><span>活発</span></div>
+            </div>
+
+            <!-- SHO -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-5 h-5 rounded text-center text-xs font-bold flex items-center justify-center" style="background:#14532d;color:#86efac;">承</span>
+                  <span class="text-xs text-gray-300">展開・盛り上がり</span>
+                </div>
+                <span class="text-xs font-mono text-green-300" id="shoVal">3</span>
+              </div>
+              <input type="range" id="sliderSho" min="1" max="5" value="3" step="1"
+                class="w-full accent-green-400" oninput="onSlider('sho',this.value)" />
+              <div class="flex justify-between text-xs text-gray-600 mt-0.5"><span>ゆったり</span><span>密度高</span></div>
+            </div>
+
+            <!-- TEN -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-5 h-5 rounded text-center text-xs font-bold flex items-center justify-center" style="background:#7f1d1d;color:#fca5a5;">転</span>
+                  <span class="text-xs text-gray-300">クライマックス</span>
+                </div>
+                <span class="text-xs font-mono text-red-300" id="tenVal">4</span>
+              </div>
+              <input type="range" id="sliderTen" min="1" max="5" value="4" step="1"
+                class="w-full accent-red-400" oninput="onSlider('ten',this.value)" />
+              <div class="flex justify-between text-xs text-gray-600 mt-0.5"><span>穏やか</span><span>ドラマチック</span></div>
+            </div>
+
+            <!-- KETSU -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-5 h-5 rounded text-center text-xs font-bold flex items-center justify-center" style="background:#581c87;color:#d8b4fe;">結</span>
+                  <span class="text-xs text-gray-300">収束・結末</span>
+                </div>
+                <span class="text-xs font-mono text-purple-300" id="ketsuVal">2</span>
+              </div>
+              <input type="range" id="sliderKetsu" min="1" max="5" value="2" step="1"
+                class="w-full accent-purple-400" oninput="onSlider('ketsu',this.value)" />
+              <div class="flex justify-between text-xs text-gray-600 mt-0.5"><span>余韻たっぷり</span><span>スッキリ</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Style -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">コマ間 (ガター)</div>
+          <div class="grid grid-cols-3 gap-2" id="gutterBtns">
+            <button onclick="setGutter(2,'gutter2')" id="gutter2"
+              class="gutter-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">タイト</button>
+            <button onclick="setGutter(4,'gutter4')" id="gutter4"
+              class="gutter-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all">標準</button>
+            <button onclick="setGutter(7,'gutter7')" id="gutter7"
+              class="gutter-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all">ゆったり</button>
+          </div>
+        </div>
+
+        <!-- Page distribution preview -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-gray-400 font-semibold mb-2">ページ配分プレビュー</div>
+          <div id="distPreview" class="flex gap-1 flex-wrap"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="space-y-2">
+          <button onclick="generate()"
+            class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all"
+            style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+            コマ割りを生成
+          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="shuffle()"
+              class="py-2.5 rounded-xl text-sm font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+              シャッフル
+            </button>
+            <button onclick="downloadSVG()"
+              class="py-2.5 rounded-xl text-sm font-medium bg-white/10 text-gray-300 hover:bg-white/20 transition-all">
+              SVG DL
+            </button>
+          </div>
+        </div>
+
+        <!-- Guide -->
+        <div class="bg-white/5 rounded-2xl p-4 text-xs text-gray-500 space-y-1.5 leading-relaxed">
+          <div>・コマ番号は右上→左下（日本語漫画読み）の参考順序です</div>
+          <div>・SVGはIllustrator / Inkscapeで開いて編集できます</div>
+          <div>・ページ単位でもダウンロードできます</div>
+        </div>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="flex-1">
+        <div id="placeholder" class="bg-white/5 rounded-2xl p-12 text-center">
+          <div class="text-5xl mb-4">📐</div>
+          <div class="text-gray-400 text-sm">設定を調整して「コマ割りを生成」を押してください</div>
+        </div>
+        <div id="pagesArea" class="hidden">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-sm text-gray-400" id="pagesLabel"></div>
+          </div>
+          <div id="pagesGrid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // ── Layout library ─────────────────────────────────────────────────────────
+  // Each panel: [x%, y%, w%, h%] — no gaps built in; gutter applied at render time
+  const PHASE_POOLS = {
+    ki: [
+      { panels: [[0,0,100,40],[0,40,50,60],[50,40,50,60]], name: '3コマ・上段大' },
+      { panels: [[0,0,50,50],[50,0,50,50],[0,50,50,50],[50,50,50,50]], name: '4コマ・均等' },
+      { panels: [[0,0,100,38],[0,38,33,62],[33,38,34,62],[67,38,33,62]], name: '4コマ・上大下3' },
+      { panels: [[0,0,33,100],[33,0,34,100],[67,0,33,100]], name: '3コマ・縦3列' },
+    ],
+    sho: [
+      { panels: [[0,0,50,100],[50,0,50,33],[50,33,50,34],[50,67,50,33]], name: '4コマ・左大右3' },
+      { panels: [[0,0,50,42],[50,0,50,42],[0,42,33,58],[33,42,34,58],[67,42,33,58]], name: '5コマ・上2下3' },
+      { panels: [[0,0,33,45],[33,0,34,45],[67,0,33,45],[0,45,50,55],[50,45,50,55]], name: '5コマ・上3下2' },
+      { panels: [[0,0,50,30],[50,0,50,30],[0,30,100,38],[0,68,50,32],[50,68,50,32]], name: '5コマ・中央強調' },
+    ],
+    ten: [
+      { panels: [[0,0,60,100],[60,0,40,50],[60,50,40,50]], name: '3コマ・左大右2' },
+      { panels: [[0,0,100,62],[0,62,50,38],[50,62,50,38]], name: '3コマ・上スプラッシュ' },
+      { panels: [[0,0,100,60],[0,60,100,40]], name: '2コマ・大小' },
+      { panels: [[0,0,100,100]], name: '1コマ・フルスプラッシュ' },
+    ],
+    ketsu: [
+      { panels: [[0,0,50,35],[50,0,50,35],[0,35,100,65]], name: '3コマ・余韻締め' },
+      { panels: [[0,0,50,50],[50,0,50,50],[0,50,50,50],[50,50,50,50]], name: '4コマ・均等' },
+      { panels: [[0,0,33,45],[33,0,34,45],[67,0,33,45],[0,45,100,55]], name: '4コマ・上3下大' },
+      { panels: [[0,0,25,42],[25,0,25,42],[50,0,25,42],[75,0,25,42],[0,42,100,58]], name: '5コマ・起急結' },
+    ],
+  };
+
+  const PHASE_INFO = {
+    ki:    { label: '起', color: '#3b82f6', bg: '#1e3a5f', textColor: '#93c5fd' },
+    sho:   { label: '承', color: '#22c55e', bg: '#14432a', textColor: '#86efac' },
+    ten:   { label: '転', color: '#ef4444', bg: '#4c1d1d', textColor: '#fca5a5' },
+    ketsu: { label: '結', color: '#a855f7', bg: '#3b1f5e', textColor: '#d8b4fe' },
+  };
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let state = {
+    pages: 4,
+    ki: 3, sho: 3, ten: 4, ketsu: 2,
+    gutter: 4,
+    seed: 0,
+    distribution: [],
+  };
+
+  let generatedSVGs = [];
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function init() {
+    // Page count buttons 1-8
+    const grid = document.getElementById('pageCountGrid');
+    for (let i = 1; i <= 8; i++) {
+      const btn = document.createElement('button');
+      btn.id = 'pg' + i;
+      btn.textContent = i;
+      btn.className = i === state.pages
+        ? 'py-2 rounded-lg text-sm font-bold border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'
+        : 'py-2 rounded-lg text-sm font-medium border-2 border-white/10 text-gray-400 hover:border-purple-500/40 transition-all';
+      btn.onclick = () => setPages(i);
+      grid.appendChild(btn);
+    }
+    updateDistPreview();
+  }
+
+  function setPages(n) {
+    state.pages = n;
+    for (let i = 1; i <= 8; i++) {
+      const b = document.getElementById('pg' + i);
+      if (!b) continue;
+      b.className = i === n
+        ? 'py-2 rounded-lg text-sm font-bold border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'
+        : 'py-2 rounded-lg text-sm font-medium border-2 border-white/10 text-gray-400 hover:border-purple-500/40 transition-all';
+    }
+    updateDistPreview();
+  }
+
+  function onSlider(phase, val) {
+    state[phase] = parseInt(val);
+    document.getElementById(phase + 'Val').textContent = val;
+    updateDistPreview();
+  }
+
+  function setGutter(val, activeId) {
+    state.gutter = val;
+    ['gutter2','gutter4','gutter7'].forEach(id => {
+      const b = document.getElementById(id);
+      b.className = id === activeId
+        ? 'gutter-btn py-2 rounded-lg text-xs font-medium border-2 border-purple-500 bg-purple-500/20 text-purple-300 transition-all'
+        : 'gutter-btn py-2 rounded-lg text-xs font-medium border-2 border-white/10 text-gray-400 transition-all';
+    });
+  }
+
+  // ── Distribution calculation ───────────────────────────────────────────────
+  function calcDistribution(totalPages, ki, sho, ten, ketsu) {
+    const weights = [ki, sho, ten, ketsu];
+    const phases  = ['ki', 'sho', 'ten', 'ketsu'];
+    const total   = weights.reduce((a,b) => a+b, 0);
+
+    let alloc = weights.map(w => Math.max(1, Math.floor(totalPages * w / total)));
+    let sum   = alloc.reduce((a,b) => a+b, 0);
+
+    // Adjust to exactly totalPages using largest-remainder method
+    while (sum < totalPages) {
+      const rem = weights.map((w, i) => w / total - alloc[i] / totalPages);
+      const mi  = rem.indexOf(Math.max(...rem));
+      alloc[mi]++; sum++;
+    }
+    while (sum > totalPages) {
+      const idx = alloc.reduce((mi, v, i) => (v > alloc[mi] && v > 1) ? i : mi, 0);
+      if (alloc[idx] <= 1) break;
+      alloc[idx]--; sum--;
+    }
+
+    const pages = [];
+    phases.forEach((p, i) => { for (let j = 0; j < alloc[i]; j++) pages.push(p); });
+    return pages;
+  }
+
+  function updateDistPreview() {
+    const dist = calcDistribution(state.pages, state.ki, state.sho, state.ten, state.ketsu);
+    state.distribution = dist;
+    const el = document.getElementById('distPreview');
+    el.innerHTML = dist.map(p => {
+      const info = PHASE_INFO[p];
+      return `<span class="px-2 py-1 rounded text-xs font-bold" style="background:${info.bg};color:${info.textColor};">${info.label}</span>`;
+    }).join('');
+  }
+
+  // ── Layout selection ───────────────────────────────────────────────────────
+  function pickLayout(phase, intensity, pageIndexInPhase, seed) {
+    const pool = PHASE_POOLS[phase];
+    // Intensity 1-5 → layout index 0-3
+    const base = Math.min(3, Math.round((intensity - 1) * 3 / 4));
+    // Shuffle: alternate adjacent layouts for variety
+    const offset = (seed + pageIndexInPhase) % 2 === 0 ? 0 : (base < 3 ? 1 : -1);
+    const idx = Math.max(0, Math.min(pool.length - 1, base + offset));
+    return pool[idx];
+  }
+
+  // ── SVG generation ─────────────────────────────────────────────────────────
+  const PW = 210, PH = 297; // A4 proportions
+  const PM = 12;            // margin
+  const PCW = PW - 2 * PM;  // content width
+  const PCH = PH - 2 * PM - 10; // content height (leave 10 for label)
+
+  function buildPageSVG(phase, intensity, pageNum, totalPages, seed, phasePageIdx, gutter) {
+    const layout = pickLayout(phase, intensity, phasePageIdx, seed);
+    const info   = PHASE_INFO[phase];
+    const G      = gutter;
+
+    let panelsSVG = '';
+    layout.panels.forEach((p, i) => {
+      const [xp, yp, wp, hp] = p;
+      const rx = PM + (xp / 100) * PCW + G;
+      const ry = PM + (yp / 100) * PCH + G;
+      const rw = (wp / 100) * PCW - G * 2;
+      const rh = (hp / 100) * PCH - G * 2;
+      const cx = rx + rw / 2, cy = ry + rh / 2;
+      const fs = Math.min(18, Math.max(10, rh * 0.2));
+
+      panelsSVG += `
+        <rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}"
+          fill="white" stroke="#1a1a1a" stroke-width="1.5" rx="0"/>
+        <text x="${cx.toFixed(2)}" y="${cy.toFixed(2)}" text-anchor="middle" dominant-baseline="middle"
+          font-size="${fs.toFixed(1)}" fill="#ddd" font-family="sans-serif">${i + 1}</text>`;
+    });
+
+    // Bottom strip with phase label
+    const stripY = PH - PM + 1;
+    const layoutName = layout.name;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PW} ${PH}">
+  <rect width="${PW}" height="${PH}" fill="#f8f8f8"/>
+  <rect x="0.5" y="0.5" width="${PW-1}" height="${PH-1}" fill="none" stroke="#ccc" stroke-width="0.5"/>
+  ${panelsSVG}
+  <rect x="0" y="${PH-9}" width="${PW}" height="9" fill="${info.color}" opacity="0.15"/>
+  <text x="6" y="${PH-3}" font-size="6" fill="${info.color}" font-family="sans-serif" font-weight="bold">${info.label} - ${layoutName}</text>
+  <text x="${PW-6}" y="${PH-3}" text-anchor="end" font-size="6" fill="#aaa" font-family="sans-serif">${pageNum} / ${totalPages}</text>
+</svg>`;
+  }
+
+  // ── Main generate ──────────────────────────────────────────────────────────
+  function generate() {
+    updateDistPreview();
+    const dist = state.distribution;
+    generatedSVGs = [];
+
+    // Count per phase to track pageIndexInPhase
+    const phaseCounters = { ki: 0, sho: 0, ten: 0, ketsu: 0 };
+    const phaseIntensity = { ki: state.ki, sho: state.sho, ten: state.ten, ketsu: state.ketsu };
+
+    dist.forEach((phase, i) => {
+      const svg = buildPageSVG(
+        phase,
+        phaseIntensity[phase],
+        i + 1,
+        dist.length,
+        state.seed,
+        phaseCounters[phase],
+        state.gutter
+      );
+      phaseCounters[phase]++;
+      generatedSVGs.push({ phase, svg, pageNum: i + 1 });
+    });
+
+    renderPreview();
+  }
+
+  function shuffle() {
+    state.seed = (state.seed + 1 + Math.floor(Math.random() * 5)) % 100;
+    if (generatedSVGs.length > 0) generate();
+  }
+
+  // ── Preview render ─────────────────────────────────────────────────────────
+  function renderPreview() {
+    document.getElementById('placeholder').classList.add('hidden');
+    const area = document.getElementById('pagesArea');
+    area.classList.remove('hidden');
+    document.getElementById('pagesLabel').textContent = `${generatedSVGs.length} ページ生成完了`;
+
+    const grid = document.getElementById('pagesGrid');
+    grid.innerHTML = '';
+
+    generatedSVGs.forEach(({ phase, svg, pageNum }) => {
+      const info = PHASE_INFO[phase];
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-col gap-2';
+
+      // SVG preview container
+      const preview = document.createElement('div');
+      preview.className = 'rounded-xl overflow-hidden shadow-lg border border-white/10';
+      preview.style.background = '#f8f8f8';
+      preview.innerHTML = svg.replace(/width="\d+"/, '').replace(/height="\d+"/, 'width="100%"');
+      // Make SVG responsive
+      const svgEl = preview.querySelector('svg');
+      if (svgEl) {
+        svgEl.setAttribute('width', '100%');
+        svgEl.removeAttribute('height');
+        svgEl.style.display = 'block';
+      }
+
+      // Label + download row
+      const footer = document.createElement('div');
+      footer.className = 'flex items-center justify-between';
+      footer.innerHTML = `
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold px-1.5 py-0.5 rounded" style="background:${info.bg};color:${info.textColor};">${info.label}</span>
+          <span class="text-xs text-gray-500">${pageNum}ページ</span>
+        </div>
+        <button onclick="downloadPage(${pageNum - 1})"
+          class="text-xs text-gray-400 hover:text-purple-300 transition-colors px-2 py-0.5 rounded border border-white/10 hover:border-purple-400">
+          DL
+        </button>`;
+
+      wrap.appendChild(preview);
+      wrap.appendChild(footer);
+      grid.appendChild(wrap);
+    });
+  }
+
+  // ── Download ───────────────────────────────────────────────────────────────
+  function downloadPage(idx) {
+    const item = generatedSVGs[idx];
+    if (!item) return;
+    const blob = new Blob([item.svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `manga-panel-p${item.pageNum}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadSVG() {
+    if (generatedSVGs.length === 0) { generate(); return; }
+
+    // Combine all pages into one tall SVG
+    const GAP   = 20;
+    const TOTAL_H = generatedSVGs.length * (PH + GAP) - GAP;
+    const svgParts = generatedSVGs.map(({ svg }, i) => {
+      // Extract inner content from each page SVG
+      const inner = svg.replace(/<svg[^>]*>/, '').replace('</svg>', '');
+      return `<g transform="translate(0,${i * (PH + GAP)})">${inner}</g>`;
+    });
+
+    const combined = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PW} ${TOTAL_H}" width="${PW}" height="${TOTAL_H}">
+  <rect width="${PW}" height="${TOTAL_H}" fill="#e8e8e8"/>
+  ${svgParts.join('\n')}
+</svg>`;
+
+    const blob = new Blob([combined], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `manga-panels-${generatedSVGs.length}pages.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  init();
+</script>

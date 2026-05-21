@@ -227,7 +227,7 @@ export const tools: Tool[] = [
 		id: 33, slug: 'manga-panels',
 		name: '漫画ネーム用コマ割りテンプレ',
 		description: 'ページ数・起承転結スライダーを入れるとSVGコマ割りを出力。',
-		emoji: '📖', category: 'creator', status: 'coming-soon',
+		emoji: '📖', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 34, slug: 'character-sheet',
