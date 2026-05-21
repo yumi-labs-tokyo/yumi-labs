@@ -1,11 +1,11 @@
----
+﻿---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="タイピング速度測定（記号特化）" description="{}[]=>!== など実務で使う記号の入力速度を測定。プログラマー向け特化型タイピングテスト。">
 <style>
   .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
   .hero { text-align: center; margin-bottom: 32px; }
-  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 8px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 8px; }
   .hero-sub { color: #94a3b8; font-size: 0.95rem; }
 
   /* mode select */
@@ -37,7 +37,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .char.done-ok { color: #4ade80; }
   .char.done-err { color: #f87171; background: rgba(248,113,113,.15); border-radius: 2px; }
   .char.cursor {
-    color: #e2e8f0;
+    color: var(--gray-0);
     border-left: 2px solid #6366f1;
     margin-left: -1px;
     animation: blink .8s step-end infinite;
@@ -50,7 +50,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .typing-input {
     width: 100%; box-sizing: border-box;
     background: #1e293b; border: 2px solid #334155; border-radius: 12px;
-    color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 1.1rem;
+    color: var(--gray-0); font-family: 'Courier New', monospace; font-size: 1.1rem;
     padding: 14px 16px; outline: none; transition: border-color .2s;
     caret-color: #6366f1;
   }
@@ -79,7 +79,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   }
   .result-card.show { display: block; }
   .result-grade { font-size: 3rem; margin-bottom: 8px; }
-  .result-title { font-size: 1.4rem; font-weight: 800; color: #e2e8f0; margin-bottom: 20px; }
+  .result-title { font-size: 1.4rem; font-weight: 800; color: var(--gray-0); margin-bottom: 20px; }
   .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
   .result-item { background: #0f172a; border-radius: 10px; padding: 12px; }
   .result-item .val { font-size: 1.5rem; font-weight: 800; color: #6366f1; }
@@ -90,7 +90,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .history-title { font-size: 1rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
   .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .history-table th { color: #64748b; text-align: left; padding: 6px 10px; border-bottom: 1px solid #334155; }
-  .history-table td { color: #e2e8f0; padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+  .history-table td { color: var(--gray-0); padding: 7px 10px; border-bottom: 1px solid #1e293b; }
   .history-table tr:hover td { background: #1e293b; }
 
   /* symbol reference */

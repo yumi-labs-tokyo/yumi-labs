@@ -1,11 +1,11 @@
----
+﻿---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="速読トレーニング" description="テキストを貼り付けて表示速度を調整。1分間に何文字読めるか測定する速読トレーニングツール。">
 <style>
   .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
   .hero { text-align: center; margin-bottom: 28px; }
-  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 6px; }
   .hero-sub { color: #94a3b8; font-size: 0.92rem; }
 
   /* tabs */
@@ -14,7 +14,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer;
     font-size: 0.88rem; font-weight: 700; color: #64748b; background: transparent; transition: all .2s;
   }
-  .tab-btn.active { background: #1e293b; color: #e2e8f0; }
+  .tab-btn.active { background: #1e293b; color: var(--gray-0); }
 
   /* stats row */
   .stats-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
@@ -31,7 +31,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   }
   /* mode: rsvp */
   .rsvp-word {
-    font-size: 2.8rem; font-weight: 800; color: #e2e8f0;
+    font-size: 2.8rem; font-weight: 800; color: var(--gray-0);
     text-align: center; line-height: 1.2; transition: opacity .05s;
     max-width: 100%;
   }
@@ -42,13 +42,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   }
   /* mode: scroll */
   .scroll-text {
-    font-size: 1.1rem; color: #e2e8f0; line-height: 2; text-align: left;
+    font-size: 1.1rem; color: var(--gray-0); line-height: 2; text-align: left;
     width: 100%; max-height: 300px; overflow: hidden; position: relative;
   }
   .scroll-text .current-chunk { background: rgba(34,211,238,.15); border-radius: 4px; color: #67e8f9; }
   /* mode: chunk */
   .chunk-text {
-    font-size: 1.4rem; font-weight: 600; color: #e2e8f0;
+    font-size: 1.4rem; font-weight: 600; color: var(--gray-0);
     text-align: center; line-height: 1.6;
   }
 
@@ -74,7 +74,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .section-label { font-size: 0.82rem; font-weight: 700; color: #94a3b8; margin-bottom: 10px; }
   .text-area {
     width: 100%; box-sizing: border-box; background: #0f172a; border: 2px solid #334155;
-    border-radius: 10px; color: #e2e8f0; font-size: 0.95rem; padding: 12px 14px;
+    border-radius: 10px; color: var(--gray-0); font-size: 0.95rem; padding: 12px 14px;
     outline: none; resize: vertical; min-height: 120px; font-family: inherit;
     line-height: 1.7; transition: border-color .2s;
   }
@@ -107,7 +107,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .history-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 10px; }
   .history-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   .history-table th { color: #64748b; text-align: left; padding: 5px 8px; border-bottom: 1px solid #334155; }
-  .history-table td { color: #e2e8f0; padding: 6px 8px; border-bottom: 1px solid #0f172a; }
+  .history-table td { color: var(--gray-0); padding: 6px 8px; border-bottom: 1px solid #0f172a; }
 
   /* countdown */
   .countdown-overlay {

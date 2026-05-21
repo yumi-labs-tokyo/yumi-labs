@@ -1,11 +1,11 @@
----
+﻿---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="Git「やり直したい」逆引き辞典" description="「コミット取り消したい」「ブランチ切り戻したい」を自然言語で検索してGitコマンドを逆引き。">
 <style>
   .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
   .hero { text-align: center; margin-bottom: 28px; }
-  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 6px; }
   .hero-sub { color: #94a3b8; font-size: 0.92rem; }
 
   /* search */
@@ -13,7 +13,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .search-input {
     width: 100%; box-sizing: border-box;
     background: #1e293b; border: 2px solid #334155; border-radius: 14px;
-    color: #e2e8f0; font-size: 1.05rem; padding: 14px 48px 14px 18px;
+    color: var(--gray-0); font-size: 1.05rem; padding: 14px 48px 14px 18px;
     outline: none; transition: border-color .2s;
   }
   .search-input:focus { border-color: #f97316; }
@@ -41,7 +41,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .card.caution-card { border-left: 4px solid #fbbf24; }
   .card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
   .card-emoji { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-  .card-situation { font-size: 1rem; font-weight: 700; color: #e2e8f0; line-height: 1.4; }
+  .card-situation { font-size: 1rem; font-weight: 700; color: var(--gray-0); line-height: 1.4; }
   .card-keywords { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
   .kw-chip {
     padding: 2px 8px; border-radius: 99px; font-size: 0.7rem;

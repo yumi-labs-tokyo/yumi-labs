@@ -1,11 +1,11 @@
----
+﻿---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="デザインパターン学習カード（GoF 23種）" description="GoF 23種のデザインパターンをUML図＋TypeScriptコード例＋使うべき場面で学習。1日1パターン習得。">
 <style>
   .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
   .hero { text-align: center; margin-bottom: 24px; }
-  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 6px; }
   .hero-sub { color: #94a3b8; font-size: 0.92rem; }
 
   /* category tabs */
@@ -29,7 +29,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .pattern-chip:hover { border-color: #6366f1; }
   .pattern-chip.active { border-color: #6366f1; background: #1e1b4b; }
   .pattern-chip.learned { border-color: #4ade80; background: #052e16; }
-  .chip-name { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; }
+  .chip-name { font-size: 0.8rem; font-weight: 700; color: var(--gray-0); }
   .chip-cat  { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
   .chip-check{ font-size: 0.7rem; }
 
@@ -52,7 +52,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .cat-creational { background: #052e16; color: #4ade80; border: 1px solid #4ade80; }
   .cat-structural  { background: #0c1a2e; color: #38bdf8; border: 1px solid #38bdf8; }
   .cat-behavioral  { background: #1c0533; color: #c4b5fd; border: 1px solid #a78bfa; }
-  .card-name { font-size: 1.4rem; font-weight: 800; color: #e2e8f0; }
+  .card-name { font-size: 1.4rem; font-weight: 800; color: var(--gray-0); }
   .card-en   { font-size: 0.85rem; color: #64748b; }
   .card-learn-btn {
     margin-left: auto; padding: 6px 16px; border-radius: 8px; border: 1px solid #4ade80;
@@ -78,7 +78,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .code-block {
     background: #0f172a; border-radius: 10px; padding: 16px;
     font-family: 'Courier New', monospace; font-size: 0.82rem; line-height: 1.7;
-    overflow-x: auto; position: relative; color: #e2e8f0;
+    overflow-x: auto; position: relative; color: var(--gray-0);
   }
   .copy-btn {
     position: absolute; top: 8px; right: 8px;
