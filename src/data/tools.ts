@@ -295,7 +295,7 @@ export const tools: Tool[] = [
 		id: 44, slug: 'philosopher-chat',
 		name: '哲学者「もしも対話」シミュレーター',
 		description: '質問を入れるとカント風/ニーチェ風/ソクラテス風に回答。',
-		emoji: '🤔', category: 'learning', status: 'coming-soon',
+		emoji: '🤔', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 45, slug: 'csv-quiz',

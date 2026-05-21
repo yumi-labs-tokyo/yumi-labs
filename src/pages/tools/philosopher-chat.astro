@@ -1,0 +1,343 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="哲学者「もしも対話」シミュレーター | yumi Labs">
+  <style>
+    @keyframes typing-dot {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+      40%            { transform: scale(1);   opacity: 1; }
+    }
+    .typing-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: typing-dot 1.2s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .msg-in { animation: msg-in 0.35s ease-out forwards; }
+    .philosopher-btn { transition: all 0.2s; }
+    .philosopher-btn.active {
+      transform: scale(1.05);
+    }
+    .chat-bubble-user {
+      background: linear-gradient(135deg, #9333ea, #ec4899);
+      border-radius: 18px 18px 4px 18px;
+    }
+    .chat-bubble-philo {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px 18px 18px 4px;
+    }
+    .scroll-chat { scroll-behavior: smooth; }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🤔</div>
+      <div class="text-3xl font-bold text-white mb-2">哲学者「もしも対話」シミュレーター</div>
+      <div class="text-gray-400 text-sm">歴史上の哲学者と対話。あなたの質問にソクラテス・カント・ニーチェなどが答えます</div>
+    </div>
+
+    <!-- Philosopher selector -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-5">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">対話する哲学者を選択</div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="philoGrid">
+
+        <button onclick="selectPhilo('socrates')" data-id="socrates"
+          class="philosopher-btn active flex flex-col items-center p-3 rounded-xl border border-purple-400/50 bg-purple-500/20 text-center transition-all">
+          <div class="text-2xl mb-1">🏛️</div>
+          <div class="text-xs font-bold text-white">ソクラテス</div>
+          <div class="text-xs text-gray-500 mt-0.5">古代ギリシャ</div>
+        </button>
+
+        <button onclick="selectPhilo('kant')" data-id="kant"
+          class="philosopher-btn flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 text-center transition-all">
+          <div class="text-2xl mb-1">⚖️</div>
+          <div class="text-xs font-bold text-white">カント</div>
+          <div class="text-xs text-gray-500 mt-0.5">18世紀ドイツ</div>
+        </button>
+
+        <button onclick="selectPhilo('nietzsche')" data-id="nietzsche"
+          class="philosopher-btn flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 text-center transition-all">
+          <div class="text-2xl mb-1">⚡</div>
+          <div class="text-xs font-bold text-white">ニーチェ</div>
+          <div class="text-xs text-gray-500 mt-0.5">19世紀ドイツ</div>
+        </button>
+
+        <button onclick="selectPhilo('descartes')" data-id="descartes"
+          class="philosopher-btn flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 text-center transition-all">
+          <div class="text-2xl mb-1">🔭</div>
+          <div class="text-xs font-bold text-white">デカルト</div>
+          <div class="text-xs text-gray-500 mt-0.5">17世紀フランス</div>
+        </button>
+
+        <button onclick="selectPhilo('aristotle')" data-id="aristotle"
+          class="philosopher-btn flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 text-center transition-all">
+          <div class="text-2xl mb-1">📜</div>
+          <div class="text-xs font-bold text-white">アリストテレス</div>
+          <div class="text-xs text-gray-500 mt-0.5">古代ギリシャ</div>
+        </button>
+
+        <button onclick="selectPhilo('rousseau')" data-id="rousseau"
+          class="philosopher-btn flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 text-center transition-all">
+          <div class="text-2xl mb-1">🌿</div>
+          <div class="text-xs font-bold text-white">ルソー</div>
+          <div class="text-xs text-gray-500 mt-0.5">18世紀スイス</div>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Example questions -->
+    <div class="mb-4">
+      <div class="text-xs text-gray-500 mb-2">💡 質問例</div>
+      <div class="flex flex-wrap gap-2" id="exampleQuestions">
+        <button onclick="setQuestion(this.dataset.q)" data-q="人生の意味とは何ですか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          人生の意味とは？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="死を恐れるべきですか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          死を恐れるべきか？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="AI（人工知能）をどう思いますか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          AIをどう思う？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="幸福になるにはどうすればいいですか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          幸福になるには？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="なぜ戦争はなくならないのですか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          なぜ戦争はなくならない？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="お金と幸福は関係ありますか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          お金と幸福の関係は？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="SNSは人間を幸せにしていますか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          SNSは人を幸せにする？
+        </button>
+        <button onclick="setQuestion(this.dataset.q)" data-q="真実とは何ですか？どうすれば真実を知れますか？"
+          class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-400/30 transition-all">
+          真実とは何か？
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat window -->
+    <div class="bg-white/5 rounded-2xl border border-white/10 mb-4 overflow-hidden">
+      <!-- Chat header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+        <div class="flex items-center gap-2">
+          <span id="activeEmoji" class="text-lg">🏛️</span>
+          <div>
+            <div class="text-sm font-bold text-white" id="activeName">ソクラテス</div>
+            <div class="text-xs text-gray-500" id="activePeriod">紀元前470〜399年</div>
+          </div>
+        </div>
+        <button onclick="clearChat()" class="text-xs text-gray-500 hover:text-gray-300 border border-white/10 rounded-lg px-2 py-1 hover:border-white/20 transition-all">
+          会話をリセット
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div id="chatMessages" class="scroll-chat p-4 space-y-4 overflow-y-auto" style="min-height:280px;max-height:480px;">
+        <!-- Welcome message -->
+        <div class="flex gap-3 msg-in">
+          <div class="text-xl flex-shrink-0 mt-1" id="welcomeEmoji">🏛️</div>
+          <div class="chat-bubble-philo px-4 py-3 max-w-prose">
+            <div class="text-sm text-gray-200 leading-relaxed" id="welcomeText">
+              ようこそ。私はソクラテスです。あなたの問いを聞かせてください。共に真理を探求しましょう。ただ、私が知っているのは、私が何も知らないということだけです……では、何を問いたいのですか？
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing indicator -->
+      <div id="typingIndicator" class="hidden px-4 py-3 border-t border-white/5">
+        <div class="flex gap-3 items-center">
+          <span id="typingEmoji" class="text-xl">🏛️</span>
+          <div class="chat-bubble-philo px-4 py-2.5">
+            <span class="typing-dot text-gray-400"></span>
+            <span class="typing-dot text-gray-400"></span>
+            <span class="typing-dot text-gray-400"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="flex gap-2">
+      <textarea id="questionInput" placeholder="哲学者に問いかけよう..." rows="2"
+        class="flex-1 bg-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm resize-none"
+        onkeydown="handleKey(event)"></textarea>
+      <button id="sendBtn" onclick="sendQuestion()"
+        class="px-5 rounded-xl font-bold text-white text-sm flex-shrink-0 transition-all self-stretch"
+        style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+        送信
+      </button>
+    </div>
+    <div class="text-xs text-gray-600 mt-1.5 text-right">Ctrl+Enter でも送信</div>
+
+    <!-- Info footer -->
+    <div class="mt-6 bg-white/5 rounded-xl p-4 text-xs text-gray-500 leading-relaxed">
+      <strong class="text-gray-400">⚠ 注意：</strong>
+      このツールはAIがキャラクターを演じるエンターテインメント・学習体験です。
+      実際の哲学者の思想を完全に再現するものではありません。学術的研究には一次文献をご参照ください。
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const PHILOSOPHERS = {
+    socrates:  { name: 'ソクラテス',     emoji: '🏛️', period: '紀元前470〜399年',
+      welcome: 'ようこそ。私はソクラテスです。あなたの問いを聞かせてください。共に真理を探求しましょう。ただ、私が知っているのは、私が何も知らないということだけです……では、何を問いたいのですか？' },
+    kant:      { name: 'カント',         emoji: '⚖️', period: '1724〜1804年',
+      welcome: '良い時刻ですな。私はイマヌエル・カントです。理性の光のもとで、あなたの問いを吟味しましょう。さて、純粋理性が問いたいことは何でしょうか？' },
+    nietzsche: { name: 'ニーチェ',       emoji: '⚡', period: '1844〜1900年',
+      welcome: 'ほう！君は対話を望むのか！私はフリードリヒ・ニーチェだ。神は死んだ——そして我々がその神を殺したのだ！さあ、何を問いたいのか言いたまえ！' },
+    descartes: { name: 'デカルト',       emoji: '🔭', period: '1596〜1650年',
+      welcome: '初めまして。私はルネ・デカルトです。まず全てを疑うことから始めましょう。確実なことは「我思う、ゆえに我あり」だけ。さて、何を確かめたいですか？' },
+    aristotle: { name: 'アリストテレス', emoji: '📜', period: '紀元前384〜322年',
+      welcome: '歓迎します。私はアリストテレスです。観察と論理を通じて、万物の真理を探求してきました。エウダイモニア（よき生）について、あるいは他の何でも問うてください。' },
+    rousseau:  { name: 'ルソー',         emoji: '🌿', period: '1712〜1778年',
+      welcome: 'ああ、ようこそ！私はジャン＝ジャック・ルソーです。人間は本来善であり、自然のなかで生まれた。しかし社会が人を堕落させた……何でも話しましょう。' },
+  };
+
+  let currentPhilo = 'socrates';
+  let chatHistory = [];
+  let isLoading = false;
+
+  function selectPhilo(id) {
+    currentPhilo = id;
+    chatHistory = [];
+    const p = PHILOSOPHERS[id];
+
+    document.querySelectorAll('.philosopher-btn').forEach(b => {
+      const active = b.dataset.id === id;
+      b.classList.toggle('active', active);
+      b.style.borderColor = active ? 'rgba(147,51,234,0.5)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+    });
+
+    document.getElementById('activeEmoji').textContent = p.emoji;
+    document.getElementById('activeName').textContent = p.name;
+    document.getElementById('activePeriod').textContent = p.period;
+    document.getElementById('typingEmoji').textContent = p.emoji;
+
+    // Clear and reset chat
+    const msgs = document.getElementById('chatMessages');
+    msgs.innerHTML = `
+      <div class="flex gap-3 msg-in">
+        <div class="text-xl flex-shrink-0 mt-1">${p.emoji}</div>
+        <div class="chat-bubble-philo px-4 py-3 max-w-prose">
+          <div class="text-sm text-gray-200 leading-relaxed">${p.welcome}</div>
+        </div>
+      </div>`;
+  }
+
+  function clearChat() {
+    selectPhilo(currentPhilo);
+  }
+
+  function setQuestion(q) {
+    document.getElementById('questionInput').value = q;
+    document.getElementById('questionInput').focus();
+  }
+
+  function handleKey(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      sendQuestion();
+    }
+  }
+
+  function appendMessage(role, text, emoji) {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'flex gap-3 msg-in ' + (role === 'user' ? 'justify-end' : '');
+
+    if (role === 'user') {
+      div.innerHTML = `
+        <div class="chat-bubble-user px-4 py-3 max-w-prose">
+          <div class="text-sm text-white leading-relaxed">${escHtml(text)}</div>
+        </div>
+        <div class="text-xl flex-shrink-0 mt-1">👤</div>`;
+    } else {
+      div.innerHTML = `
+        <div class="text-xl flex-shrink-0 mt-1">${emoji}</div>
+        <div class="chat-bubble-philo px-4 py-3 max-w-prose">
+          <div class="text-sm text-gray-200 leading-relaxed" style="white-space:pre-wrap;">${escHtml(text)}</div>
+        </div>`;
+    }
+
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  async function sendQuestion() {
+    if (isLoading) return;
+    const question = document.getElementById('questionInput').value.trim();
+    if (!question) return;
+
+    document.getElementById('questionInput').value = '';
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('sendBtn').style.opacity = '0.6';
+
+    appendMessage('user', question);
+
+    // Show typing
+    const typing = document.getElementById('typingIndicator');
+    typing.classList.remove('hidden');
+    document.getElementById('chatMessages').scrollTop = 999999;
+
+    try {
+      const resp = await fetch('/api/philosopher-chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          philosopher: currentPhilo,
+          history: chatHistory.slice(-6), // last 3 exchanges
+        }),
+      });
+
+      const data = await resp.json();
+      typing.classList.add('hidden');
+
+      if (!resp.ok || data.error) {
+        appendMessage('philo', '申し訳ありません。通信に問題が生じました。', PHILOSOPHERS[currentPhilo].emoji);
+      } else {
+        chatHistory.push({ question, answer: data.answer });
+        appendMessage('philo', data.answer, PHILOSOPHERS[currentPhilo].emoji);
+      }
+    } catch (e) {
+      typing.classList.add('hidden');
+      appendMessage('philo', '通信エラーが発生しました。再度お試しください。', PHILOSOPHERS[currentPhilo].emoji);
+    }
+
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').style.opacity = '1';
+    document.getElementById('questionInput').focus();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init
+  document.querySelectorAll('.philosopher-btn').forEach(b => {
+    if (b.dataset.id === 'socrates') {
+      b.style.borderColor = 'rgba(147,51,234,0.5)';
+      b.style.background = 'rgba(147,51,234,0.2)';
+    }
+  });
+</script>
