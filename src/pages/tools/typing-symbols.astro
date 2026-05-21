@@ -1,0 +1,504 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="タイピング速度測定（記号特化）" description="{}[]=>!== など実務で使う記号の入力速度を測定。プログラマー向け特化型タイピングテスト。">
+<style>
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 32px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 8px; }
+  .hero-sub { color: #94a3b8; font-size: 0.95rem; }
+
+  /* mode select */
+  .mode-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .mode-btn {
+    padding: 8px 18px; border-radius: 8px; border: 2px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.85rem;
+    transition: all .2s;
+  }
+  .mode-btn.active { border-color: #6366f1; background: #312e81; color: #e0e7ff; }
+
+  /* stats row */
+  .stats-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-box {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 12px 20px; text-align: center; min-width: 100px;
+  }
+  .stat-val { font-size: 1.8rem; font-weight: 800; color: #6366f1; }
+  .stat-label { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+
+  /* text display */
+  .text-display {
+    background: #0f172a; border: 2px solid #334155; border-radius: 14px;
+    padding: 20px 24px; font-family: 'Courier New', monospace; font-size: 1.25rem;
+    line-height: 2; letter-spacing: 0.04em; margin-bottom: 16px;
+    min-height: 90px; position: relative; overflow: hidden;
+  }
+  .char { position: relative; }
+  .char.done-ok { color: #4ade80; }
+  .char.done-err { color: #f87171; background: rgba(248,113,113,.15); border-radius: 2px; }
+  .char.cursor {
+    color: #e2e8f0;
+    border-left: 2px solid #6366f1;
+    margin-left: -1px;
+    animation: blink .8s step-end infinite;
+  }
+  .char.upcoming { color: #475569; }
+  @keyframes blink { 0%,100%{border-color:#6366f1} 50%{border-color:transparent} }
+
+  /* input */
+  .input-wrap { position: relative; margin-bottom: 20px; }
+  .typing-input {
+    width: 100%; box-sizing: border-box;
+    background: #1e293b; border: 2px solid #334155; border-radius: 12px;
+    color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 1.1rem;
+    padding: 14px 16px; outline: none; transition: border-color .2s;
+    caret-color: #6366f1;
+  }
+  .typing-input:focus { border-color: #6366f1; }
+  .typing-input:disabled { opacity: .5; }
+
+  /* controls */
+  .ctrl-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .btn {
+    padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 700; transition: all .2s;
+  }
+  .btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,.4); }
+  .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .btn-secondary:hover { border-color: #6366f1; color: #e0e7ff; }
+
+  /* progress bar */
+  .progress-bar-wrap { background: #1e293b; border-radius: 99px; height: 6px; margin-bottom: 8px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#6366f1,#8b5cf6); border-radius: 99px; transition: width .2s; }
+
+  /* result */
+  .result-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+    padding: 28px; text-align: center; display: none;
+  }
+  .result-card.show { display: block; }
+  .result-grade { font-size: 3rem; margin-bottom: 8px; }
+  .result-title { font-size: 1.4rem; font-weight: 800; color: #e2e8f0; margin-bottom: 20px; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .result-item { background: #0f172a; border-radius: 10px; padding: 12px; }
+  .result-item .val { font-size: 1.5rem; font-weight: 800; color: #6366f1; }
+  .result-item .lbl { font-size: 0.72rem; color: #64748b; }
+
+  /* history */
+  .history-section { margin-top: 32px; }
+  .history-title { font-size: 1rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .history-table th { color: #64748b; text-align: left; padding: 6px 10px; border-bottom: 1px solid #334155; }
+  .history-table td { color: #e2e8f0; padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+  .history-table tr:hover td { background: #1e293b; }
+
+  /* symbol reference */
+  .ref-section { margin-top: 32px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; }
+  .ref-title { font-size: 0.9rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .ref-item { background: #0f172a; border-radius: 8px; padding: 8px 10px; }
+  .ref-sym { font-family: 'Courier New', monospace; font-size: 1rem; color: #6366f1; font-weight: 700; }
+  .ref-name { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+
+  .timer-ring { display: inline-block; font-size: 2rem; font-weight: 800; color: #f59e0b; }
+  .countdown { text-align: center; font-size: 1.1rem; color: #94a3b8; margin-bottom: 8px; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">⌨️ タイピング速度測定（記号特化）</div>
+    <div class="hero-sub">{}[]=>!== など実務で使う記号の入力速度を測定。プログラマー向け特化型。</div>
+  </div>
+
+  <!-- mode select -->
+  <div class="mode-bar">
+    <button class="mode-btn active" onclick="setMode('symbols')" id="mode-symbols">記号特化</button>
+    <button class="mode-btn" onclick="setMode('mixed')" id="mode-mixed">英数字ミックス</button>
+    <button class="mode-btn" onclick="setMode('operators')" id="mode-operators">演算子・比較</button>
+    <button class="mode-btn" onclick="setMode('brackets')" id="mode-brackets">括弧・囲み</button>
+    <button class="mode-btn" onclick="setMode('regex')" id="mode-regex">正規表現風</button>
+  </div>
+
+  <!-- stats -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" id="stat-wpm">--</div><div class="stat-label">WPM</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-cpm">--</div><div class="stat-label">CPM</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-acc">--</div><div class="stat-label">正確率 %</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-time">60</div><div class="stat-label">残り秒</div></div>
+  </div>
+
+  <!-- progress -->
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:100%"></div></div>
+
+  <!-- text display -->
+  <div class="text-display" id="text-display"></div>
+
+  <!-- input -->
+  <div class="input-wrap">
+    <input type="text" class="typing-input" id="typing-input"
+      placeholder="ここに入力してください（入力を始めるとタイマースタート）"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+  </div>
+
+  <!-- controls -->
+  <div class="ctrl-row">
+    <button class="btn btn-primary" onclick="startTest()" id="btn-start">スタート / リセット</button>
+    <button class="btn btn-secondary" onclick="togglePause()" id="btn-pause" style="display:none">一時停止</button>
+  </div>
+
+  <!-- result -->
+  <div class="result-card" id="result-card">
+    <div class="result-grade" id="result-grade">🏆</div>
+    <div class="result-title" id="result-title">テスト完了！</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val" id="r-wpm">--</div><div class="lbl">WPM</div></div>
+      <div class="result-item"><div class="val" id="r-cpm">--</div><div class="lbl">CPM</div></div>
+      <div class="result-item"><div class="val" id="r-acc">--</div><div class="lbl">正確率 %</div></div>
+      <div class="result-item"><div class="val" id="r-errors">--</div><div class="lbl">ミス数</div></div>
+      <div class="result-item"><div class="val" id="r-time">60</div><div class="lbl">秒</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="startTest()">もう一度</button>
+  </div>
+
+  <!-- history -->
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="history-title">📊 過去の記録</div>
+    <table class="history-table">
+      <thead><tr><th>日時</th><th>モード</th><th>WPM</th><th>CPM</th><th>正確率</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
+  <!-- symbol reference -->
+  <div class="ref-section">
+    <div class="ref-title">💡 プログラマー記号リファレンス</div>
+    <div class="ref-grid" id="ref-grid"></div>
+  </div>
+</div>
+
+<script is:inline>
+// ======= TEXT POOLS =======
+const POOLS = {
+  symbols: [
+    '{} [] () <> "" \'\' `` => -> == != !== === !==',
+    '() => { return {} } [] + {} === "object"',
+    'const fn = () => ({ key: value, arr: [] });',
+    'if (a !== b && c >= d || !e) { throw new Error(); }',
+    'map.set("key", { id: 1, tags: ["a", "b"] });',
+    'const { x, y, ...rest } = obj; const [first, ...tail] = arr;',
+    'async function fetch() { try { await Promise.all([]) } catch(e) {} }',
+    'type Fn = (a: string, b?: number) => boolean | null;',
+    '/^[a-z0-9_]+$/i.test(str) && str.length > 0',
+    '`Hello ${name}!` + \'world\' + "!" === "Hello world!"',
+    '>> << & | ^ ~ >>> **= %= /= *= -= +=',
+    '!true === false; !!null === false; 0 || "default"',
+  ],
+  mixed: [
+    'const result = array.filter(x => x > 0).map(x => x * 2);',
+    'function add(a, b) { return a + b; } add(1, 2); // 3',
+    'let obj = { name: "Alice", age: 30, active: true };',
+    'for (let i = 0; i < arr.length; i++) { arr[i] *= 2; }',
+    'import { useState, useEffect } from "react";',
+    'export default class App extends Component {}',
+    'const url = `https://api.example.com/v2/users/${id}`;',
+    'db.query("SELECT * FROM users WHERE id = $1", [userId]);',
+    'console.log(typeof null === "object"); // true',
+    'Object.keys(obj).forEach(key => delete obj[key]);',
+  ],
+  operators: [
+    '=== !== == != >= <= > < && || ! ?? ?.',
+    'a++ --b a += 1 b -= 2 c *= 3 d /= 4 e %= 5',
+    'x ** 2 + y ** 2 === z ** 2',
+    'result ?? "default" ; value?.property?.nested',
+    '~index !== -1 && arr[index] | 0 === Math.floor(arr[index])',
+    'a & 0xFF | (b << 8) & 0xFF00 ^ (c << 16)',
+    '!isNaN(+str) && isFinite(+str) && str.trim() !== ""',
+    'cond ? "yes" : "no" ; a > b ? a : b',
+    'typeof x === "undefined" || x === null || x === ""',
+    '>>> 0 converts to Uint32; | 0 converts to Int32',
+  ],
+  brackets: [
+    '({}) ([]) {[]} [()] ({[]}) [[[]]] ((()))',
+    'fn({ key: [1, 2, (3 + 4)] })',
+    'arr[0][1] map["key"]["sub"] obj.a.b.c',
+    'new Map([["a", 1], ["b", 2], ["c", 3]])',
+    'import("./module").then(({ default: mod }) => mod)',
+    'React.createElement("div", { className: "app" }, [children])',
+    'Promise.all([fetch(url1), fetch(url2)]).then(([r1, r2]) => {})',
+    '{ ...spread } [...arr] { key: value, ...rest }',
+    'destructure: const { a: { b: { c } } } = deep;',
+    'template: `${obj["key"]} and ${arr[0].prop}`',
+  ],
+  regex: [
+    '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/',
+    '/^(\\d{3})-?(\\d{4})-?(\\d{4})$/.test(phone)',
+    'str.replace(/([\\w]+)/g, (_, m) => m.toUpperCase())',
+    '/(?<=\\s|^)#[\\w]+(?=\\s|$)/g.exec(tweet)',
+    '/^(?:https?:\\/\\/)?(?:www\\.)?[\\w.-]+\\.[a-z]{2,}/',
+    'const re = /[{}\\[\\]()\\<\\>"\\'`!@#$%^&*]/g;',
+    '/\\b(?:const|let|var|function|class|import|export)\\b/g',
+    'text.match(/```[\\s\\S]*?```/g) ?? []',
+    '/^\\s*\\/\\/.*$/m; /^\\/\\*[\\s\\S]*?\\*\\//m',
+    '(?:^|(?<=[^\\\\]))(?:\\\\{2})*"[^"\\\\]*(?:\\\\.[^"\\\\]*)*"',
+  ],
+};
+
+const SYMBOL_REF = [
+  { sym: '{}', name: '波括弧 / オブジェクト' },
+  { sym: '[]', name: '角括弧 / 配列' },
+  { sym: '()', name: '丸括弧 / 関数呼び出し' },
+  { sym: '=>', name: 'アロー関数' },
+  { sym: '->', name: 'アロー (PHP/C)' },
+  { sym: '===', name: '厳密等値' },
+  { sym: '!==', name: '厳密非等値' },
+  { sym: '??', name: 'Null 合体演算子' },
+  { sym: '?.', name: 'オプショナルチェーン' },
+  { sym: '...', name: 'スプレッド演算子' },
+  { sym: '`', name: 'バッククォート' },
+  { sym: '${', name: 'テンプレートリテラル' },
+  { sym: '&&', name: '論理AND' },
+  { sym: '||', name: '論理OR' },
+  { sym: '>>=', name: '右シフト代入' },
+  { sym: '/^$/', name: '正規表現' },
+];
+
+// ======= STATE =======
+let mode = 'symbols';
+let targetText = '';
+let typedText = '';
+let startTime = null;
+let endTime = null;
+let timerInterval = null;
+let duration = 60;
+let remaining = 60;
+let totalErrors = 0;
+let errorMap = {}; // index -> true
+let running = false;
+let paused = false;
+let history = JSON.parse(localStorage.getItem('typing_symbols_v1') || '[]');
+
+// ======= INIT =======
+function buildRefGrid() {
+  const g = document.getElementById('ref-grid');
+  g.innerHTML = SYMBOL_REF.map(r =>
+    `<div class="ref-item"><div class="ref-sym">${escHtml(r.sym)}</div><div class="ref-name">${r.name}</div></div>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + m).classList.add('active');
+  startTest();
+}
+
+function pickText() {
+  const pool = POOLS[mode];
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx];
+}
+
+function startTest() {
+  clearInterval(timerInterval);
+  targetText = pickText();
+  typedText = '';
+  totalErrors = 0;
+  errorMap = {};
+  startTime = null;
+  endTime = null;
+  remaining = duration;
+  running = false;
+  paused = false;
+
+  document.getElementById('stat-wpm').textContent = '--';
+  document.getElementById('stat-cpm').textContent = '--';
+  document.getElementById('stat-acc').textContent = '--';
+  document.getElementById('stat-time').textContent = duration;
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('btn-pause').style.display = 'none';
+
+  const inp = document.getElementById('typing-input');
+  inp.value = '';
+  inp.disabled = false;
+  inp.placeholder = 'ここに入力してください（入力を始めるとタイマースタート）';
+  inp.focus();
+
+  renderText();
+  renderHistory();
+}
+
+function renderText() {
+  const display = document.getElementById('text-display');
+  const len = targetText.length;
+  let html = '';
+  for (let i = 0; i < len; i++) {
+    const ch = escHtml(targetText[i]);
+    if (i < typedText.length) {
+      if (errorMap[i]) {
+        html += `<span class="char done-err">${ch}</span>`;
+      } else {
+        html += `<span class="char done-ok">${ch}</span>`;
+      }
+    } else if (i === typedText.length) {
+      html += `<span class="char cursor">${ch}</span>`;
+    } else {
+      html += `<span class="char upcoming">${ch}</span>`;
+    }
+  }
+  display.innerHTML = html;
+
+  // scroll cursor into view
+  const cursor = display.querySelector('.cursor');
+  if (cursor) {
+    const cr = cursor.getBoundingClientRect();
+    const dr = display.getBoundingClientRect();
+    if (cr.right > dr.right - 20) {
+      display.scrollLeft += cr.right - dr.right + 40;
+    }
+  }
+}
+
+function onInput(e) {
+  const inp = e.target;
+  const val = inp.value;
+
+  // start timer on first keypress
+  if (!startTime && !paused) {
+    startTime = Date.now();
+    running = true;
+    document.getElementById('btn-pause').style.display = '';
+    timerInterval = setInterval(tick, 200);
+  }
+
+  if (!running) return;
+
+  // compare char by char
+  const newLen = val.length;
+  // update typedText to val (clamp to targetText length)
+  if (newLen > targetText.length) {
+    inp.value = val.slice(0, targetText.length);
+    return;
+  }
+
+  // detect errors
+  for (let i = 0; i < newLen; i++) {
+    if (val[i] !== targetText[i]) {
+      errorMap[i] = true;
+    }
+  }
+
+  typedText = val;
+  updateStats();
+  renderText();
+
+  // check complete
+  if (typedText.length === targetText.length) {
+    finishTest();
+  }
+}
+
+function tick() {
+  if (!running || paused) return;
+  const elapsed = (Date.now() - startTime) / 1000;
+  remaining = Math.max(0, duration - elapsed);
+  document.getElementById('stat-time').textContent = Math.ceil(remaining);
+  document.getElementById('progress-fill').style.width = (remaining / duration * 100) + '%';
+  updateStats();
+  if (remaining <= 0) finishTest();
+}
+
+function updateStats() {
+  if (!startTime) return;
+  const elapsed = (Date.now() - startTime) / 1000 || 1;
+  const correctChars = typedText.split('').filter((c, i) => c === targetText[i]).length;
+  const cpm = Math.round((correctChars / elapsed) * 60);
+  const wpm = Math.round(cpm / 5);
+  const acc = typedText.length > 0 ? Math.round((correctChars / typedText.length) * 100) : 100;
+  document.getElementById('stat-wpm').textContent = wpm;
+  document.getElementById('stat-cpm').textContent = cpm;
+  document.getElementById('stat-acc').textContent = acc;
+}
+
+function finishTest() {
+  clearInterval(timerInterval);
+  running = false;
+  endTime = Date.now();
+  document.getElementById('typing-input').disabled = true;
+  document.getElementById('btn-pause').style.display = 'none';
+
+  const elapsed = (endTime - startTime) / 1000 || 1;
+  const correctChars = typedText.split('').filter((c, i) => c === targetText[i]).length;
+  const cpm = Math.round((correctChars / elapsed) * 60);
+  const wpm = Math.round(cpm / 5);
+  const acc = typedText.length > 0 ? Math.round((correctChars / typedText.length) * 100) : 100;
+  const errors = Object.keys(errorMap).length;
+  const timeTaken = Math.round(elapsed);
+
+  // grade
+  let grade = '🥉', title = 'ナイスチャレンジ！';
+  if (wpm >= 80 && acc >= 95) { grade = '🏆'; title = 'エキスパート！'; }
+  else if (wpm >= 60 && acc >= 90) { grade = '🥇'; title = 'プロフェッショナル！'; }
+  else if (wpm >= 40 && acc >= 85) { grade = '🥈'; title = '上級者！'; }
+  else if (wpm >= 20) { grade = '🥉'; title = 'グッドジョブ！'; }
+
+  document.getElementById('result-grade').textContent = grade;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('r-wpm').textContent = wpm;
+  document.getElementById('r-cpm').textContent = cpm;
+  document.getElementById('r-acc').textContent = acc;
+  document.getElementById('r-errors').textContent = errors;
+  document.getElementById('r-time').textContent = timeTaken;
+  document.getElementById('result-card').classList.add('show');
+
+  // save history
+  const MODE_LABELS = { symbols:'記号特化', mixed:'ミックス', operators:'演算子', brackets:'括弧', regex:'正規表現' };
+  const rec = {
+    date: new Date().toLocaleString('ja-JP'),
+    mode: MODE_LABELS[mode] || mode,
+    wpm, cpm, acc
+  };
+  history.unshift(rec);
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('typing_symbols_v1', JSON.stringify(history));
+  renderHistory();
+}
+
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  document.getElementById('btn-pause').textContent = paused ? '再開' : '一時停止';
+  if (!paused) {
+    // adjust startTime to account for pause
+    startTime = Date.now() - (duration - remaining) * 1000;
+  }
+}
+
+function renderHistory() {
+  if (history.length === 0) {
+    document.getElementById('history-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('history-section').style.display = '';
+  const tbody = document.getElementById('history-body');
+  tbody.innerHTML = history.slice(0, 10).map(r =>
+    `<tr><td>${r.date}</td><td>${r.mode}</td><td>${r.wpm}</td><td>${r.cpm}</td><td>${r.acc}%</td></tr>`
+  ).join('');
+}
+
+// ======= KEYBOARD =======
+document.getElementById('typing-input').addEventListener('input', onInput);
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') startTest();
+});
+
+buildRefGrid();
+renderHistory();
+startTest();
+</script>
+</BaseLayout>

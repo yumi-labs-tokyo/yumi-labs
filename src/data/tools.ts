@@ -307,7 +307,7 @@ export const tools: Tool[] = [
 		id: 46, slug: 'typing-symbols',
 		name: 'タイピング速度測定（記号特化）',
 		description: '{}[]=>!== など実務で使う記号の入力速度を測定。',
-		emoji: '⌨️', category: 'learning', status: 'coming-soon',
+		emoji: '⌨️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 47, slug: 'vim-game',
