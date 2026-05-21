@@ -313,7 +313,7 @@ export const tools: Tool[] = [
 		id: 47, slug: 'vim-game',
 		name: 'Vimコマンド学習ゲーム',
 		description: 'ステージ制で:wq・ddP・ciwなど実用コマンドをクイズ形式で習得。',
-		emoji: '🟩', category: 'learning', badge: 'New', status: 'coming-soon',
+		emoji: '🟩', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 48, slug: 'regex-visualizer',

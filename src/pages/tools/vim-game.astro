@@ -1,0 +1,735 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Vimコマンド学習ゲーム" description="ステージ制で:wq・ddP・ciwなど実用コマンドをクイズ形式で習得。">
+<style>
+  .container { max-width: 820px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 28px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* stage nav */
+  .stage-bar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .stage-btn {
+    padding: 6px 14px; border-radius: 20px; border: 2px solid #334155;
+    background: #1e293b; color: #64748b; cursor: pointer; font-size: 0.8rem;
+    font-weight: 700; transition: all .2s;
+  }
+  .stage-btn.unlocked { color: #94a3b8; border-color: #334155; }
+  .stage-btn.current { border-color: #4ade80; color: #4ade80; background: #052e16; }
+  .stage-btn.cleared { border-color: #22c55e; background: #14532d; color: #bbf7d0; }
+  .stage-btn.locked { opacity: .4; cursor: not-allowed; }
+
+  /* progress */
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .progress-bar-wrap { flex: 1; background: #1e293b; border-radius: 99px; height: 8px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#4ade80,#22d3ee); border-radius: 99px; transition: width .4s; }
+  .progress-label { font-size: 0.8rem; color: #64748b; white-space: nowrap; }
+
+  /* quiz card */
+  .quiz-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+    padding: 28px; margin-bottom: 20px;
+  }
+  .q-stage-label { font-size: 0.75rem; color: #4ade80; font-weight: 700; letter-spacing: .08em; margin-bottom: 8px; }
+  .q-number { font-size: 0.8rem; color: #64748b; margin-bottom: 12px; }
+  .q-question { font-size: 1.15rem; color: #e2e8f0; font-weight: 700; margin-bottom: 6px; line-height: 1.6; }
+  .q-context {
+    background: #0f172a; border-left: 3px solid #4ade80; border-radius: 0 8px 8px 0;
+    padding: 10px 14px; font-family: 'Courier New', monospace; font-size: 0.9rem;
+    color: #94a3b8; margin-bottom: 20px; white-space: pre;
+  }
+  .q-type-label { font-size: 0.75rem; color: #64748b; margin-bottom: 10px; }
+
+  /* choices */
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  @media(max-width:500px){ .choices { grid-template-columns: 1fr; } }
+  .choice-btn {
+    padding: 12px 16px; border-radius: 10px; border: 2px solid #334155;
+    background: #0f172a; color: #cbd5e1; cursor: pointer; text-align: left;
+    font-family: 'Courier New', monospace; font-size: 0.95rem;
+    transition: all .15s; font-weight: 700;
+  }
+  .choice-btn:hover { border-color: #4ade80; color: #e2e8f0; background: #052e16; }
+  .choice-btn.correct { border-color: #4ade80; background: #052e16; color: #4ade80; }
+  .choice-btn.wrong { border-color: #f87171; background: #450a0a; color: #f87171; }
+  .choice-btn:disabled { cursor: default; }
+
+  /* type input */
+  .type-wrap { display: flex; gap: 8px; margin-bottom: 16px; }
+  .type-input {
+    flex: 1; background: #0f172a; border: 2px solid #334155; border-radius: 10px;
+    color: #4ade80; font-family: 'Courier New', monospace; font-size: 1.1rem;
+    padding: 10px 14px; outline: none; transition: border-color .2s; caret-color: #4ade80;
+  }
+  .type-input:focus { border-color: #4ade80; }
+  .type-input.correct-in { border-color: #4ade80; background: #052e16; }
+  .type-input.wrong-in { border-color: #f87171; background: #450a0a; animation: shake .3s; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
+  .submit-btn {
+    padding: 10px 18px; border-radius: 10px; border: none;
+    background: #4ade80; color: #052e16; font-weight: 800; cursor: pointer; font-size: 0.9rem;
+  }
+  .submit-btn:hover { background: #22c55e; }
+
+  /* feedback */
+  .feedback {
+    display: none; padding: 14px 18px; border-radius: 10px;
+    font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px;
+  }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #052e16; border: 1px solid #4ade80; color: #86efac; }
+  .feedback.ng { background: #450a0a; border: 1px solid #f87171; color: #fca5a5; }
+  .feedback-cmd { font-family: 'Courier New', monospace; font-weight: 800; font-size: 1rem; }
+  .next-btn {
+    padding: 10px 24px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg,#4ade80,#22d3ee); color: #0f172a;
+    font-weight: 800; cursor: pointer; font-size: 0.9rem; display: none;
+  }
+  .next-btn.show { display: inline-block; }
+
+  /* stage clear */
+  .stage-clear {
+    display: none; text-align: center; background: #1e293b;
+    border: 2px solid #4ade80; border-radius: 16px; padding: 36px; margin-bottom: 20px;
+  }
+  .stage-clear.show { display: block; }
+  .clear-emoji { font-size: 3.5rem; margin-bottom: 10px; }
+  .clear-title { font-size: 1.5rem; font-weight: 800; color: #4ade80; margin-bottom: 8px; }
+  .clear-sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+  .clear-stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .clear-stat { background: #0f172a; border-radius: 10px; padding: 10px 18px; text-align: center; }
+  .clear-stat .val { font-size: 1.4rem; font-weight: 800; color: #4ade80; }
+  .clear-stat .lbl { font-size: 0.72rem; color: #64748b; }
+
+  /* score */
+  .score-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .score-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px 18px; text-align: center; }
+  .score-val { font-size: 1.5rem; font-weight: 800; color: #4ade80; }
+  .score-lbl { font-size: 0.72rem; color: #64748b; }
+
+  /* command ref panel */
+  .ref-panel { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; margin-top: 24px; }
+  .ref-title { font-size: 0.9rem; font-weight: 700; color: #4ade80; margin-bottom: 14px; }
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+  .ref-item { background: #0f172a; border-radius: 8px; padding: 8px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .ref-cmd { font-family: 'Courier New', monospace; color: #4ade80; font-weight: 700; font-size: 0.95rem; min-width: 60px; }
+  .ref-desc { color: #94a3b8; font-size: 0.78rem; line-height: 1.4; }
+
+  .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+  .btn-green { background: linear-gradient(135deg,#4ade80,#22d3ee); color: #0f172a; }
+  .btn-gray { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .btn-gray:hover { border-color: #4ade80; color: #4ade80; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">🟩 Vimコマンド学習ゲーム</div>
+    <div class="hero-sub">ステージ制でVimの実用コマンドをクイズ形式で習得しよう</div>
+  </div>
+
+  <!-- score row -->
+  <div class="score-row">
+    <div class="score-box"><div class="score-val" id="total-score">0</div><div class="score-lbl">スコア</div></div>
+    <div class="score-box"><div class="score-val" id="total-correct">0</div><div class="score-lbl">正解数</div></div>
+    <div class="score-box"><div class="score-val" id="cleared-stages">0</div><div class="score-lbl">クリアステージ</div></div>
+    <div class="score-box"><div class="score-val" id="streak-count">0</div><div class="score-lbl">連続正解</div></div>
+  </div>
+
+  <!-- stage bar -->
+  <div class="stage-bar" id="stage-bar"></div>
+
+  <!-- progress -->
+  <div class="progress-row">
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">0 / 0</div>
+  </div>
+
+  <!-- quiz card -->
+  <div class="quiz-card" id="quiz-card">
+    <div class="q-stage-label" id="q-stage-label">STAGE 1</div>
+    <div class="q-number" id="q-number">問題 1 / 5</div>
+    <div class="q-question" id="q-question"></div>
+    <div class="q-context" id="q-context" style="display:none"></div>
+    <div class="q-type-label" id="q-type-label"></div>
+    <div class="choices" id="choices"></div>
+    <div class="type-wrap" id="type-wrap" style="display:none">
+      <input type="text" class="type-input" id="type-input"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        placeholder="コマンドを入力..." />
+      <button class="submit-btn" onclick="submitType()">確認</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題 →</button>
+  </div>
+
+  <!-- stage clear overlay -->
+  <div class="stage-clear" id="stage-clear">
+    <div class="clear-emoji" id="clear-emoji">🎉</div>
+    <div class="clear-title" id="clear-title">ステージクリア！</div>
+    <div class="clear-sub" id="clear-sub"></div>
+    <div class="clear-stats">
+      <div class="clear-stat"><div class="val" id="cs-correct">--</div><div class="lbl">正解</div></div>
+      <div class="clear-stat"><div class="val" id="cs-score">--</div><div class="lbl">獲得スコア</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" id="next-stage-btn" onclick="goNextStage()">次のステージへ →</button>
+      <button class="btn btn-gray" onclick="retryStage()">もう一度</button>
+    </div>
+  </div>
+
+  <!-- command reference -->
+  <div class="ref-panel">
+    <div class="ref-title">📖 Vimコマンドリファレンス</div>
+    <div class="ref-grid" id="ref-grid"></div>
+  </div>
+</div>
+
+<script is:inline>
+// ======= STAGES DATA =======
+const STAGES = [
+  {
+    id: 1,
+    name: '入門：保存と終了',
+    emoji: '💾',
+    questions: [
+      {
+        q: '変更を保存してVimを終了するコマンドは？',
+        type: 'choice',
+        choices: [':wq', ':q!', ':x!', ':save'],
+        answer: ':wq',
+        explanation: ':w で書き込み（write）、:q で終了（quit）。:wq で両方同時に実行。:x も同様の動作。',
+      },
+      {
+        q: '変更を破棄してVimを強制終了するコマンドは？',
+        type: 'choice',
+        choices: [':q!', ':wq!', ':qa', ':exit'],
+        answer: ':q!',
+        explanation: ':q! の ! は強制オプション。未保存の変更を無視して終了する。',
+      },
+      {
+        q: 'ファイルを保存する（終了せず）コマンドは？',
+        type: 'type',
+        answer: ':w',
+        explanation: ':w (write) でファイルに書き込む。終了はしない。',
+      },
+      {
+        q: '複数ウィンドウをすべて保存して終了するコマンドは？',
+        type: 'choice',
+        choices: [':wqa', ':qall', ':wall', ':wq!'],
+        answer: ':wqa',
+        explanation: ':wqa = write + quit + all。開いているすべてのバッファを保存して終了。',
+      },
+      {
+        q: 'インサートモードから通常モードに戻るキーは？',
+        type: 'choice',
+        choices: ['Esc', 'Ctrl+C', 'Ctrl+[', ':normal'],
+        answer: 'Esc',
+        explanation: 'Esc が標準。Ctrl+[ も同じ動作。慣れると Ctrl+[ の方が押しやすいという人も多い。',
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: '移動：カーソル操作',
+    emoji: '🧭',
+    questions: [
+      {
+        q: 'ファイルの先頭に移動するコマンドは？',
+        type: 'choice',
+        choices: ['gg', 'G', '1G', '0'],
+        answer: 'gg',
+        explanation: 'gg でファイル先頭へ。G でファイル末尾へ。数字+G で指定行へ（例: 42G）。',
+      },
+      {
+        q: '行末に移動するコマンドは？',
+        type: 'choice',
+        choices: ['$', '^', '0', 'G'],
+        answer: '$',
+        explanation: '$ で行末。^ で行頭の最初の非空白文字。0 で行の先頭文字（空白含む）。',
+      },
+      {
+        q: '次の単語の先頭に移動するコマンドは？',
+        type: 'type',
+        answer: 'w',
+        explanation: 'w (word) で次の単語先頭へ。b で前の単語先頭へ。e で単語末尾へ。',
+      },
+      {
+        q: '画面の中央行に移動するコマンドは？',
+        type: 'choice',
+        choices: ['M', 'H', 'L', 'zz'],
+        answer: 'M',
+        explanation: 'M (Middle)。H は画面最上行、L は画面最下行。zz は現在行を画面中央にスクロール。',
+      },
+      {
+        q: 'マッチする括弧に移動するコマンドは？',
+        type: 'choice',
+        choices: ['%', '*', '#', '&'],
+        answer: '%',
+        explanation: '% で対応する括弧 () [] {} にジャンプ。コードの構造把握に超便利。',
+      },
+    ],
+  },
+  {
+    id: 3,
+    name: '編集：削除・コピー・貼り付け',
+    emoji: '✂️',
+    questions: [
+      {
+        q: '1行を削除（カット）するコマンドは？',
+        type: 'choice',
+        choices: ['dd', 'yy', 'cc', 'dw'],
+        answer: 'dd',
+        explanation: 'dd で1行削除。削除した内容はレジスタに保存されるので p で貼り付け可能。',
+      },
+      {
+        q: '1行をコピー（ヤンク）するコマンドは？',
+        type: 'type',
+        answer: 'yy',
+        explanation: 'yy (yank yank) で1行コピー。y+移動コマンドで範囲指定可能（例: y$ で行末まで）。',
+      },
+      {
+        q: 'カーソルの下に貼り付けるコマンドは？',
+        type: 'choice',
+        choices: ['p', 'P', 'o', 'a'],
+        answer: 'p',
+        explanation: 'p (paste) でカーソルの後ろ/下に貼り付け。P で前/上に貼り付け。',
+      },
+      {
+        q: '行を削除して上の行に連結するコマンドは？',
+        type: 'choice',
+        choices: ['J', 'K', 'gJ', 'dj'],
+        answer: 'J',
+        explanation: 'J (Join) で次の行を現在行に連結。スペースが自動挿入される。gJ はスペースなしで連結。',
+      },
+      {
+        q: 'カーソル下の文字を削除するコマンドは？',
+        type: 'choice',
+        choices: ['x', 'X', 'd', 's'],
+        answer: 'x',
+        explanation: 'x でカーソル下の1文字を削除。X で左の文字を削除。delete キーと同じ動作。',
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: '編集：変更・置換コマンド',
+    emoji: '🔄',
+    questions: [
+      {
+        q: '1行を変更モードで編集するコマンドは？',
+        type: 'choice',
+        choices: ['cc', 'dd', 'yy', 'S'],
+        answer: 'cc',
+        explanation: 'cc で行の内容を削除してインサートモードへ。S も同じ動作。c+移動で範囲指定変更。',
+      },
+      {
+        q: 'カーソル位置の単語を変更する（ciw）は何の略？',
+        context: 'ciw でカーソル下の単語を削除してインサートモードへ',
+        type: 'choice',
+        choices: ['Change Inner Word', 'Cut In Window', 'Copy Insert Word', 'Clear In Write'],
+        answer: 'Change Inner Word',
+        explanation: 'c = change（変更）、i = inner（内側）、w = word（単語）。テキストオブジェクトは強力な機能。',
+      },
+      {
+        q: 'ファイル全体で foo を bar に置換するコマンドは？',
+        type: 'choice',
+        choices: [':%s/foo/bar/g', ':s/foo/bar/', ':%r/foo/bar/', ':replace foo bar'],
+        answer: ':%s/foo/bar/g',
+        explanation: ':% = 全行、s = substitute、/g = 各行の全マッチ。確認しながらなら /gc を使う。',
+      },
+      {
+        q: 'カーソル下の文字を r で1文字置換。r の次に入力するものは？',
+        type: 'choice',
+        choices: ['置換後の文字', 'Enter', ':', 'i'],
+        answer: '置換後の文字',
+        explanation: 'r+文字 で1文字置換。インサートモードに入らず即座に置換。R で上書きモード開始。',
+      },
+      {
+        q: 'ddP の組み合わせの効果は？',
+        context: 'dd: 行を削除  P: カーソルの上に貼り付け',
+        type: 'choice',
+        choices: ['現在行を1行上に移動', '現在行を1行下に移動', '行を複製', '2行を削除'],
+        answer: '現在行を1行上に移動',
+        explanation: 'dd で行削除（レジスタへ）→ P で1つ上に貼り付け。結果として行が1つ上に移動。',
+      },
+    ],
+  },
+  {
+    id: 5,
+    name: 'アドバンスド：検索・マクロ・分割',
+    emoji: '⚡',
+    questions: [
+      {
+        q: 'ファイル内を前方向に検索するコマンドは？',
+        type: 'type',
+        answer: '/',
+        explanation: '/ + 検索語 + Enter で前方検索。? で後方検索。n で次の一致、N で前の一致へ。',
+      },
+      {
+        q: 'マクロを記録開始するコマンドは（レジスタ a に記録）？',
+        type: 'choice',
+        choices: ['qa', 'ma', 'ra', '@a'],
+        answer: 'qa',
+        explanation: 'q+レジスタ名 で記録開始、q で停止。@a で実行。@@ で最後のマクロを再実行。',
+      },
+      {
+        q: '画面を水平分割するコマンドは？',
+        type: 'choice',
+        choices: [':sp', ':vsp', ':split v', 'Ctrl+w s'],
+        answer: ':sp',
+        explanation: ':sp (split) で水平分割。:vsp で垂直分割。Ctrl+w で分割ウィンドウ間を移動。',
+      },
+      {
+        q: 'アンドゥ（取り消し）のコマンドは？',
+        type: 'choice',
+        choices: ['u', 'U', 'Ctrl+z', ':undo'],
+        answer: 'u',
+        explanation: 'u でアンドゥ。Ctrl+r でリドゥ。U で行全体の変更をアンドゥ（少し異なる動作）。',
+      },
+      {
+        q: 'ビジュアルモードで選択→y でコピー後、別の行に移動して p。何が起こる？',
+        context: 'ビジュアル選択: Hello World\n→ yでコピー → 別行にカーソル → p',
+        type: 'choice',
+        choices: ['選択テキストが貼り付けられる', '選択テキストが削除される', 'エラーになる', '何も起こらない'],
+        answer: '選択テキストが貼り付けられる',
+        explanation: 'y でヤンク（コピー）した内容は " レジスタに保存。p でカーソルの後ろに貼り付けられる。',
+      },
+    ],
+  },
+  {
+    id: 6,
+    name: 'エキスパート：テキストオブジェクト',
+    emoji: '🧙',
+    questions: [
+      {
+        q: '"Hello World" の引用符内を変更するコマンドは？',
+        context: 'カーソルが引用符内にある状態:\n  message = "Hello World"',
+        type: 'choice',
+        choices: ['ci"', 'ca"', 'di"', 'yi"'],
+        answer: 'ci"',
+        explanation: 'ci" = change inner " → 引用符の中身を削除してインサートモードへ。ca" なら引用符も含めて変更。',
+      },
+      {
+        q: '関数の引数を含む丸括弧内を削除するコマンドは？',
+        context: 'fn(arg1, arg2, arg3)\n   ↑カーソルはここ',
+        type: 'choice',
+        choices: ['di(', 'da(', 'ci(', 'yi('],
+        answer: 'di(',
+        explanation: 'di( = delete inner ( → 括弧内の内容を削除（括弧は残る）。da( なら括弧ごと削除。',
+      },
+      {
+        q: 'カーソルを単語に置き、その単語全体をビジュアル選択するコマンドは？',
+        type: 'choice',
+        choices: ['viw', 'vaw', 'vis', 'vip'],
+        answer: 'viw',
+        explanation: 'viw = visual inner word。vaw だと前後のスペースも含む。vis で文、vip で段落を選択。',
+      },
+      {
+        q: '{ } ブロック全体（括弧含む）をヤンクするコマンドは？',
+        context: 'function hello() {\n  console.log("hi");\n}\n↑カーソルはブロック内',
+        type: 'choice',
+        choices: ['ya{', 'yi{', 'ya(', 'y%'],
+        answer: 'ya{',
+        explanation: 'ya{ = yank around { → {} とその中身を全部コピー。yi{ なら中身だけコピー。',
+      },
+      {
+        q: '. コマンドの役割は？',
+        type: 'choice',
+        choices: ['直前の変更を繰り返す', '現在行を実行', 'マクロを実行', 'ファイルを保存'],
+        answer: '直前の変更を繰り返す',
+        explanation: '. (ドット) は Vim 最強コマンドの一つ。直前の変更操作を繰り返す。複数ファイルの一括編集などに使える。',
+      },
+    ],
+  },
+];
+
+const CMD_REF = [
+  { cmd: ':wq', desc: '保存して終了' },
+  { cmd: ':q!', desc: '変更破棄して終了' },
+  { cmd: 'gg / G', desc: 'ファイル先頭/末尾' },
+  { cmd: 'w / b / e', desc: '単語移動' },
+  { cmd: '$ / ^', desc: '行末/行頭' },
+  { cmd: 'dd / yy', desc: '行削除/コピー' },
+  { cmd: 'p / P', desc: '下/上に貼り付け' },
+  { cmd: 'u / Ctrl+r', desc: 'アンドゥ/リドゥ' },
+  { cmd: 'ciw', desc: '単語を変更' },
+  { cmd: 'ci"', desc: '"内を変更' },
+  { cmd: 'di(', desc: '()内を削除' },
+  { cmd: 'va{', desc: '{}をビジュアル選択' },
+  { cmd: ':%s/a/b/g', desc: '全体置換' },
+  { cmd: '/', desc: '前方検索' },
+  { cmd: 'qa / @a', desc: 'マクロ記録/実行' },
+  { cmd: '.', desc: '直前の変更を繰り返す' },
+];
+
+// ======= STATE =======
+let stageIdx = 0;
+let qIdx = 0;
+let stageCorrect = 0;
+let stageScore = 0;
+let totalScore = 0;
+let totalCorrect = 0;
+let streak = 0;
+let answeredThisQ = false;
+let progress = JSON.parse(localStorage.getItem('vim_game_v1') || '{"cleared":[],"score":0,"correct":0}');
+
+// ======= INIT =======
+function buildRefGrid() {
+  document.getElementById('ref-grid').innerHTML = CMD_REF.map(r =>
+    `<div class="ref-item"><div class="ref-cmd">${escHtml(r.cmd)}</div><div class="ref-desc">${r.desc}</div></div>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildStageBar() {
+  const bar = document.getElementById('stage-bar');
+  bar.innerHTML = STAGES.map((s, i) => {
+    const cleared = progress.cleared.includes(s.id);
+    const current = i === stageIdx;
+    const locked = i > 0 && !progress.cleared.includes(STAGES[i-1].id) && !current;
+    let cls = 'stage-btn';
+    if (cleared) cls += ' cleared';
+    else if (current) cls += ' current';
+    else if (!locked) cls += ' unlocked';
+    else cls += ' locked';
+    return `<button class="${cls}" onclick="goStage(${i})" ${locked?'disabled':''}>${s.emoji} Stage ${s.id}</button>`;
+  }).join('');
+}
+
+function goStage(i) {
+  // check lock
+  if (i > 0 && !progress.cleared.includes(STAGES[i-1].id)) return;
+  stageIdx = i;
+  qIdx = 0;
+  stageCorrect = 0;
+  stageScore = 0;
+  answeredThisQ = false;
+  document.getElementById('stage-clear').classList.remove('show');
+  buildStageBar();
+  renderQuestion();
+}
+
+function goNextStage() {
+  if (stageIdx < STAGES.length - 1) goStage(stageIdx + 1);
+}
+
+function retryStage() {
+  goStage(stageIdx);
+}
+
+function renderQuestion() {
+  const stage = STAGES[stageIdx];
+  const q = stage.questions[qIdx];
+  answeredThisQ = false;
+
+  document.getElementById('q-stage-label').textContent = `STAGE ${stage.id}：${stage.name}`;
+  document.getElementById('q-number').textContent = `問題 ${qIdx + 1} / ${stage.questions.length}`;
+  document.getElementById('q-question').textContent = q.q;
+
+  const ctxEl = document.getElementById('q-context');
+  if (q.context) {
+    ctxEl.textContent = q.context;
+    ctxEl.style.display = '';
+  } else {
+    ctxEl.style.display = 'none';
+  }
+
+  // progress bar
+  const total = stage.questions.length;
+  document.getElementById('progress-fill').style.width = (qIdx / total * 100) + '%';
+  document.getElementById('progress-label').textContent = `${qIdx} / ${total}`;
+
+  // feedback reset
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.innerHTML = '';
+  document.getElementById('next-btn').classList.remove('show');
+
+  if (q.type === 'choice') {
+    document.getElementById('q-type-label').textContent = '選択肢から選んでください';
+    document.getElementById('type-wrap').style.display = 'none';
+    const choicesEl = document.getElementById('choices');
+    choicesEl.style.display = '';
+    // shuffle choices
+    const shuffled = [...q.choices].sort(() => Math.random() - .5);
+    choicesEl.innerHTML = shuffled.map(c =>
+      `<button class="choice-btn" onclick="selectChoice(this, '${escHtml(c)}')">${escHtml(c)}</button>`
+    ).join('');
+  } else {
+    document.getElementById('q-type-label').textContent = 'コマンドを入力してください';
+    document.getElementById('choices').style.display = 'none';
+    const tw = document.getElementById('type-wrap');
+    tw.style.display = 'flex';
+    const inp = document.getElementById('type-input');
+    inp.value = '';
+    inp.className = 'type-input';
+    inp.disabled = false;
+    setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function selectChoice(btn, val) {
+  if (answeredThisQ) return;
+  answeredThisQ = true;
+  const stage = STAGES[stageIdx];
+  const q = stage.questions[qIdx];
+
+  // disable all
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+
+  if (val === q.answer) {
+    btn.classList.add('correct');
+    showFeedback(true, q);
+    addScore(true);
+  } else {
+    btn.classList.add('wrong');
+    // show correct
+    document.querySelectorAll('.choice-btn').forEach(b => {
+      if (b.textContent === q.answer) b.classList.add('correct');
+    });
+    showFeedback(false, q);
+    addScore(false);
+  }
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function submitType() {
+  if (answeredThisQ) return;
+  const inp = document.getElementById('type-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  answeredThisQ = true;
+  inp.disabled = true;
+  const stage = STAGES[stageIdx];
+  const q = stage.questions[qIdx];
+
+  if (val === q.answer) {
+    inp.className = 'type-input correct-in';
+    showFeedback(true, q);
+    addScore(true);
+  } else {
+    inp.className = 'type-input wrong-in';
+    showFeedback(false, q);
+    addScore(false);
+  }
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function showFeedback(correct, q) {
+  const fb = document.getElementById('feedback');
+  if (correct) {
+    fb.className = 'feedback ok show';
+    fb.innerHTML = `✅ 正解！ <span class="feedback-cmd">${escHtml(q.answer)}</span><br>${q.explanation}`;
+  } else {
+    fb.className = 'feedback ng show';
+    fb.innerHTML = `❌ 不正解。正解は <span class="feedback-cmd">${escHtml(q.answer)}</span><br>${q.explanation}`;
+  }
+}
+
+function addScore(correct) {
+  if (correct) {
+    stageCorrect++;
+    totalCorrect++;
+    streak++;
+    const bonus = streak >= 3 ? 20 : 0;
+    const pts = 10 + bonus;
+    stageScore += pts;
+    totalScore += pts;
+  } else {
+    streak = 0;
+  }
+  updateScoreDisplay();
+}
+
+function updateScoreDisplay() {
+  document.getElementById('total-score').textContent = totalScore;
+  document.getElementById('total-correct').textContent = totalCorrect;
+  document.getElementById('cleared-stages').textContent = progress.cleared.length;
+  document.getElementById('streak-count').textContent = streak;
+}
+
+function nextQuestion() {
+  const stage = STAGES[stageIdx];
+  qIdx++;
+  if (qIdx >= stage.questions.length) {
+    showStageClear();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showStageClear() {
+  const stage = STAGES[stageIdx];
+  const total = stage.questions.length;
+  const pct = Math.round(stageCorrect / total * 100);
+
+  let emoji = '🎉', title = 'ステージクリア！';
+  if (pct === 100) { emoji = '🏆'; title = '完璧！パーフェクト！'; }
+  else if (pct >= 80) { emoji = '⭐'; title = 'ステージクリア！'; }
+  else { emoji = '💪'; title = 'クリア！もう一度挑戦しよう！'; }
+
+  document.getElementById('clear-emoji').textContent = emoji;
+  document.getElementById('clear-title').textContent = title;
+  document.getElementById('clear-sub').textContent = `${stage.name}  正解率 ${pct}%`;
+  document.getElementById('cs-correct').textContent = `${stageCorrect} / ${total}`;
+  document.getElementById('cs-score').textContent = stageScore;
+
+  // save progress
+  if (!progress.cleared.includes(stage.id)) {
+    progress.cleared.push(stage.id);
+  }
+  localStorage.setItem('vim_game_v1', JSON.stringify(progress));
+
+  const nextBtn = document.getElementById('next-stage-btn');
+  if (stageIdx < STAGES.length - 1) {
+    nextBtn.style.display = '';
+  } else {
+    nextBtn.style.display = 'none';
+  }
+
+  document.getElementById('quiz-card').style.display = 'none';
+  document.getElementById('stage-clear').classList.add('show');
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = `${total} / ${total}`;
+  buildStageBar();
+  updateScoreDisplay();
+}
+
+// keyboard: Enter to submit type, Escape to nothing
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn.classList.contains('show')) {
+      nextQuestion();
+      return;
+    }
+    const tw = document.getElementById('type-wrap');
+    if (tw.style.display !== 'none') submitType();
+  }
+});
+
+// show quiz card when stage clear dismissed
+function goNextStage() {
+  document.getElementById('stage-clear').classList.remove('show');
+  document.getElementById('quiz-card').style.display = '';
+  if (stageIdx < STAGES.length - 1) goStage(stageIdx + 1);
+}
+function retryStage() {
+  document.getElementById('stage-clear').classList.remove('show');
+  document.getElementById('quiz-card').style.display = '';
+  goStage(stageIdx);
+}
+
+buildRefGrid();
+buildStageBar();
+updateScoreDisplay();
+renderQuestion();
+</script>
+</BaseLayout>
