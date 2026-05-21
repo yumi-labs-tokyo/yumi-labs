@@ -269,7 +269,7 @@ export const tools: Tool[] = [
 		id: 40, slug: 'stream-roulette',
 		name: '配信枠決め豪華ルーレット',
 		description: 'ゲームタイトル候補を入れて視聴者が見られる演出ルーレット。',
-		emoji: '🎡', category: 'creator', status: 'coming-soon',
+		emoji: '🎡', category: 'creator', badge: 'New', status: 'available',
 	},
 
 	// 🧠 学習・自己研鑽 (41-60)
