@@ -277,7 +277,7 @@ export const tools: Tool[] = [
 		id: 41, slug: 'book-tracker',
 		name: '専門書「1日1ページ」進捗トラッカー',
 		description: '総ページ数と開始日を入れると終了予定日と1日のノルマを可視化。',
-		emoji: '📚', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '📚', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 42, slug: 'vocab-forgetting-curve',

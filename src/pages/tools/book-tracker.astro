@@ -1,0 +1,544 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="専門書「1日1ページ」進捗トラッカー | yumi Labs">
+  <style>
+    .prog-bar-fill {
+      transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes streak-pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.12); }
+    }
+    .streak-fire { animation: streak-pulse 1.2s ease-in-out infinite; }
+    .day-cell {
+      width: 14px; height: 14px; border-radius: 3px;
+      flex-shrink: 0; cursor: default;
+      transition: transform 0.1s;
+    }
+    .day-cell:hover { transform: scale(1.4); }
+    .heatmap-row { display: flex; gap: 3px; }
+    input[type=range] { accent-color: #9333ea; }
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1rem; padding: 1rem;
+      text-align: center;
+    }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">📚</div>
+      <div class="text-3xl font-bold text-white mb-2">専門書「1日1ページ」進捗トラッカー</div>
+      <div class="text-gray-400 text-sm">総ページ数と開始日を入れると終了予定日・1日ノルマを可視化。挫折防止グラフで継続をサポート</div>
+    </div>
+
+    <!-- Setup -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-5" id="setupCard">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-4">本の情報を入力</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <div class="text-xs text-gray-400 mb-1">本のタイトル</div>
+          <input id="inTitle" type="text" placeholder="例：プログラミングRust 第2版" maxlength="60"
+            class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-1">総ページ数 <span class="text-red-400">*</span></div>
+          <input id="inPages" type="number" min="10" max="5000" placeholder="例：512"
+            class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-1">開始ページ（既読）</div>
+          <input id="inStartPage" type="number" min="0" value="0"
+            class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-1">開始日</div>
+          <input id="inStartDate" type="date"
+            class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-1">1日のノルマ（ページ）</div>
+          <div class="flex items-center gap-2">
+            <input id="inDailyGoal" type="range" min="1" max="50" value="5" oninput="updateGoalLabel(this.value)" class="flex-1" />
+            <span id="goalLabel" class="text-white font-bold text-sm w-16 text-right">5 p/日</span>
+          </div>
+        </div>
+      </div>
+      <button onclick="setupTracker()"
+        class="mt-4 w-full py-3 rounded-xl font-bold text-white text-sm transition-all"
+        style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+        トラッカーを作成
+      </button>
+    </div>
+
+    <!-- Dashboard (hidden until setup) -->
+    <div id="dashboard" class="hidden space-y-5">
+
+      <!-- Book info bar -->
+      <div class="bg-white/5 rounded-2xl p-4 flex items-center justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="text-white font-bold text-base truncate" id="dashTitle">本のタイトル</div>
+          <div class="text-xs text-gray-400 mt-0.5" id="dashSub"></div>
+        </div>
+        <button onclick="resetTracker()" class="text-xs text-gray-500 hover:text-gray-300 flex-shrink-0 border border-white/10 rounded-lg px-2 py-1 hover:border-white/20 transition-all">リセット</button>
+      </div>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="stat-card">
+          <div class="text-2xl font-black text-white" id="statPct">0%</div>
+          <div class="text-xs text-gray-400 mt-0.5">達成率</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl font-black text-purple-300" id="statRemain">--</div>
+          <div class="text-xs text-gray-400 mt-0.5">残りページ</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl font-black text-green-300" id="statFinish">--</div>
+          <div class="text-xs text-gray-400 mt-0.5">完了予定</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl font-black" id="statStreak">🔥 0</div>
+          <div class="text-xs text-gray-400 mt-0.5">連続日数</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="bg-white/5 rounded-2xl p-5">
+        <div class="flex justify-between text-xs text-gray-400 mb-2">
+          <span>進捗</span>
+          <span id="barLabel">0 / 0 ページ</span>
+        </div>
+        <div class="h-5 bg-white/10 rounded-full overflow-hidden">
+          <div id="progressBar" class="prog-bar-fill h-full rounded-full flex items-center justify-end pr-2"
+            style="width:0%;background:linear-gradient(90deg,#9333ea,#ec4899);">
+            <span id="progressPct" class="text-white text-xs font-bold" style="font-size:10px;"></span>
+          </div>
+        </div>
+        <!-- Pace indicator -->
+        <div id="paceMsg" class="mt-2 text-xs text-center"></div>
+      </div>
+
+      <!-- Today's log -->
+      <div class="bg-white/5 rounded-2xl p-5">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">今日の記録</div>
+        <div class="flex gap-3 items-end">
+          <div class="flex-1">
+            <div class="text-xs text-gray-400 mb-1">今日読んだページ数</div>
+            <input id="todayPages" type="number" min="0" max="500" placeholder="0"
+              class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+          <div class="flex-1">
+            <div class="text-xs text-gray-400 mb-1">現在ページ（直接入力も可）</div>
+            <input id="currentPage" type="number" min="0"
+              class="w-full bg-white/10 rounded-xl px-3 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+          <button onclick="logToday()"
+            class="px-5 py-2.5 rounded-xl font-bold text-white text-sm flex-shrink-0 transition-all"
+            style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+            記録
+          </button>
+        </div>
+        <div id="logMsg" class="mt-2 text-xs text-center hidden"></div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="bg-white/5 rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">読書ヒートマップ（直近12週）</div>
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span>少</span>
+            <span class="w-3 h-3 rounded-sm inline-block" style="background:rgba(147,51,234,0.15)"></span>
+            <span class="w-3 h-3 rounded-sm inline-block" style="background:rgba(147,51,234,0.4)"></span>
+            <span class="w-3 h-3 rounded-sm inline-block" style="background:rgba(147,51,234,0.7)"></span>
+            <span class="w-3 h-3 rounded-sm inline-block" style="background:#9333ea"></span>
+            <span>多</span>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <div id="heatmap" class="flex gap-1.5"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-600 mt-1 px-1" id="heatmapLabels"></div>
+      </div>
+
+      <!-- Pace chart (simple bar chart) -->
+      <div class="bg-white/5 rounded-2xl p-5">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">ペースチャート（直近14日）</div>
+        <div id="paceChart" class="flex items-end gap-1 h-28"></div>
+        <div class="flex justify-between text-xs text-gray-600 mt-1" id="paceLabels"></div>
+      </div>
+
+      <!-- Motivational message -->
+      <div id="motivationBox" class="bg-white/5 rounded-2xl p-4 text-center">
+        <div id="motivationText" class="text-sm text-gray-300 leading-relaxed"></div>
+      </div>
+
+      <!-- Danger zone: deadline override -->
+      <div class="bg-white/5 rounded-2xl p-5">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">締め切り目標（任意）</div>
+        <div class="flex gap-3 items-end">
+          <div class="flex-1">
+            <div class="text-xs text-gray-400 mb-1">完読目標日</div>
+            <input id="inDeadline" type="date"
+              oninput="updateDeadlineInfo()"
+              class="w-full bg-white/10 rounded-xl px-3 py-2 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+          <div id="deadlineInfo" class="text-xs text-gray-400 flex-1 leading-relaxed"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const STORAGE_KEY = 'book_tracker_v1';
+
+  let state = null;
+
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function load() {
+    try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { state = null; }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function updateGoalLabel(v) {
+    document.getElementById('goalLabel').textContent = v + ' p/日';
+  }
+
+  // ---- Setup ----
+  function setupTracker() {
+    const pages = parseInt(document.getElementById('inPages').value);
+    if (!pages || pages < 10) { alert('総ページ数を入力してください（10以上）'); return; }
+    const startPage = parseInt(document.getElementById('inStartPage').value) || 0;
+    const startDate = document.getElementById('inStartDate').value || todayStr();
+    const dailyGoal = parseInt(document.getElementById('inDailyGoal').value) || 5;
+    const title = document.getElementById('inTitle').value.trim() || '読書記録';
+
+    state = {
+      title, totalPages: pages, startPage, currentPage: startPage,
+      startDate, dailyGoal,
+      log: {}, // { "2024-01-01": pagesRead }
+      createdAt: Date.now(),
+    };
+    save();
+    showDashboard();
+  }
+
+  function resetTracker() {
+    if (!confirm('トラッカーをリセットしますか？記録が全て消えます。')) return;
+    state = null;
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('setupCard').classList.remove('hidden');
+  }
+
+  // ---- Dashboard ----
+  function showDashboard() {
+    document.getElementById('setupCard').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    renderDashboard();
+  }
+
+  function renderDashboard() {
+    if (!state) return;
+    const { title, totalPages, startPage, currentPage, startDate, dailyGoal, log } = state;
+    const remaining = totalPages - currentPage;
+    const done = currentPage - startPage;
+    const pct = Math.min(100, Math.round((currentPage - startPage) / Math.max(1, totalPages - startPage) * 100));
+
+    // Header
+    document.getElementById('dashTitle').textContent = title;
+    document.getElementById('dashSub').textContent = `${totalPages}ページ・1日${dailyGoal}ページ・${startDate}開始`;
+
+    // Finish date estimate
+    const daysNeeded = Math.ceil(remaining / dailyGoal);
+    const finishDate = new Date();
+    finishDate.setDate(finishDate.getDate() + daysNeeded);
+    const finishStr = `${finishDate.getMonth()+1}/${finishDate.getDate()}`;
+
+    // Streak
+    const streak = calcStreak(log);
+
+    // Stats
+    document.getElementById('statPct').textContent = pct + '%';
+    document.getElementById('statRemain').textContent = remaining + 'p';
+    document.getElementById('statFinish').textContent = remaining <= 0 ? '完読！' : finishStr;
+    const streakEl = document.getElementById('statStreak');
+    streakEl.textContent = `🔥 ${streak}`;
+    if (streak >= 3) streakEl.classList.add('streak-fire');
+    else streakEl.classList.remove('streak-fire');
+
+    // Progress bar
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct > 8 ? pct + '%' : '';
+    document.getElementById('barLabel').textContent = `${currentPage - startPage} / ${totalPages - startPage} ページ`;
+
+    // Pace message
+    const elapsed = daysBetween(startDate, todayStr());
+    const expectedPage = startPage + Math.min(elapsed * dailyGoal, totalPages - startPage);
+    const diff = currentPage - expectedPage;
+    const paceEl = document.getElementById('paceMsg');
+    if (diff >= dailyGoal) {
+      paceEl.textContent = `🚀 ${Math.floor(diff / dailyGoal)}日分 先行しています！`;
+      paceEl.className = 'mt-2 text-xs text-center text-green-400';
+    } else if (diff >= 0) {
+      paceEl.textContent = `✅ 予定通りのペースです`;
+      paceEl.className = 'mt-2 text-xs text-center text-green-300';
+    } else {
+      const behind = Math.abs(Math.floor(diff / dailyGoal));
+      paceEl.textContent = `⚠ ${behind}日分 遅れています。今日は ${dailyGoal + Math.abs(diff)}ページ 読みましょう！`;
+      paceEl.className = 'mt-2 text-xs text-center text-orange-400';
+    }
+
+    // Current page input prefill
+    document.getElementById('currentPage').value = currentPage;
+
+    // Heatmap
+    renderHeatmap(log, dailyGoal);
+
+    // Pace chart
+    renderPaceChart(log, dailyGoal);
+
+    // Motivation
+    renderMotivation(pct, streak, remaining, daysNeeded);
+  }
+
+  function calcStreak(log) {
+    let streak = 0;
+    const d = new Date();
+    while (true) {
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (log[key] && log[key] > 0) { streak++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return streak;
+  }
+
+  function daysBetween(a, b) {
+    const da = new Date(a), db = new Date(b);
+    return Math.max(0, Math.round((db - da) / 86400000));
+  }
+
+  // ---- Log today ----
+  function logToday() {
+    const todayPagesInput = parseInt(document.getElementById('todayPages').value);
+    const currentPageInput = parseInt(document.getElementById('currentPage').value);
+    const msgEl = document.getElementById('logMsg');
+
+    let newPage = state.currentPage;
+
+    if (!isNaN(currentPageInput) && currentPageInput > state.currentPage) {
+      newPage = Math.min(currentPageInput, state.totalPages);
+    } else if (!isNaN(todayPagesInput) && todayPagesInput > 0) {
+      newPage = Math.min(state.currentPage + todayPagesInput, state.totalPages);
+    } else {
+      msgEl.textContent = '⚠ 読んだページ数か現在ページを入力してください';
+      msgEl.className = 'mt-2 text-xs text-center text-orange-400';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+
+    const pagesRead = newPage - state.currentPage;
+    state.currentPage = newPage;
+    const today = todayStr();
+    state.log[today] = (state.log[today] || 0) + pagesRead;
+    save();
+
+    document.getElementById('todayPages').value = '';
+    document.getElementById('currentPage').value = '';
+
+    const msgs = [
+      `📖 +${pagesRead}ページ 記録しました！`,
+      `🎉 今日も読んだ！+${pagesRead}ページ`,
+      `✨ すばらしい！+${pagesRead}ページ積み上げ`,
+    ];
+    msgEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    msgEl.className = 'mt-2 text-xs text-center text-green-400';
+    msgEl.classList.remove('hidden');
+    setTimeout(() => msgEl.classList.add('hidden'), 3000);
+
+    renderDashboard();
+  }
+
+  // ---- Heatmap ----
+  function renderHeatmap(log, dailyGoal) {
+    const container = document.getElementById('heatmap');
+    const labelsEl = document.getElementById('heatmapLabels');
+    container.innerHTML = '';
+
+    const WEEKS = 12;
+    const today = new Date();
+    // Start from 12 weeks ago, align to Sunday
+    const start = new Date(today);
+    start.setDate(start.getDate() - WEEKS * 7 + 1);
+
+    const weeks = [];
+    let current = new Date(start);
+
+    for (let w = 0; w < WEEKS; w++) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const key = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`;
+        const pages = log[key] || 0;
+        const isFuture = current > today;
+        week.push({ key, pages, isFuture, date: new Date(current) });
+        current.setDate(current.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+
+    weeks.forEach(week => {
+      const col = document.createElement('div');
+      col.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+      week.forEach(day => {
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        if (day.isFuture) {
+          cell.style.background = 'rgba(255,255,255,0.04)';
+        } else if (day.pages === 0) {
+          cell.style.background = 'rgba(255,255,255,0.08)';
+        } else {
+          const intensity = Math.min(day.pages / (dailyGoal * 2), 1);
+          const alpha = 0.2 + intensity * 0.8;
+          cell.style.background = `rgba(147,51,234,${alpha})`;
+        }
+        cell.title = `${day.key}: ${day.pages}ページ`;
+        col.appendChild(cell);
+      });
+      container.appendChild(col);
+    });
+
+    // Month labels
+    const firstOfMonths = [];
+    let lastMonth = -1;
+    for (let i = 0; i < weeks.length; i++) {
+      const m = weeks[i][0].date.getMonth();
+      if (m !== lastMonth) { firstOfMonths.push({ w: i, label: (weeks[i][0].date.getMonth()+1) + '月' }); lastMonth = m; }
+    }
+    labelsEl.innerHTML = weeks.map((w, i) => {
+      const found = firstOfMonths.find(f => f.w === i);
+      return `<span style="min-width:17px;">${found ? found.label : ''}</span>`;
+    }).join('');
+  }
+
+  // ---- Pace chart ----
+  function renderPaceChart(log, dailyGoal) {
+    const container = document.getElementById('paceChart');
+    const labelsEl = document.getElementById('paceLabels');
+    container.innerHTML = '';
+    labelsEl.innerHTML = '';
+
+    const DAYS = 14;
+    const today = new Date();
+    const data = [];
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      data.push({ key, pages: log[key] || 0, label: (d.getMonth()+1) + '/' + d.getDate(), isFuture: d > today });
+    }
+
+    const maxPages = Math.max(dailyGoal * 2, ...data.map(d => d.pages), 1);
+
+    data.forEach((d, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'flex-1 rounded-t-md transition-all relative group';
+      const pct = (d.pages / maxPages) * 100;
+      const goalPct = (dailyGoal / maxPages) * 100;
+      bar.style.cssText = `height:${Math.max(pct, 2)}%;min-height:2px;position:relative;`;
+
+      // Goal line marker (shown as a dotted overlay)
+      if (d.pages >= dailyGoal && d.pages > 0) {
+        bar.style.background = 'linear-gradient(180deg,#4ade80,#22c55e)';
+      } else if (d.pages > 0) {
+        bar.style.background = 'linear-gradient(180deg,#9333ea,#7c3aed)';
+      } else {
+        bar.style.background = 'rgba(255,255,255,0.08)';
+        bar.style.height = '4px';
+      }
+
+      bar.title = `${d.label}: ${d.pages}ページ（ノルマ${dailyGoal}p）`;
+
+      // Tooltip
+      const tip = document.createElement('div');
+      tip.className = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:flex bg-black/80 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10';
+      tip.textContent = `${d.pages}p`;
+      bar.appendChild(tip);
+
+      container.appendChild(bar);
+    });
+
+    // Goal line (horizontal dashed) — drawn as a positioned element
+    const chartH = 112; // h-28
+    const goalY = 100 - (dailyGoal / maxPages) * 100;
+    container.style.position = 'relative';
+    const goalLine = document.createElement('div');
+    goalLine.style.cssText = `position:absolute;left:0;right:0;border-top:1.5px dashed rgba(251,191,36,0.5);top:${goalY}%;pointer-events:none;`;
+    goalLine.title = `1日ノルマ: ${dailyGoal}p`;
+    container.appendChild(goalLine);
+
+    // Labels (show every 2 days)
+    labelsEl.innerHTML = data.map((d, i) =>
+      `<span class="flex-1 text-center" style="min-width:0;overflow:hidden;font-size:10px;">${i % 2 === 0 ? d.label.split('/')[1] : ''}</span>`
+    ).join('');
+  }
+
+  // ---- Motivation ----
+  function renderMotivation(pct, streak, remaining, daysNeeded) {
+    const msgs = [];
+    if (pct === 0) msgs.push('📖 今日が最初の一歩。1ページだけでも読もう！');
+    if (pct > 0 && pct < 25) msgs.push(`📘 ${pct}%完了！序盤を突破しています。まずは25%を目指して。`);
+    if (pct >= 25 && pct < 50) msgs.push(`📗 ${pct}%！折り返しが見えてきた。ここが踏ん張りどころ。`);
+    if (pct >= 50 && pct < 75) msgs.push(`🔥 半分以上読んだ！あと${remaining}ページ。終わりが見えてきた！`);
+    if (pct >= 75 && pct < 100) msgs.push(`🚀 残り${remaining}ページ！ゴールまであと少し。スパートをかけよう！`);
+    if (pct >= 100) msgs.push('🎉 完読おめでとうございます！すばらしい達成です！');
+    if (streak >= 7) msgs.push(`🔥 ${streak}日連続！週1冊ペースの猛者です。`);
+    if (streak >= 3 && streak < 7) msgs.push(`✨ ${streak}日連続中！習慣になってきた証拠。`);
+    if (daysNeeded > 60) msgs.push(`💪 ${daysNeeded}日後に完読予定。焦らず毎日コツコツ。`);
+    document.getElementById('motivationText').textContent = msgs[0] || `📚 今日も1ページ読もう！`;
+  }
+
+  // ---- Deadline info ----
+  function updateDeadlineInfo() {
+    if (!state) return;
+    const deadline = document.getElementById('inDeadline').value;
+    if (!deadline) { document.getElementById('deadlineInfo').textContent = ''; return; }
+    const daysLeft = daysBetween(todayStr(), deadline);
+    const remaining = state.totalPages - state.currentPage;
+    if (daysLeft <= 0) { document.getElementById('deadlineInfo').textContent = '⚠ 期限が過ぎています'; return; }
+    const neededPerDay = Math.ceil(remaining / daysLeft);
+    const info = document.getElementById('deadlineInfo');
+    if (neededPerDay <= state.dailyGoal) {
+      info.innerHTML = `<span class="text-green-400">✅ 1日${neededPerDay}ページで間に合います！（現ノルマ${state.dailyGoal}p以内）</span>`;
+    } else {
+      info.innerHTML = `<span class="text-orange-400">⚠ 1日${neededPerDay}ページ必要です（現ノルマの${Math.round(neededPerDay/state.dailyGoal*10)/10}倍）</span>`;
+    }
+  }
+
+  // ---- Init ----
+  load();
+  // Set today as default start date
+  document.getElementById('inStartDate').value = todayStr();
+
+  if (state) {
+    showDashboard();
+    document.getElementById('inTitle').value = state.title;
+    document.getElementById('inPages').value = state.totalPages;
+    document.getElementById('inStartDate').value = state.startDate;
+    document.getElementById('inDailyGoal').value = state.dailyGoal;
+    updateGoalLabel(state.dailyGoal);
+  }
+</script>
