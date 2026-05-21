@@ -1,0 +1,297 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="キャンプ「持ち物チェックリスト」生成" description="人数・季節・宿泊数で必要装備を自動生成、印刷チェックリスト化。">
+<main class="cc-wrap">
+  <div class="cc-header">
+    <div class="cc-title">🏕️ キャンプ持ち物チェックリスト</div>
+    <div class="cc-sub">条件を入力して必要な持ち物リストを自動生成</div>
+  </div>
+
+  <div class="cc-settings">
+    <div class="cc-set-card">
+      <div class="cc-card-title">キャンプ条件</div>
+      <div class="cc-settings-grid">
+        <div class="cc-sg">
+          <label class="cc-label">人数</label>
+          <select id="ccPeople" class="cc-select" onchange="generate()">
+            <option value="1">1人（ソロ）</option>
+            <option value="2" selected>2人</option>
+            <option value="4">3〜4人</option>
+            <option value="6">5人以上</option>
+          </select>
+        </div>
+        <div class="cc-sg">
+          <label class="cc-label">季節</label>
+          <select id="ccSeason" class="cc-select" onchange="generate()">
+            <option value="spring">春（3〜5月）</option>
+            <option value="summer" selected>夏（6〜8月）</option>
+            <option value="fall">秋（9〜11月）</option>
+            <option value="winter">冬（12〜2月）</option>
+          </select>
+        </div>
+        <div class="cc-sg">
+          <label class="cc-label">宿泊数</label>
+          <select id="ccNights" class="cc-select" onchange="generate()">
+            <option value="0">日帰り</option>
+            <option value="1" selected>1泊2日</option>
+            <option value="2">2泊3日</option>
+            <option value="3">3泊以上</option>
+          </select>
+        </div>
+        <div class="cc-sg">
+          <label class="cc-label">キャンプスタイル</label>
+          <select id="ccStyle" class="cc-select" onchange="generate()">
+            <option value="auto" selected>オートキャンプ（車）</option>
+            <option value="backpack">バックパック（徒歩・軽量化必須）</option>
+            <option value="glamping">グランピング（設備充実）</option>
+          </select>
+        </div>
+      </div>
+      <div class="cc-options">
+        <label class="cc-check"><input type="checkbox" id="optCooking" onchange="generate()" checked /> 自炊する</label>
+        <label class="cc-check"><input type="checkbox" id="optFishing" onchange="generate()" /> 釣りをする</label>
+        <label class="cc-check"><input type="checkbox" id="optChildren" onchange="generate()" /> 子供連れ</label>
+        <label class="cc-check"><input type="checkbox" id="optPet" onchange="generate()" /> ペット同伴</label>
+        <label class="cc-check"><input type="checkbox" id="optRain" onchange="generate()" /> 雨の備え重視</label>
+      </div>
+    </div>
+    <div class="cc-actions">
+      <button class="cc-btn purple" onclick="checkAll()">全てチェック</button>
+      <button class="cc-btn gray" onclick="uncheckAll()">チェック解除</button>
+      <button class="cc-btn blue" onclick="window.print()">🖨️ 印刷</button>
+    </div>
+  </div>
+
+  <div id="checklistArea" class="cc-checklist-area"></div>
+</main>
+
+<script is:inline>
+const ITEMS = {
+  shelter: {
+    label: '⛺ シェルター・寝具',
+    items: [
+      { id:'tent', text:'テント', always:true, not:['glamping'] },
+      { id:'tent_poles', text:'テントポール（別売の場合）', style:['backpack'] },
+      { id:'tent_sheet', text:'グランドシート', always:true, not:['glamping'] },
+      { id:'sleeping_bag', text:'寝袋（シュラフ）', night:true, not:['glamping'] },
+      { id:'sleeping_mat', text:'マット・エアマット', night:true, not:['glamping'] },
+      { id:'pillow', text:'枕（圧縮式など）', night:true },
+      { id:'tarp', text:'タープ・シェード', always:true },
+      { id:'hammock', text:'ハンモック（任意）' },
+    ]
+  },
+  fire: {
+    label: '🔥 火起こし・調理',
+    items: [
+      { id:'lighter', text:'ライター・マッチ', always:true },
+      { id:'firestarter', text:'着火剤', always:true },
+      { id:'charcoal', text:'炭・薪', cooking:true },
+      { id:'bbq_grill', text:'BBQグリル・焚き火台', cooking:true },
+      { id:'stove', text:'バーナー・コンロ', cooking:true },
+      { id:'gas', text:'ガスカートリッジ', cooking:true },
+      { id:'pots', text:'クッカー・鍋', cooking:true },
+      { id:'fry_pan', text:'フライパン', cooking:true },
+      { id:'tongs', text:'トング・火バサミ', cooking:true },
+      { id:'cutting_board', text:'まな板・包丁', cooking:true },
+      { id:'cooler', text:'クーラーボックス', cooking:true },
+      { id:'ice', text:'保冷剤・氷', cooking:true },
+      { id:'trash_bags', text:'ゴミ袋（複数）', always:true },
+    ]
+  },
+  tableware: {
+    label: '🍽️ 食器・食事',
+    items: [
+      { id:'plates', text:'食器・皿', cooking:true },
+      { id:'cups', text:'カップ・コップ', always:true },
+      { id:'chopsticks', text:'箸・フォーク・スプーン', always:true },
+      { id:'kettle', text:'ケトル（お湯用）', always:true },
+      { id:'dish_soap', text:'食器用洗剤・スポンジ', always:true },
+      { id:'coffee', text:'コーヒーセット', night:true },
+      { id:'aluminum_foil', text:'アルミホイル', cooking:true },
+      { id:'zip_bags', text:'ジップロック（食材保存）', cooking:true },
+    ]
+  },
+  clothing: {
+    label: '👕 衣類・装備',
+    items: [
+      { id:'clothes_change', text:'着替え（宿泊数分）', night:true },
+      { id:'rain_gear', text:'レインウェア・カッパ', always:true },
+      { id:'boots', text:'トレッキングシューズ・長靴', always:true },
+      { id:'hat', text:'帽子・キャップ', summer:true },
+      { id:'gloves', text:'手袋', winter:true },
+      { id:'thermal', text:'防寒インナー', winter:true },
+      { id:'down', text:'ダウン・フリース', fall:true, winter:true },
+      { id:'swimwear', text:'水着', summer:true },
+      { id:'towel', text:'タオル（速乾性推奨）', always:true },
+    ]
+  },
+  lighting: {
+    label: '💡 照明・電源',
+    items: [
+      { id:'lantern', text:'ランタン', night:true },
+      { id:'headlamp', text:'ヘッドライト・懐中電灯', night:true },
+      { id:'batteries', text:'予備電池', night:true },
+      { id:'power_bank', text:'モバイルバッテリー', always:true },
+      { id:'solar', text:'ソーラーパネル（長期）', nights3:true },
+    ]
+  },
+  hygiene: {
+    label: '🧼 衛生・洗面',
+    items: [
+      { id:'toothbrush', text:'歯ブラシ・歯磨き粉', always:true },
+      { id:'shampoo', text:'シャンプー・ボディソープ', always:true },
+      { id:'sunscreen', text:'日焼け止め', summer:true, spring:true },
+      { id:'insect_repellent', text:'虫除けスプレー', summer:true },
+      { id:'insect_coil', text:'蚊取り線香', summer:true },
+      { id:'first_aid', text:'救急セット・絆創膏', always:true },
+      { id:'medicines', text:'常備薬・酔い止め', always:true },
+      { id:'wet_wipes', text:'ウェットティッシュ', always:true },
+      { id:'toilet_paper', text:'トイレットペーパー', always:true },
+      { id:'hand_soap', text:'手洗い用石鹸', always:true },
+    ]
+  },
+  tools: {
+    label: '🔧 ツール・その他',
+    items: [
+      { id:'rope', text:'ロープ・ガイライン', always:true },
+      { id:'stakes', text:'ペグ・ハンマー', not:['glamping'] },
+      { id:'multi_tool', text:'マルチツール・ナイフ', always:true },
+      { id:'map', text:'地図・コンパス', backpack:true },
+      { id:'chair', text:'チェア・椅子', auto:true },
+      { id:'table', text:'テーブル', auto:true },
+      { id:'folding_bucket', text:'折りたたみバケツ', always:true },
+      { id:'broom', text:'ほうき・チリトリ', auto:true },
+    ]
+  },
+  optional: {
+    label: '🎣 オプション',
+    items: [
+      { id:'fishing_rod', text:'釣り竿・リール', fishing:true },
+      { id:'fishing_tackle', text:'仕掛け・ルアー', fishing:true },
+      { id:'fishing_license', text:'遊漁券（必要な場合）', fishing:true },
+      { id:'kids_toys', text:'子供のおもちゃ・ゲーム', children:true },
+      { id:'kids_lifejacket', text:'子供用ライフジャケット', children:true },
+      { id:'pet_food', text:'ペットフード・食器', pet:true },
+      { id:'pet_leash', text:'リード・ケージ', pet:true },
+      { id:'umbrella', text:'折り畳み傘', rain:true },
+      { id:'extra_tarp', text:'大型タープ（雨対策）', rain:true },
+    ]
+  }
+};
+
+let checked = {};
+try { checked = JSON.parse(localStorage.getItem('cc_checked') || '{}'); } catch(e) {}
+
+function saveChecked() { try { localStorage.setItem('cc_checked', JSON.stringify(checked)); } catch(e) {} }
+
+function shouldShow(item, opts) {
+  const { people, season, nights, style, cooking, fishing, children, pet, rain } = opts;
+  if (item.not && item.not.includes(style)) return false;
+  if (item.cooking && !cooking) return false;
+  if (item.fishing && !fishing) return false;
+  if (item.children && !children) return false;
+  if (item.pet && !pet) return false;
+  if (item.rain && !rain) return false;
+  if (item.night && nights === 0) return false;
+  if (item.nights3 && nights < 3) return false;
+  if (item.backpack && style !== 'backpack') return false;
+  if (item.auto && style !== 'auto') return false;
+  if (item.summer && season !== 'summer') return false;
+  if (item.winter && season !== 'winter') return false;
+  if (item.spring && season !== 'spring') return false;
+  if (item.fall && season !== 'fall') return false;
+  return true;
+}
+
+function generate() {
+  const opts = {
+    people: parseInt(document.getElementById('ccPeople').value),
+    season: document.getElementById('ccSeason').value,
+    nights: parseInt(document.getElementById('ccNights').value),
+    style: document.getElementById('ccStyle').value,
+    cooking: document.getElementById('optCooking').checked,
+    fishing: document.getElementById('optFishing').checked,
+    children: document.getElementById('optChildren').checked,
+    pet: document.getElementById('optPet').checked,
+    rain: document.getElementById('optRain').checked,
+  };
+
+  const area = document.getElementById('checklistArea');
+  area.innerHTML = Object.entries(ITEMS).map(([catKey, cat]) => {
+    const filtered = cat.items.filter(item => item.always || shouldShow(item, opts));
+    if (!filtered.length) return '';
+    return `<div class="cc-category">
+      <div class="cc-cat-title">${cat.label}</div>
+      <div class="cc-items-grid">
+        ${filtered.map(item => `
+          <label class="cc-item ${checked[item.id] ? 'done' : ''}">
+            <input type="checkbox" ${checked[item.id] ? 'checked' : ''} onchange="toggleItem('${item.id}',this.checked)" />
+            <span>${item.text}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleItem(id, val) {
+  checked[id] = val;
+  saveChecked();
+  // Update visual
+  document.querySelectorAll('.cc-item').forEach(el => {
+    const input = el.querySelector('input');
+    el.classList.toggle('done', input.checked);
+  });
+}
+
+function checkAll() {
+  document.querySelectorAll('.cc-item input').forEach(inp => {
+    inp.checked = true;
+    checked[inp.closest('.cc-item').querySelector('span').textContent.trim()] = true;
+  });
+  document.querySelectorAll('.cc-item').forEach(el => el.classList.add('done'));
+  saveChecked();
+}
+
+function uncheckAll() {
+  checked = {};
+  saveChecked();
+  document.querySelectorAll('.cc-item input').forEach(inp => inp.checked = false);
+  document.querySelectorAll('.cc-item').forEach(el => el.classList.remove('done'));
+}
+
+generate();
+</script>
+
+<style>
+.cc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.cc-header { text-align: center; margin-bottom: 2rem; }
+.cc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.cc-sub { color: var(--gray-400); margin-top: .3rem; }
+.cc-set-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: .8rem; }
+.cc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.cc-settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: .6rem; margin-bottom: .8rem; }
+.cc-sg { display: flex; flex-direction: column; gap: .3rem; }
+.cc-label { font-size: .75rem; color: var(--gray-400); }
+.cc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.cc-options { display: flex; flex-wrap: wrap; gap: .6rem; }
+.cc-check { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--gray-300); cursor: pointer; }
+.cc-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.cc-btn { padding: .45rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .85rem; }
+.cc-btn.purple { background: #7c3aed; color: #fff; }
+.cc-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.cc-btn.blue { background: #1d4ed8; color: #fff; }
+.cc-checklist-area { display: flex; flex-direction: column; gap: 1rem; }
+.cc-category { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.cc-cat-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.cc-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: .4rem; }
+.cc-item { display: flex; align-items: center; gap: .5rem; padding: .4rem .6rem; background: var(--gray-900); border-radius: 8px; cursor: pointer; font-size: .85rem; color: var(--gray-200); border: 1.5px solid transparent; }
+.cc-item.done { background: #14532d20; border-color: #16a34a40; color: var(--gray-400); text-decoration: line-through; }
+@media print {
+  .cc-settings, .cc-actions { display: none; }
+  .cc-wrap { padding: 1rem; }
+  .cc-item { break-inside: avoid; }
+}
+</style>
+</BaseLayout>

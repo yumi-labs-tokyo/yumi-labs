@@ -1,0 +1,204 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ロードバイク「ヒルクライム所要時間」予測" description="FTP・距離・標高差を入れるとタイム予測＋補給ポイント提案。">
+<main class="hc-wrap">
+  <div class="hc-header">
+    <div class="hc-title">🚴 ヒルクライム所要時間予測</div>
+    <div class="hc-sub">FTP・コース情報からタイムと補給計画を算出</div>
+  </div>
+
+  <div class="hc-body">
+    <div class="hc-left">
+      <div class="hc-card">
+        <div class="hc-card-title">ライダー情報</div>
+        <div class="hc-fg">
+          <label class="hc-label">FTP（Functional Threshold Power / ワット）</label>
+          <input type="number" id="ftp" class="hc-input" value="200" min="80" max="500" oninput="calc()" />
+          <span class="hc-hint">FTPが不明な場合は20分全力走のパワー × 0.95 で推定</span>
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">体重（kg）</label>
+          <input type="number" id="weight" class="hc-input" value="65" min="40" max="120" step="0.5" oninput="calc()" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">クライミング強度（FTPの%）</label>
+          <input type="range" id="intensity" class="hc-range" min="60" max="100" value="75" oninput="updateIntensity();calc()" />
+          <div class="hc-range-val">FTPの<span id="intensityVal">75</span>% = <span id="targetPower">—</span>W</div>
+        </div>
+        <div class="hc-quick-ftp">
+          <div class="hc-label">FTP目安（体重比W/kg別）</div>
+          <div class="hc-ftp-grid">
+            <button class="hc-ftp-btn" onclick="setFTP('novice')">入門<br><small>2〜3 W/kg</small></button>
+            <button class="hc-ftp-btn" onclick="setFTP('intermediate')">中級<br><small>3〜4 W/kg</small></button>
+            <button class="hc-ftp-btn" onclick="setFTP('advanced')">上級<br><small>4〜5 W/kg</small></button>
+            <button class="hc-ftp-btn" onclick="setFTP('elite')">エリート<br><small>5〜6 W/kg</small></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hc-card">
+        <div class="hc-card-title">コース情報</div>
+        <div class="hc-form-grid">
+          <div class="hc-fg">
+            <label class="hc-label">距離（km）</label>
+            <input type="number" id="distance" class="hc-input" value="12" min="1" max="100" step="0.5" oninput="calc()" />
+          </div>
+          <div class="hc-fg">
+            <label class="hc-label">獲得標高（m）</label>
+            <input type="number" id="elevation" class="hc-input" value="800" min="50" max="5000" step="10" oninput="calc()" />
+          </div>
+          <div class="hc-fg">
+            <label class="hc-label">路面状況</label>
+            <select id="surface" class="hc-select" onchange="calc()">
+              <option value="1.0">舗装路（良好）</option>
+              <option value="0.95">舗装路（普通）</option>
+              <option value="0.85">荒れた路面</option>
+              <option value="0.75">未舗装</option>
+            </select>
+          </div>
+        </div>
+        <div class="hc-presets">
+          <div class="hc-label">有名コースプリセット</div>
+          <div class="hc-preset-grid">
+            <button class="hc-pbtn" onclick="setRoute(14.4,1020)">富士山<br><small>14.4km/1020m</small></button>
+            <button class="hc-pbtn" onclick="setRoute(13.8,1272)">乗鞍岳<br><small>13.8km/1272m</small></button>
+            <button class="hc-pbtn" onclick="setRoute(25.5,1640)">ヤビツ峠<br><small>11.8km/645m</small></button>
+            <button class="hc-pbtn" onclick="setRoute(11.8,645)">箱根旧道<br><small>15km/940m</small></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-right">
+      <div class="hc-result" id="resultCard">
+        <div class="hc-card-title">予測タイム</div>
+        <div id="resultContent"><div style="color:var(--gray-400);padding:1rem;font-size:.9rem">情報を入力してください</div></div>
+      </div>
+
+      <div class="hc-fueling">
+        <div class="hc-card-title">🍌 補給計画</div>
+        <div id="fuelingContent"></div>
+      </div>
+
+      <div class="hc-tips">
+        <div class="hc-card-title">💡 ヒルクライムのコツ</div>
+        <div class="hc-tip-list">
+          <div class="tip">序盤はFTPの70%に抑えて後半に余力を残す</div>
+          <div class="tip">ケイデンスは70〜90rpmを維持し筋肉疲労を防ぐ</div>
+          <div class="tip">60分以上の登りは1時間ごとにジェル1本（60〜90g）</div>
+          <div class="tip">下りで一気に冷えるので防寒ベストを携帯する</div>
+          <div class="tip">心拍ゾーン3〜4（FTP比75〜90%）が持続可能ペース</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+function updateIntensity() {
+  const v = document.getElementById('intensity').value;
+  document.getElementById('intensityVal').textContent = v;
+}
+
+function setFTP(level) {
+  const w = parseInt(document.getElementById('weight').value) || 65;
+  const ratios = { novice: 2.5, intermediate: 3.5, advanced: 4.5, elite: 5.5 };
+  document.getElementById('ftp').value = Math.round(w * ratios[level]);
+  calc();
+}
+
+function setRoute(dist, elev) {
+  document.getElementById('distance').value = dist;
+  document.getElementById('elevation').value = elev;
+  calc();
+}
+
+function calc() {
+  const ftp = parseFloat(document.getElementById('ftp').value) || 200;
+  const weight = parseFloat(document.getElementById('weight').value) || 65;
+  const intensity = parseFloat(document.getElementById('intensity').value) / 100;
+  const distance = parseFloat(document.getElementById('distance').value) || 12;
+  const elevation = parseFloat(document.getElementById('elevation').value) || 800;
+  const surface = parseFloat(document.getElementById('surface').value) || 1.0;
+
+  const targetPower = Math.round(ftp * intensity);
+  document.getElementById('targetPower').textContent = targetPower;
+
+  const wPerKg = ftp / weight;
+  const grad = (elevation / (distance * 1000)) * 100;
+
+  // Estimated speed using Strava model approximation
+  // Speed(km/h) ≈ targetPower / (weight * 9.81 * (grad/100) * 0.277 + CdA*speed^2) - simplified
+  // Simplified: use VAM (vertical ascent meters per hour) approach
+  // VAM ≈ targetPower * 270 / weight (Coggan approximation)
+  const vam = targetPower * 270 / weight; // m/h
+  const climbTimeHours = elevation / vam;
+  const flatTimeHours = (distance * (1 - grad / 100) * 0.5) / 30; // flat at 30km/h
+
+  const totalTimeHours = (climbTimeHours + flatTimeHours) / surface;
+  const totalMinutes = Math.round(totalTimeHours * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+
+  const avgSpeed = (distance / totalTimeHours).toFixed(1);
+  const avgGrad = grad.toFixed(1);
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="res-time">${hours > 0 ? hours + '時間 ' : ''}${mins}分</div>
+    <div class="res-rows">
+      <div class="rr"><span>平均斜度</span><span>${avgGrad}%</span></div>
+      <div class="rr"><span>目標パワー</span><span>${targetPower}W (FTP×${(intensity*100).toFixed(0)}%)</span></div>
+      <div class="rr"><span>推定VAM</span><span>${Math.round(vam)} m/h</span></div>
+      <div class="rr"><span>推定平均速度</span><span>${avgSpeed} km/h</span></div>
+      <div class="rr"><span>FTP (W/kg)</span><span>${(ftp/weight).toFixed(2)} W/kg</span></div>
+    </div>
+  `;
+
+  // Fueling
+  const calPerHour = targetPower * 3.6; // kcal/h ≈ watts * 3.6
+  const totalCal = Math.round(calPerHour * totalTimeHours);
+  const gels = Math.ceil(totalMinutes / 45);
+  document.getElementById('fuelingContent').innerHTML = `
+    <div class="fuel-row"><span>推定消費カロリー</span><span>${totalCal} kcal</span></div>
+    <div class="fuel-row"><span>推奨補給量</span><span>${Math.round(totalCal * 0.6)} kcal（消費の60%）</span></div>
+    <div class="fuel-row"><span>ジェル目安</span><span>${gels}本（45分ごと）</span></div>
+    <div class="fuel-row"><span>水分</span><span>${(totalTimeHours * 600).toFixed(0)}ml〜${(totalTimeHours * 800).toFixed(0)}ml</span></div>
+    ${totalMinutes > 120 ? '<div class="fuel-row warn">60分以上は補給ポイントを設けて早めに補給</div>' : ''}
+  `;
+}
+
+updateIntensity();
+calc();
+</script>
+
+<style>
+.hc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.hc-header { text-align: center; margin-bottom: 2rem; }
+.hc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.hc-sub { color: var(--gray-400); margin-top: .3rem; }
+.hc-body { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
+@media (max-width: 750px) { .hc-body { grid-template-columns: 1fr; } }
+.hc-card, .hc-result, .hc-fueling, .hc-tips { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.hc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.hc-fg { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .7rem; }
+.hc-label { font-size: .75rem; color: var(--gray-400); }
+.hc-hint { font-size: .72rem; color: var(--gray-500); }
+.hc-input, .hc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
+.hc-range { accent-color: #7c3aed; width: 100%; }
+.hc-range-val { font-size: .82rem; color: var(--gray-300); }
+.hc-form-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .6rem; margin-bottom: .7rem; }
+.hc-presets, .hc-quick-ftp { margin-top: .5rem; }
+.hc-ftp-grid, .hc-preset-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .4rem; margin-top: .4rem; }
+.hc-ftp-btn, .hc-pbtn { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .35rem .2rem; font-size: .72rem; cursor: pointer; color: var(--gray-300); line-height: 1.4; }
+.hc-ftp-btn:hover, .hc-pbtn:hover { border-color: #7c3aed; }
+.hc-ftp-btn small, .hc-pbtn small { color: var(--gray-500); }
+.res-time { font-size: 2.5rem; font-weight: 800; color: #fbbf24; text-align: center; margin-bottom: .8rem; }
+.res-rows, .fuel-rows { display: flex; flex-direction: column; }
+.rr, .fuel-row { display: flex; justify-content: space-between; font-size: .85rem; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.rr:last-child, .fuel-row:last-child { border-bottom: none; }
+.fuel-row.warn { color: #fbbf24; font-size: .8rem; justify-content: center; }
+.hc-tip-list { display: flex; flex-direction: column; gap: .4rem; }
+.tip { background: var(--gray-900); border-radius: 8px; padding: .45rem .7rem; font-size: .82rem; color: var(--gray-300); }
+</style>
+</BaseLayout>

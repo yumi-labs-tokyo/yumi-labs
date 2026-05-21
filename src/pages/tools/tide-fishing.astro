@@ -1,0 +1,293 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="釣り「タイドグラフ＋月齢」表示" description="日付と場所を入れると満潮干潮・月齢から釣り適期判定。">
+<main class="tf-wrap">
+  <div class="tf-header">
+    <div class="tf-title">🎣 釣り タイドグラフ＋月齢</div>
+    <div class="tf-sub">潮汐と月齢から釣り適期を判定</div>
+  </div>
+
+  <div class="tf-body">
+    <div class="tf-left">
+      <div class="tf-card">
+        <div class="tf-card-title">設定</div>
+        <div class="tf-form">
+          <div class="tf-fg">
+            <label class="tf-label">日付</label>
+            <input type="date" id="tfDate" class="tf-input" oninput="calc()" />
+          </div>
+          <div class="tf-fg">
+            <label class="tf-label">地域（標準時差）</label>
+            <select id="tfRegion" class="tf-select" onchange="calc()">
+              <option value="0">標準（東京・大阪）</option>
+              <option value="-30">西日本（九州・沖縄）</option>
+              <option value="30">東日本（北海道）</option>
+            </select>
+          </div>
+          <div class="tf-fg">
+            <label class="tf-label">ターゲット魚種</label>
+            <select id="tfFish" class="tf-select" onchange="calc()">
+              <option value="general">汎用（一般的な釣り）</option>
+              <option value="sea_bass">シーバス（スズキ）</option>
+              <option value="flounder">ヒラメ・マゴチ</option>
+              <option value="yellowtail">ブリ・イナダ</option>
+              <option value="black_sea_bream">クロダイ（チヌ）</option>
+              <option value="rockfish">メバル・カサゴ</option>
+              <option value="squid">アオリイカ</option>
+              <option value="horse_mackerel">アジ・サバ</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="tf-moon-card" id="moonCard"></div>
+
+      <div class="tf-tips-card">
+        <div class="tf-card-title">🐟 魚種別 釣れやすい条件</div>
+        <div id="fishTips"></div>
+      </div>
+    </div>
+
+    <div class="tf-right">
+      <div class="tf-result-card" id="resultCard">
+        <div class="tf-card-title">本日の釣り適期判定</div>
+        <div id="resultContent"></div>
+      </div>
+
+      <div class="tf-chart-card">
+        <div class="tf-card-title">タイドグラフ（概算）</div>
+        <svg id="tideChart" viewBox="0 0 400 200" style="width:100%;max-height:200px;background:var(--gray-900);border-radius:8px"></svg>
+        <div class="tf-note">※タイドグラフは概算です。実際の釣行には気象庁タイド表を確認してください。</div>
+      </div>
+
+      <div class="tf-times-card">
+        <div class="tf-card-title">本日の潮汐時刻（目安）</div>
+        <div id="tideTimesContent"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const FISH_TIPS = {
+  general: { name:'一般', tips:['上げ3分・下げ3分が最も活性が高い','満潮・干潮の前後1時間が鉄板','大潮の日は潮の流れが速く魚が活発'] },
+  sea_bass: { name:'シーバス', tips:['上げ潮で河川に遡上するタイミングが好機','満潮前後の流れの変化時が狙い目','夜釣りで月明かりがない日は表層で動く'] },
+  flounder: { name:'ヒラメ・マゴチ', tips:['上げ潮で砂地に近いベイトフィッシュを追う','朝マズメと上げ潮が重なると最高','小潮より大潮の方が活性が上がりやすい'] },
+  yellowtail: { name:'ブリ・イナダ', tips:['潮の流れが速いポイントに好んで集まる','大潮の下げ潮で潮目を狙う','回遊魚なので時合いが短い'] },
+  black_sea_bream: { name:'クロダイ', tips:['上げ3分が特に有効','濁り潮を好むことが多い','朝マズメと満潮が重なると好釣果が期待できる'] },
+  rockfish: { name:'メバル・カサゴ', tips:['夜釣りが主体。月が明るい夜は沖に出る','下げ潮で根周りに止まって待ち伏せする','大潮よりも小潮の方が活性が高いことも'] },
+  squid: { name:'アオリイカ', tips:['月明かりが明るい夜はシャローに集まりやすい','新月・満月前後が数釣りしやすい','水温が低い時期は日中のほうが釣れやすい'] },
+  horse_mackerel: { name:'アジ・サバ', tips:['回遊魚なので時合いを見逃さない','常夜灯周りに集まるプランクトンを追う','潮が動いている時間帯に群れが接近する'] },
+};
+
+document.getElementById('tfDate').value = new Date().toISOString().split('T')[0];
+
+function getMoonPhase(date) {
+  const d = new Date(date);
+  const known = new Date('2000-01-06'); // known new moon
+  const diff = (d - known) / (29.530588853 * 86400000);
+  const phase = ((diff % 1) + 1) % 1;
+  return phase;
+}
+
+function getMoonEmoji(phase) {
+  if (phase < 0.0625 || phase >= 0.9375) return '🌑';
+  if (phase < 0.1875) return '🌒';
+  if (phase < 0.3125) return '🌓';
+  if (phase < 0.4375) return '🌔';
+  if (phase < 0.5625) return '🌕';
+  if (phase < 0.6875) return '🌖';
+  if (phase < 0.8125) return '🌗';
+  return '🌘';
+}
+
+function getMoonName(phase) {
+  if (phase < 0.0625 || phase >= 0.9375) return '新月（朔）';
+  if (phase < 0.1875) return '三日月';
+  if (phase < 0.3125) return '上弦の月';
+  if (phase < 0.4375) return '十三夜';
+  if (phase < 0.5625) return '満月（望）';
+  if (phase < 0.6875) return '十六夜';
+  if (phase < 0.8125) return '下弦の月';
+  return '有明月';
+}
+
+function getTideType(phase) {
+  // 大潮: 新月・満月 ±2日, 中潮: その前後, 小潮: 上弦・下弦前後, 長潮・若潮
+  const dist = Math.min(phase, 1 - phase); // dist from new moon
+  const distHalf = Math.abs(phase - 0.5); // dist from full moon
+  const minDist = Math.min(dist, distHalf);
+  if (minDist < 0.07) return { type: '大潮', score: 5, color: '#ef4444' };
+  if (minDist < 0.12) return { type: '中潮', score: 4, color: '#f97316' };
+  if (Math.abs(minDist - 0.25) < 0.04) return { type: '長潮', score: 2, color: '#6b7280' };
+  if (Math.abs(minDist - 0.25) < 0.08) return { type: '若潮', score: 3, color: '#94a3b8' };
+  if (minDist < 0.2) return { type: '中潮', score: 4, color: '#f97316' };
+  return { type: '小潮', score: 2, color: '#60a5fa' };
+}
+
+function getTideTimes(date, offset) {
+  const d = new Date(date);
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  const baseHigh1 = (6 + dayOfYear * 0.8 + offset / 60) % 12;
+  const times = [];
+  for (let i = 0; i < 2; i++) {
+    const h = (baseHigh1 + i * 12) % 24;
+    times.push({ type: '満潮', hour: Math.floor(h), min: Math.floor((h % 1) * 60) });
+    times.push({ type: '干潮', hour: Math.floor((h + 6) % 24), min: Math.floor((h % 1) * 60) });
+  }
+  return times.sort((a, b) => a.hour * 60 + a.min - (b.hour * 60 + b.min));
+}
+
+function calc() {
+  const date = document.getElementById('tfDate').value;
+  const offset = parseInt(document.getElementById('tfRegion').value) || 0;
+  const fish = document.getElementById('tfFish').value;
+  if (!date) return;
+
+  const phase = getMoonPhase(date);
+  const tideInfo = getTideType(phase);
+  const moonEmoji = getMoonEmoji(phase);
+  const moonName = getMoonName(phase);
+  const fishInfo = FISH_TIPS[fish];
+  const days = Math.round(phase * 29.5);
+
+  // Moon card
+  document.getElementById('moonCard').innerHTML = `
+    <div class="moon-display">
+      <div class="moon-emoji">${moonEmoji}</div>
+      <div class="moon-info">
+        <div class="moon-name">${moonName}</div>
+        <div class="moon-age">月齢 ${days}日</div>
+      </div>
+      <div class="tide-badge" style="background:${tideInfo.color}20;color:${tideInfo.color}">${tideInfo.type}</div>
+    </div>
+  `;
+
+  // Score
+  const score = tideInfo.score;
+  const scoreBar = '⭐'.repeat(score) + '☆'.repeat(5 - score);
+  const scoreLabel = ['', '渋い', '普通', '普通', 'まずまず', '絶好'][score];
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="result-score">
+      <div class="score-stars">${scoreBar}</div>
+      <div class="score-label">${scoreLabel} (${tideInfo.type})</div>
+    </div>
+    <div class="result-rows">
+      <div class="rr"><span>月齢</span><span>${moonEmoji} ${moonName}（${days}日）</span></div>
+      <div class="rr"><span>潮まわり</span><span style="color:${tideInfo.color}">${tideInfo.type}</span></div>
+      <div class="rr"><span>マズメ時</span><span>日の出・日没±1時間が狙い目</span></div>
+      <div class="rr"><span>おすすめ時間帯</span><span>潮止まり前後30分＋マズメ</span></div>
+    </div>
+  `;
+
+  // Fish tips
+  document.getElementById('fishTips').innerHTML = `
+    <div class="fish-name">${fishInfo.name}</div>
+    <ul class="fish-tips-list">
+      ${fishInfo.tips.map(t => '<li>' + t + '</li>').join('')}
+    </ul>
+  `;
+
+  // Tide times
+  const tideTimes = getTideTimes(date, offset);
+  document.getElementById('tideTimesContent').innerHTML = tideTimes.map(t => `
+    <div class="tt-row">
+      <span class="tt-type ${t.type === '満潮' ? 'high' : 'low'}">${t.type === '満潮' ? '↑' : '↓'} ${t.type}</span>
+      <span class="tt-time">${String(t.hour).padStart(2,'0')}:${String(t.min).padStart(2,'0')}</span>
+      <span class="tt-rating">${t.type === '満潮' ? '⭐' : ''}</span>
+    </div>
+  `).join('');
+
+  drawChart(tideTimes, offset);
+}
+
+function drawChart(times, offset) {
+  const svg = document.getElementById('tideChart');
+  svg.innerHTML = '';
+  const W = 400, H = 200, PL = 30, PR = 10, PT = 15, PB = 25;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  function el(tag, attrs, txt) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Generate tide curve (simplified sine)
+  const points = [];
+  for (let h = 0; h <= 24; h += 0.5) {
+    const val = Math.sin((h / 12 + 0.2) * Math.PI) * 0.5 + 0.5 +
+                Math.sin((h / 6 + 0.5) * Math.PI) * 0.15;
+    points.push({ h, val: Math.min(1, Math.max(0, val)) });
+  }
+
+  const path = points.map((p, i) => {
+    const x = PL + (p.h / 24) * cW;
+    const y = PT + cH - p.val * cH;
+    return (i === 0 ? 'M' : 'L') + x + ' ' + y;
+  }).join(' ');
+
+  // Fill area
+  const fillPath = path + ' L' + (PL + cW) + ' ' + (PT + cH) + ' L' + PL + ' ' + (PT + cH) + ' Z';
+  svg.appendChild(el('path', {d: fillPath, fill:'#1e40af', opacity:'0.3'}));
+  svg.appendChild(el('path', {d: path, stroke:'#60a5fa', 'stroke-width':'2', fill:'none'}));
+
+  // Grid
+  [0, 6, 12, 18, 24].forEach(h => {
+    const x = PL + (h / 24) * cW;
+    svg.appendChild(el('line', {x1:x, x2:x, y1:PT, y2:PT+cH, stroke:'#374151', 'stroke-width':'0.5'}));
+    svg.appendChild(el('text', {x, y:H-PB+13, 'font-size':'9', fill:'#6b7280', 'text-anchor':'middle'}, h + 'h'));
+  });
+
+  // Current time marker
+  const now = new Date();
+  const currentH = now.getHours() + now.getMinutes() / 60;
+  const cx = PL + (currentH / 24) * cW;
+  svg.appendChild(el('line', {x1:cx, x2:cx, y1:PT, y2:PT+cH, stroke:'#ef4444', 'stroke-width':'1.5', 'stroke-dasharray':'4,3'}));
+  svg.appendChild(el('text', {x:cx, y:PT-3, 'font-size':'8', fill:'#ef4444', 'text-anchor':'middle'}, '今'));
+}
+
+calc();
+</script>
+
+<style>
+.tf-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.tf-header { text-align: center; margin-bottom: 2rem; }
+.tf-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.tf-sub { color: var(--gray-400); margin-top: .3rem; }
+.tf-body { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
+@media (max-width: 750px) { .tf-body { grid-template-columns: 1fr; } }
+.tf-card, .tf-moon-card, .tf-tips-card, .tf-result-card, .tf-chart-card, .tf-times-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.tf-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.tf-form { display: flex; flex-direction: column; gap: .6rem; }
+.tf-fg { display: flex; flex-direction: column; gap: .3rem; }
+.tf-label { font-size: .75rem; color: var(--gray-400); }
+.tf-input, .tf-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.moon-display { display: flex; align-items: center; gap: .8rem; }
+.moon-emoji { font-size: 2rem; }
+.moon-name { font-weight: 700; color: var(--gray-100); }
+.moon-age { font-size: .78rem; color: var(--gray-400); }
+.tide-badge { padding: .25rem .7rem; border-radius: 20px; font-weight: 700; font-size: .85rem; margin-left: auto; }
+.fish-name { font-weight: 700; color: var(--gray-200); margin-bottom: .5rem; font-size: .85rem; }
+.fish-tips-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .3rem; }
+.fish-tips-list li { font-size: .82rem; color: var(--gray-300); }
+.result-score { text-align: center; margin-bottom: 1rem; }
+.score-stars { font-size: 1.4rem; }
+.score-label { font-size: 1rem; font-weight: 700; color: var(--gray-200); }
+.result-rows { display: flex; flex-direction: column; gap: 0; }
+.rr { display: flex; justify-content: space-between; font-size: .85rem; padding: .35rem 0; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.rr:last-child { border-bottom: none; }
+.tf-note { font-size: .72rem; color: var(--gray-500); margin-top: .5rem; line-height: 1.5; }
+.tt-row { display: flex; align-items: center; gap: .8rem; padding: .4rem 0; border-bottom: 1px solid var(--gray-700); font-size: .85rem; }
+.tt-row:last-child { border-bottom: none; }
+.tt-type { font-weight: 700; min-width: 80px; }
+.tt-type.high { color: #60a5fa; }
+.tt-type.low { color: #94a3b8; }
+.tt-time { font-family: monospace; color: var(--gray-200); }
+.tt-rating { margin-left: auto; }
+</style>
+</BaseLayout>

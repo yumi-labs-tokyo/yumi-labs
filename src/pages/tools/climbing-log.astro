@@ -1,0 +1,244 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="クライミングジム「課題記録ノート」" description="グレード・登れた/落ちた・感想を記録。月別グラフで成長可視化。">
+<main class="cl-wrap">
+  <div class="cl-header">
+    <div class="cl-title">🧗 クライミング課題記録ノート</div>
+    <div class="cl-sub">グレードと記録を残して成長を可視化しよう</div>
+  </div>
+
+  <div class="cl-add-card">
+    <div class="cl-card-title">課題を記録</div>
+    <div class="cl-add-form">
+      <div class="cl-form-group">
+        <label class="cl-label">日付</label>
+        <input type="date" id="clDate" class="cl-input" />
+      </div>
+      <div class="cl-form-group">
+        <label class="cl-label">グレード</label>
+        <select id="clGrade" class="cl-select">
+          <optgroup label="ボルダリング（Vグレード）">
+            <option value="VB">VB（入門）</option>
+            <option value="V0">V0</option>
+            <option value="V1">V1</option>
+            <option value="V2">V2</option>
+            <option value="V3" selected>V3</option>
+            <option value="V4">V4</option>
+            <option value="V5">V5</option>
+            <option value="V6">V6</option>
+            <option value="V7">V7</option>
+            <option value="V8">V8</option>
+            <option value="V9">V9</option>
+            <option value="V10+">V10+</option>
+          </optgroup>
+          <optgroup label="リードクライミング">
+            <option value="5.8">5.8</option>
+            <option value="5.9">5.9</option>
+            <option value="5.10a">5.10a</option>
+            <option value="5.10b">5.10b</option>
+            <option value="5.10c">5.10c</option>
+            <option value="5.10d">5.10d</option>
+            <option value="5.11a">5.11a</option>
+            <option value="5.11b">5.11b</option>
+            <option value="5.11c">5.11c</option>
+            <option value="5.12a">5.12a</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="cl-form-group">
+        <label class="cl-label">結果</label>
+        <select id="clResult" class="cl-select">
+          <option value="send">完登（Send）</option>
+          <option value="flash">一撃（Flash）</option>
+          <option value="redpoint">レッドポイント</option>
+          <option value="attempt">トライ（落ちた）</option>
+          <option value="project">プロジェクト中</option>
+        </select>
+      </div>
+      <div class="cl-form-group">
+        <label class="cl-label">セクション</label>
+        <select id="clSection" class="cl-select">
+          <option value="slab">スラブ</option>
+          <option value="vertical">垂直</option>
+          <option value="overhang">オーバーハング</option>
+          <option value="roof">ルーフ</option>
+          <option value="crack">クラック</option>
+        </select>
+      </div>
+      <div class="cl-form-group wide">
+        <label class="cl-label">メモ</label>
+        <input type="text" id="clMemo" class="cl-input" placeholder="核心部、ムーブのポイントなど" />
+      </div>
+      <button class="cl-add-btn" onclick="addLog()">＋ 記録</button>
+    </div>
+  </div>
+
+  <div id="statsArea" style="display:none">
+    <div class="cl-stats-row" id="statsRow"></div>
+    <div class="cl-chart-card">
+      <div class="cl-card-title">月別完登数</div>
+      <svg id="clChart" viewBox="0 0 600 180" style="width:100%;max-height:180px;background:var(--gray-900);border-radius:8px"></svg>
+    </div>
+    <div class="cl-grade-dist">
+      <div class="cl-card-title">グレード別完登実績</div>
+      <div id="gradeDist"></div>
+    </div>
+    <div class="cl-log-card">
+      <div class="cl-card-title">記録一覧</div>
+      <div id="logList" class="cl-log-list"></div>
+    </div>
+  </div>
+  <div id="emptyMsg" class="cl-empty">課題を記録すると成長グラフが表示されます</div>
+</main>
+
+<script is:inline>
+let logs = [];
+try { logs = JSON.parse(localStorage.getItem('cl_logs') || '[]'); } catch(e) {}
+
+document.getElementById('clDate').value = new Date().toISOString().split('T')[0];
+
+const RESULT_LABELS = { send:'完登', flash:'一撃', redpoint:'RP', attempt:'トライ', project:'進行中' };
+const RESULT_COLORS = { send:'#4ade80', flash:'#fbbf24', redpoint:'#60a5fa', attempt:'#f87171', project:'#a78bfa' };
+const SECTION_LABELS = { slab:'スラブ', vertical:'垂直', overhang:'OHG', roof:'ルーフ', crack:'クラック' };
+
+function save() { try { localStorage.setItem('cl_logs', JSON.stringify(logs)); } catch(e) {} }
+
+function addLog() {
+  const date = document.getElementById('clDate').value;
+  const grade = document.getElementById('clGrade').value;
+  const result = document.getElementById('clResult').value;
+  const section = document.getElementById('clSection').value;
+  const memo = document.getElementById('clMemo').value.trim();
+  if (!date) return;
+  logs.unshift({ id: Date.now(), date, grade, result, section, memo });
+  save();
+  document.getElementById('clMemo').value = '';
+  render();
+}
+
+function deleteLog(id) { logs = logs.filter(l => l.id !== id); save(); render(); }
+
+function render() {
+  if (!logs.length) {
+    document.getElementById('statsArea').style.display = 'none';
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+  document.getElementById('statsArea').style.display = 'block';
+  document.getElementById('emptyMsg').style.display = 'none';
+
+  const sends = logs.filter(l => ['send','flash','redpoint'].includes(l.result));
+  const flashes = logs.filter(l => l.result === 'flash');
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-c"><div class="sc-val">${logs.length}</div><div class="sc-lbl">総記録数</div></div>
+    <div class="stat-c"><div class="sc-val green">${sends.length}</div><div class="sc-lbl">完登数</div></div>
+    <div class="stat-c"><div class="sc-val yellow">${flashes.length}</div><div class="sc-lbl">一撃数</div></div>
+    <div class="stat-c"><div class="sc-val purple">${new Set(logs.map(l => l.date)).size}</div><div class="sc-lbl">練習日数</div></div>
+  `;
+
+  // Monthly chart
+  const monthly = {};
+  sends.forEach(l => {
+    const ym = l.date.slice(0,7);
+    monthly[ym] = (monthly[ym] || 0) + 1;
+  });
+  const months = Object.entries(monthly).sort((a,b) => a[0].localeCompare(b[0])).slice(-10);
+  drawChart(months.map(([ym, cnt]) => ({ label: ym.slice(5) + '月', val: cnt })));
+
+  // Grade distribution
+  const gradeCount = {};
+  sends.forEach(l => { gradeCount[l.grade] = (gradeCount[l.grade] || 0) + 1; });
+  const maxG = Math.max(...Object.values(gradeCount), 1);
+  document.getElementById('gradeDist').innerHTML = Object.entries(gradeCount)
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .map(([g, cnt]) => `
+      <div class="gd-row">
+        <div class="gd-label">${g}</div>
+        <div class="gd-bar-wrap"><div class="gd-bar" style="width:${cnt/maxG*100}%"></div></div>
+        <div class="gd-cnt">${cnt}回</div>
+      </div>
+    `).join('');
+
+  // Log list
+  document.getElementById('logList').innerHTML = logs.slice(0, 50).map(l => `
+    <div class="ll-row">
+      <div class="ll-date">${l.date}</div>
+      <div class="ll-grade">${l.grade}</div>
+      <div class="ll-result" style="color:${RESULT_COLORS[l.result]}">${RESULT_LABELS[l.result]}</div>
+      <div class="ll-section">${SECTION_LABELS[l.section]}</div>
+      <div class="ll-memo">${l.memo || '—'}</div>
+      <button class="ll-del" onclick="deleteLog(${l.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function drawChart(data) {
+  const svg = document.getElementById('clChart');
+  svg.innerHTML = '';
+  if (!data.length) return;
+  const W = 600, H = 180, PL = 30, PR = 15, PT = 15, PB = 30;
+  const cW = W-PL-PR, cH = H-PT-PB;
+  const maxV = Math.max(...data.map(d => d.val), 1);
+  const ns = 'http://www.w3.org/2000/svg';
+  const bw = cW / data.length * 0.7;
+  const gap = cW / data.length;
+
+  function el(tag, attrs, txt) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  data.forEach((d, i) => {
+    const bh = (d.val / maxV) * cH;
+    const bx = PL + gap * i + (gap - bw) / 2;
+    const by = PT + cH - bh;
+    svg.appendChild(el('rect', {x:bx, y:by, width:bw, height:bh, fill:'#7c3aed', rx:'3'}));
+    svg.appendChild(el('text', {x:bx+bw/2, y:by-3, 'font-size':'9', fill:'#a78bfa', 'text-anchor':'middle'}, d.val));
+    svg.appendChild(el('text', {x:bx+bw/2, y:H-PB+12, 'font-size':'9', fill:'#6b7280', 'text-anchor':'middle'}, d.label));
+  });
+}
+
+render();
+</script>
+
+<style>
+.cl-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.cl-header { text-align: center; margin-bottom: 2rem; }
+.cl-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.cl-sub { color: var(--gray-400); margin-top: .3rem; }
+.cl-add-card, .cl-chart-card, .cl-grade-dist, .cl-log-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.cl-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.cl-add-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: .6rem; align-items: end; }
+.cl-form-group { display: flex; flex-direction: column; gap: .3rem; }
+.cl-form-group.wide { grid-column: span 2; }
+.cl-label { font-size: .75rem; color: var(--gray-400); }
+.cl-input, .cl-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.cl-add-btn { padding: .55rem 1.2rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.cl-stats-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-bottom: 1rem; }
+.stat-c { flex: 1; min-width: 100px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem; text-align: center; }
+.sc-val { font-size: 1.6rem; font-weight: 800; color: var(--gray-100); }
+.sc-val.green { color: #4ade80; }
+.sc-val.yellow { color: #fbbf24; }
+.sc-val.purple { color: #a78bfa; }
+.sc-lbl { font-size: .7rem; color: var(--gray-400); }
+.gd-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .4rem; }
+.gd-label { width: 50px; font-size: .82rem; color: var(--gray-300); text-align: right; }
+.gd-bar-wrap { flex: 1; background: var(--gray-900); border-radius: 4px; height: 14px; }
+.gd-bar { background: #7c3aed; height: 100%; border-radius: 4px; transition: width .3s; }
+.gd-cnt { width: 35px; font-size: .78rem; color: var(--gray-400); }
+.cl-log-list { display: flex; flex-direction: column; gap: .3rem; max-height: 400px; overflow-y: auto; }
+.ll-row { display: flex; align-items: center; gap: .5rem; padding: .4rem .6rem; background: var(--gray-900); border-radius: 8px; font-size: .82rem; }
+.ll-date { color: var(--gray-400); min-width: 90px; }
+.ll-grade { font-weight: 800; color: var(--gray-100); min-width: 45px; }
+.ll-result { font-weight: 700; min-width: 50px; }
+.ll-section { color: var(--gray-400); min-width: 55px; }
+.ll-memo { flex: 1; color: var(--gray-300); }
+.ll-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.ll-del:hover { color: #ef4444; }
+.cl-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

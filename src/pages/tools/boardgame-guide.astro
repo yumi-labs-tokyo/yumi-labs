@@ -1,0 +1,236 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ボードゲーム初心者ガイド生成" description="ゲーム名を入れると簡易ルール＋よくある質問＋戦略ヒント表示。">
+<main class="bg-wrap">
+  <div class="bg-header">
+    <div class="bg-title">♟️ ボードゲーム初心者ガイド</div>
+    <div class="bg-sub">ゲームを選ぶと初心者向けのガイドを表示</div>
+  </div>
+
+  <div class="bg-search">
+    <div class="bg-search-row">
+      <input type="text" id="searchInput" class="bg-search-input" placeholder="ゲーム名を検索..." oninput="filterGames()" />
+    </div>
+    <div class="bg-tags" id="categoryTags">
+      <button class="bg-tag active" onclick="filterCat('all',this)">すべて</button>
+      <button class="bg-tag" onclick="filterCat('strategy',this)">戦略</button>
+      <button class="bg-tag" onclick="filterCat('party',this)">パーティー</button>
+      <button class="bg-tag" onclick="filterCat('family',this)">ファミリー</button>
+      <button class="bg-tag" onclick="filterCat('coop',this)">協力</button>
+      <button class="bg-tag" onclick="filterCat('card',this)">カード</button>
+    </div>
+  </div>
+
+  <div class="bg-body">
+    <div class="bg-list" id="gameList"></div>
+    <div class="bg-detail" id="gameDetail">
+      <div class="bg-detail-empty">左のリストからゲームを選んでください</div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const GAMES = [
+  {
+    id: 'catan', name: 'カタン（Catan）', cat: 'strategy', players: '3-4人', time: '60-120分', age: '10歳〜', emoji: '🏝️',
+    tagline: '島を開拓し、交渉と建設で勝利点を集める定番ストラテジー',
+    rules: [
+      '六角形のタイルで構成された島を探索・開拓する',
+      'ターンごとにサイコロを振り、対応する土地から資源を得る',
+      '木・レンガ・穀物・羊毛・鉄鉱石の5種類の資源を集める',
+      '道路・開拓地・都市を建設して勝利点を稼ぐ',
+      '10点先取したプレイヤーが勝利',
+    ],
+    tips: ['序盤は多くの資源が取れる場所（数字の合計が高い交点）に開拓地を置く','港を活用すると特定の資源を有利に交換できる','交渉は積極的に行う。独り占めより少し損でも取引した方が良いことも','騎士カードは使えるときに積極的に使って盗賊を動かす'],
+    faq: [
+      { q:'盗賊が置かれたらどうなる？', a:'その土地の資源は産出されなくなる。また、7を出したプレイヤーはカードを1枚盗める。' },
+      { q:'交換レートはいくつ？', a:'基本は4:1（4枚同じ資源で何でも1枚）。港があれば2:1や3:1に改善できる。' },
+      { q:'最長道路と最大騎士はいつ計算？', a:'それぞれ5道路連続・3騎士カード使用で2点ボーナスカードを取得。誰かが超えれば移動する。' },
+    ],
+  },
+  {
+    id: 'pandemic', name: 'パンデミック（Pandemic）', cat: 'coop', players: '2-4人', time: '45-60分', age: '8歳〜', emoji: '🦠',
+    tagline: '全員協力して感染症の拡大を防ぐ協力型ボードゲーム',
+    rules: [
+      '世界地図上で4種の感染症の拡大を食い止める',
+      '各プレイヤーは異なる役割カード（医師・研究者・隔離スペシャリスト等）を持つ',
+      '手番ごとに4アクション実施→カードを引く→感染フェーズの順に進む',
+      '4種すべての感染症の治療薬を開発すればプレイヤー側の勝利',
+      'アウトブレイクが8回起きるか、カードが切れたら敗北',
+    ],
+    tips: ['役割の特性を最大限に活かす連携が重要','感染カードは捨て山の下に戻るので、捨て山の構成を常に把握する','1箇所に3つキューブがある都市を最優先で処理する','治療薬開発に必要な5枚のカードを誰が持つかを常に確認する'],
+    faq: [
+      { q:'アウトブレイクとは？', a:'1都市に4個目のキューブを置く必要が生じると発生。隣接都市に1個ずつ拡散する。' },
+      { q:'治療薬の開発方法は？', a:'研究所のある都市で同色のカードを5枚（研究者は4枚）捨てると開発できる。' },
+      { q:'緊急対応チームとは？', a:'特定の役割。他のプレイヤーのカードを交換する際に便利な能力を持つ。' },
+    ],
+  },
+  {
+    id: 'codenames', name: 'コードネーム（Codenames）', cat: 'party', players: '4-8人', time: '15-30分', age: '14歳〜', emoji: '🕵️',
+    tagline: '1単語のヒントで複数のキーワードを当てるチーム対戦ゲーム',
+    rules: [
+      '2チームに分かれ、それぞれ「スパイマスター」を1人決める',
+      '25枚の単語カードが並べられ、スパイマスターだけが配置図を見る',
+      'スパイマスターは「1単語 + 数字」でヒントを出す',
+      'チームメンバーはヒントを元に自分たちのカードを当てていく',
+      '先に自分たちの全エージェントを見つけたチームが勝利（暗殺者を当てると即負け）',
+    ],
+    tips: ['複数のカードに関連する1単語のヒントを考えるのがコツ','暗殺者に近い単語のヒントは絶対避ける','相手が迷っているときは積極的に考える','チームで共有語彙を事前に確認しておくと有利'],
+    faq: [
+      { q:'スパイマスターは何ができる？', a:'ヒント1単語と数字を言うだけ。他は一切話せない。' },
+      { q:'数字は何個まで当てられる？', a:'ヒントの数字+1枚まで当てに行ける。途中でやめてもOK。' },
+      { q:'1単語のヒントにできない制限は？', a:'場に出ているカードの単語そのものや、その派生語はヒントにできない。' },
+    ],
+  },
+  {
+    id: 'ticket', name: '乗車券（Ticket to Ride）', cat: 'family', players: '2-5人', time: '30-75分', age: '8歳〜', emoji: '🚂',
+    tagline: '路線カードを引き、列車を並べてルートを完成させる鉄道ゲーム',
+    rules: [
+      '北米（またはヨーロッパ等）の地図上に列車コマを配置して路線を作る',
+      '同色の列車カードを集めてルートを確保する',
+      '目的地カードで指定された都市間を繋げると追加得点',
+      '色に関係ない「機関車」カードはワイルド扱い',
+      '誰かの列車コマが残り2個以下になると最終ラウンドへ',
+    ],
+    tips: ['目的地カードは2〜3枚持ち、共有ルートで効率よく得点を狙う','長距離路線ほど得点効率が高い','相手の確保したいルートを塞ぐのも戦略の1つ','機関車カードは貯めずに使った方が動きやすい'],
+    faq: [
+      { q:'目的地カードを達成できなかったら？', a:'カードに書かれた点数分がマイナスされる（例：12点なら-12点）。' },
+      { q:'同色のルートに何枚必要？', a:'ルートの長さと同じ枚数の同色カード（または機関車）が必要。' },
+      { q:'最長路線ボーナスとは？', a:'ゲーム終了時、最も長い連続路線を持つプレイヤーが10点ボーナス。' },
+    ],
+  },
+  {
+    id: 'splendor', name: 'スプレンダー（Splendor）', cat: 'strategy', players: '2-4人', time: '30分', age: '10歳〜', emoji: '💎',
+    tagline: '宝石を集め、発展カードを購入して15点を目指す宝石商ゲーム',
+    rules: [
+      '5色の宝石チップを集めて発展カードを購入する',
+      '発展カードは永続的な宝石ボーナスになり、将来の購入が楽になる',
+      '貴族タイルは条件を満たすと自動的に取得（3点）',
+      '手番にできること：チップを取る／カードを購入する／カードを予約する',
+      '15点先取で勝利（得点が同じ場合、購入カード枚数が少ない方が勝ち）',
+    ],
+    tips: ['高い得点カードほど購入コストが高いが、買えれば効率的','中段カード（2段目）を狙いすぎず、バランスよく購入する','貴族タイルの条件を早めに確認して方向性を決める','黄色（金）チップは万能なので使いどころを見極める'],
+    faq: [
+      { q:'チップは最大何個持てる？', a:'最大10個まで。10個を超える場合は余分なチップを返す。' },
+      { q:'カードの予約とは？', a:'手番を消費してカードを手元に取り置き、金チップを1枚もらう。予約カードはいつでも購入可。' },
+      { q:'貴族タイルの取り方は？', a:'条件の色の発展カードを規定枚数所持していれば、自動的に取得できる。' },
+    ],
+  },
+  {
+    id: 'uno', name: 'UNO（ウノ）', cat: 'card', players: '2-10人', time: '30分', age: '7歳〜', emoji: '🃏',
+    tagline: '手札をいち早く出し切る定番カードゲーム',
+    rules: [
+      '各自7枚のカードを持ち、場のカードと色か数字が一致するカードを出す',
+      '出せないときはカードを1枚引く（引いたカードが出せれば即出せる）',
+      '特殊カード：スキップ・リバース・ドロー2・ワイルド・ワイルドドロー4',
+      '手札が残り1枚になったら「UNO！」と宣言',
+      '手札を全部出したプレイヤーが1ラウンド終了。他プレイヤーの手札点数合計がそのプレイヤーの得点',
+    ],
+    tips: ['ワイルドドロー4は有利な場面（相手に残り少ない）で使う','色変更は相手が苦手な色を狙う','数字が同じなら違う色に変更して相手の計画を崩す','UNOの宣言忘れを見逃さずに指摘するのも戦略'],
+    faq: [
+      { q:'ワイルドドロー4はいつ使える？', a:'公式ルールでは出せる色が手札にないときのみ使用可。ただし証明できないため実質いつでも可。' },
+      { q:'UNO宣言忘れはどうなる？', a:'他のプレイヤーに指摘されたら（次の人が出す前に）2枚引く。' },
+      { q:'点数計算の方法は？', a:'数字カードはそのまま、スキップ/リバース/ドロー2は20点、ワイルド系は50点。' },
+    ],
+  },
+];
+
+let currentCat = 'all';
+let currentGame = null;
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.bg-tag').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function filterGames() {
+  renderList();
+}
+
+function renderList() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = GAMES.filter(g =>
+    (currentCat === 'all' || g.cat === currentCat) &&
+    (!q || g.name.toLowerCase().includes(q))
+  );
+  document.getElementById('gameList').innerHTML = filtered.map(g => `
+    <div class="gl-item ${currentGame?.id === g.id ? 'active' : ''}" onclick="showGame('${g.id}')">
+      <span class="gl-emoji">${g.emoji}</span>
+      <div class="gl-info">
+        <div class="gl-name">${g.name}</div>
+        <div class="gl-meta">${g.players} ／ ${g.time}</div>
+      </div>
+    </div>
+  `).join('') || '<div style="color:var(--gray-400);padding:1rem">該当なし</div>';
+}
+
+function showGame(id) {
+  currentGame = GAMES.find(g => g.id === id);
+  if (!currentGame) return;
+  document.querySelectorAll('.gl-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[onclick="showGame('${id}')"]`)?.classList.add('active');
+
+  const g = currentGame;
+  document.getElementById('gameDetail').innerHTML = `
+    <div class="gd-header">
+      <div class="gd-emoji">${g.emoji}</div>
+      <div class="gd-title">${g.name}</div>
+      <div class="gd-meta">${g.players} ／ ${g.time} ／ ${g.age}</div>
+      <div class="gd-tagline">${g.tagline}</div>
+    </div>
+    <div class="gd-section">
+      <div class="gd-sec-title">📖 基本ルール</div>
+      <ol class="gd-list">${g.rules.map(r => '<li>' + r + '</li>').join('')}</ol>
+    </div>
+    <div class="gd-section">
+      <div class="gd-sec-title">💡 初心者のための戦略ヒント</div>
+      <ul class="gd-tips">${g.tips.map(t => '<li>' + t + '</li>').join('')}</ul>
+    </div>
+    <div class="gd-section">
+      <div class="gd-sec-title">❓ よくある質問</div>
+      ${g.faq.map(f => `<div class="gd-faq"><div class="faq-q">Q: ${f.q}</div><div class="faq-a">A: ${f.a}</div></div>`).join('')}
+    </div>
+  `;
+}
+
+renderList();
+</script>
+
+<style>
+.bg-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.bg-header { text-align: center; margin-bottom: 2rem; }
+.bg-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.bg-sub { color: var(--gray-400); margin-top: .3rem; }
+.bg-search { margin-bottom: 1rem; }
+.bg-search-row { margin-bottom: .6rem; }
+.bg-search-input { width: 100%; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; color: var(--gray-100); padding: .6rem 1rem; font-size: .95rem; box-sizing: border-box; }
+.bg-tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+.bg-tag { padding: .3rem .8rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .82rem; cursor: pointer; }
+.bg-tag.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.bg-body { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
+@media (max-width: 700px) { .bg-body { grid-template-columns: 1fr; } }
+.bg-list { display: flex; flex-direction: column; gap: .4rem; }
+.gl-item { display: flex; align-items: center; gap: .7rem; padding: .7rem .9rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; cursor: pointer; }
+.gl-item:hover, .gl-item.active { border-color: #7c3aed; background: #1e1b4b; }
+.gl-emoji { font-size: 1.5rem; }
+.gl-name { font-weight: 700; color: var(--gray-100); font-size: .9rem; }
+.gl-meta { font-size: .75rem; color: var(--gray-400); }
+.bg-detail { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.5rem; }
+.bg-detail-empty { color: var(--gray-400); text-align: center; padding: 2rem; }
+.gd-header { text-align: center; padding-bottom: 1.2rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--gray-700); }
+.gd-emoji { font-size: 2.5rem; margin-bottom: .4rem; }
+.gd-title { font-size: 1.4rem; font-weight: 800; color: var(--gray-100); }
+.gd-meta { font-size: .8rem; color: var(--gray-400); margin: .3rem 0; }
+.gd-tagline { font-size: .88rem; color: var(--gray-300); }
+.gd-section { margin-bottom: 1.2rem; }
+.gd-sec-title { font-weight: 700; color: var(--gray-200); margin-bottom: .6rem; font-size: .9rem; }
+.gd-list, .gd-tips { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .4rem; }
+.gd-list li, .gd-tips li { color: var(--gray-300); font-size: .87rem; line-height: 1.6; }
+.gd-faq { background: var(--gray-900); border-radius: 8px; padding: .7rem .9rem; margin-bottom: .5rem; }
+.faq-q { font-weight: 700; color: var(--gray-200); font-size: .85rem; margin-bottom: .3rem; }
+.faq-a { color: var(--gray-300); font-size: .85rem; line-height: 1.6; }
+</style>
+</BaseLayout>
