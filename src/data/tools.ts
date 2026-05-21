@@ -319,7 +319,7 @@ export const tools: Tool[] = [
 		id: 48, slug: 'regex-visualizer',
 		name: '正規表現ビジュアライザ',
 		description: '入力すると状態遷移図SVGで表示。マッチ箇所をリアルタイムハイライト。',
-		emoji: '🔢', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '🔢', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 49, slug: 'git-undo',
