@@ -1,0 +1,587 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="プログラミング「Hello World」50言語 | yumi Labs">
+  <style>
+    .lang-card {
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .lang-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .lang-card.learned {
+      border-color: rgba(74,222,128,0.4) !important;
+    }
+    .code-area {
+      font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .copy-flash { animation: copy-flash 0.3s ease-out; }
+    @keyframes copy-flash {
+      0%   { background: rgba(74,222,128,0.3); }
+      100% { background: transparent; }
+    }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in { animation: slide-in 0.3s ease-out forwards; }
+    .progress-ring-circle {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.34,1.56,0.64,1);
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+    .syntax-keyword { color: #c792ea; }
+    .syntax-string  { color: #c3e88d; }
+    .syntax-comment { color: #546e7a; font-style: italic; }
+    .syntax-func    { color: #82aaff; }
+    .syntax-num     { color: #f78c6c; }
+    .syntax-type    { color: #ffcb6b; }
+    .syntax-op      { color: #89ddff; }
+  </style>
+
+  <div class="max-w-4xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">💻</div>
+      <div class="text-3xl font-bold text-white mb-2">プログラミング「Hello World」50言語</div>
+      <div class="text-gray-400 text-sm">1日1言語、各言語のHello Worldコードを読んで・写経して・特徴を掴もう</div>
+    </div>
+
+    <!-- Top bar: progress + filter -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-6 items-center">
+      <!-- Ring progress -->
+      <div class="flex items-center gap-4 bg-white/5 rounded-2xl px-5 py-3 flex-shrink-0">
+        <svg width="56" height="56" viewBox="0 0 56 56">
+          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5"/>
+          <circle id="progressRing" cx="28" cy="28" r="22" fill="none" stroke="#9333ea" stroke-width="5"
+            stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2"
+            class="progress-ring-circle"/>
+          <text x="28" y="33" text-anchor="middle" fill="white" font-size="13" font-weight="bold" id="progressRingText">0</text>
+        </svg>
+        <div>
+          <div class="text-white font-bold text-lg"><span id="learnedCount">0</span> / 50</div>
+          <div class="text-xs text-gray-400">言語を学習済み</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="relative flex-1 w-full">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">🔍</span>
+        <input id="searchInput" type="text" placeholder="言語名・キーワードで検索..."
+          oninput="renderGrid()"
+          class="w-full bg-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+      </div>
+
+      <!-- Filter -->
+      <div class="flex gap-1.5 flex-shrink-0">
+        <button onclick="setFilter('all')" data-f="all" class="filter-btn px-3 py-2 rounded-xl text-xs font-medium border border-purple-400/60 bg-purple-500/20 text-white transition-all">すべて</button>
+        <button onclick="setFilter('todo')" data-f="todo" class="filter-btn px-3 py-2 rounded-xl text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">未学習</button>
+        <button onclick="setFilter('done')" data-f="done" class="filter-btn px-3 py-2 rounded-xl text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">学習済み</button>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div id="langGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8"></div>
+
+    <!-- Detail panel -->
+    <div id="detailPanel" class="hidden slide-in">
+      <div class="bg-white/5 rounded-2xl p-6 border border-white/10">
+
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="text-4xl" id="detailEmoji"></div>
+            <div>
+              <div class="text-2xl font-black text-white" id="detailName"></div>
+              <div class="text-sm text-gray-400" id="detailYear"></div>
+            </div>
+          </div>
+          <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-300 text-xl transition-all">✕</button>
+        </div>
+
+        <!-- Tags -->
+        <div class="flex flex-wrap gap-1.5 mb-4" id="detailTags"></div>
+
+        <!-- Description -->
+        <div class="text-sm text-gray-300 leading-relaxed mb-4" id="detailDesc"></div>
+
+        <!-- Code block -->
+        <div class="relative mb-4">
+          <div class="flex items-center justify-between bg-white/10 rounded-t-xl px-4 py-2 border-b border-white/10">
+            <span class="text-xs text-gray-400 font-mono" id="detailLangLabel"></span>
+            <button onclick="copyCode()" id="copyBtn"
+              class="text-xs px-3 py-1 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">
+              📋 コピー
+            </button>
+          </div>
+          <pre id="detailCode" class="code-area bg-black/40 rounded-b-xl p-4 overflow-x-auto text-sm leading-relaxed whitespace-pre border border-white/5 border-t-0"></pre>
+        </div>
+
+        <!-- Fun facts -->
+        <div class="bg-white/5 rounded-xl p-4 mb-4" id="detailFacts">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">💡 ポイント</div>
+          <ul id="detailFactList" class="space-y-1"></ul>
+        </div>
+
+        <!-- Transcription area -->
+        <div class="mb-4">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">✏️ 写経エリア（タイプして練習）</div>
+          <textarea id="transcribeArea" placeholder="ここにコードを打ち込んで練習しよう..."
+            class="code-area w-full bg-black/40 rounded-xl p-4 text-white placeholder-gray-600 border border-white/10 focus:border-purple-400 focus:outline-none text-sm resize-none"
+            rows="6" oninput="checkTranscription()"></textarea>
+          <div id="transcribeMsg" class="mt-1 text-xs text-center hidden"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3">
+          <button onclick="markLearned()" id="learnBtn"
+            class="flex-1 py-3 rounded-xl font-bold text-white text-sm transition-all"
+            style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+            ✅ 学習済みにする
+          </button>
+          <button onclick="navLang(-1)" class="px-4 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">◀</button>
+          <button onclick="navLang(1)"  class="px-4 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">▶</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const STORAGE_KEY = 'hello_world_tour_v1';
+
+  const LANGS = [
+    { id:'python',     name:'Python',       emoji:'🐍', year:'1991', tags:['スクリプト','AI/ML','初心者向け'],
+      desc:'シンプルな文法が特徴。インデント（字下げ）でブロックを表現する。AI・データサイエンス分野で圧倒的人気。',
+      code:`print("Hello, World!")`,
+      facts:['print()は関数。括弧が必要','文末のセミコロン不要','インデントが文法の一部'] },
+
+    { id:'javascript', name:'JavaScript',   emoji:'🌐', year:'1995', tags:['Web','フロントエンド','ブラウザ'],
+      desc:'Webブラウザで動く唯一の言語。Node.jsでサーバーサイドも動かせる。',
+      code:`console.log("Hello, World!");`,
+      facts:['console.logはデバッグの基本',';は省略可能（ASIが補完）','シングル・ダブル・バッククォートで文字列'] },
+
+    { id:'typescript', name:'TypeScript',   emoji:'🔷', year:'2012', tags:['Web','型安全','Microsoft'],
+      desc:'JavaScriptに型システムを追加した言語。大規模開発で威力を発揮。コンパイルするとJSになる。',
+      code:`const message: string = "Hello, World!";\nconsole.log(message);`,
+      facts:['変数に型注釈: string, number, boolean','コンパイル時に型チェック','TypeScript→JavaScriptに変換'] },
+
+    { id:'java',       name:'Java',         emoji:'☕', year:'1995', tags:['OOP','エンタープライズ','Android'],
+      desc:'「Write Once, Run Anywhere」。JVM上で動くため、OS問わず動作。Androidアプリ開発にも使用。',
+      code:`public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}`,
+      facts:['クラス名とファイル名は一致が必要','mainメソッドがエントリーポイント','System.out.printlnが標準出力'] },
+
+    { id:'kotlin',     name:'Kotlin',       emoji:'🎯', year:'2011', tags:['Android','JVM','モダン'],
+      desc:'JetBrains製。Javaより簡潔で安全。現在のAndroid開発の公式言語。',
+      code:`fun main() {\n    println("Hello, World!")\n}`,
+      facts:['fun がキーワード（functionの略）','printlnはSystem.out.printlnより短い','セミコロン不要'] },
+
+    { id:'swift',      name:'Swift',        emoji:'🦅', year:'2014', tags:['iOS','Apple','モダン'],
+      desc:'Apple製。iOS/macOSアプリ開発の主要言語。安全性と速度を重視。',
+      code:`print("Hello, World!")`,
+      facts:['print()はデフォルトで改行付き','型推論が強力','Objective-Cより大幅に簡潔'] },
+
+    { id:'rust',       name:'Rust',         emoji:'🦀', year:'2010', tags:['システム','高速','メモリ安全'],
+      desc:'Mozillaが開発。GCなしでメモリ安全を保証。Stackoverflow「最も愛される言語」9年連続1位。',
+      code:`fn main() {\n    println!("Hello, World!");\n}`,
+      facts:['println!はマクロ（!がつく）','所有権システムでメモリ安全','fn はfunction'] },
+
+    { id:'go',         name:'Go',           emoji:'🐹', year:'2009', tags:['サーバー','並行処理','Google'],
+      desc:'Googleが開発。シンプルさと高速なコンパイルが特徴。マスコットはGopher（リス）。',
+      code:`package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, World!")\n}`,
+      facts:['package mainが必須','importで標準ライブラリを読み込む','fmt.Printlnがフォーマット出力'] },
+
+    { id:'c',          name:'C',            emoji:'⚙️', year:'1972', tags:['システム','低レベル','古典'],
+      desc:'プログラミング言語の父。OSやデバイスドライバに使われる。ほぼ全言語のベースになっている。',
+      code:`#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}`,
+      facts:['#includeでヘッダファイルを読み込む','printf()が書式付き出力','\\nが改行文字'] },
+
+    { id:'cpp',        name:'C++',          emoji:'⚡', year:'1985', tags:['ゲーム','システム','OOP'],
+      desc:'CにOOP機能を追加。ゲームエンジン（Unreal Engine）やブラウザの内部に使われる。',
+      code:`#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}`,
+      facts:['coutは「character out」の意','<<演算子でストリームに出力','endlで改行+バッファフラッシュ'] },
+
+    { id:'csharp',     name:'C#',           emoji:'🎵', year:'2000', tags:['.NET','ゲーム','Microsoft'],
+      desc:'Microsoft製。Unity（ゲーム開発）の主要言語。.NETエコシステムで活躍。',
+      code:`using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, World!");\n    }\n}`,
+      facts:['Console.WriteLineが標準出力','using Systemで名前空間を読み込む','Unityではこれが基本'] },
+
+    { id:'ruby',       name:'Ruby',         emoji:'💎', year:'1995', tags:['Web','Rails','日本製'],
+      desc:'まつもとゆきひろ（Matz）が開発した日本生まれの言語。RubyonRailsでWeb開発が人気。',
+      code:`puts "Hello, World!"`,
+      facts:['putsはput stringの略','最後に評価した値が戻り値','()を省略できる'] },
+
+    { id:'php',        name:'PHP',          emoji:'🐘', year:'1994', tags:['Web','サーバー','WordPress'],
+      desc:'WordPressの開発言語。Web全体の80%以上がPHPで動いているとも言われる。',
+      code:`<?php\necho "Hello, World!";\n?>`,
+      facts:['<?phpで開始','echoが出力','変数は$で始まる'] },
+
+    { id:'perl',       name:'Perl',         emoji:'🧅', year:'1987', tags:['スクリプト','テキスト処理','レガシー'],
+      desc:'テキスト処理の達人。正規表現が非常に強力。バイオインフォマティクスでも使われる。',
+      code:`print "Hello, World!\\n";`,
+      facts:['printで出力','\\nが改行','正規表現が超強力'] },
+
+    { id:'r',          name:'R',            emoji:'📊', year:'1993', tags:['統計','データ分析','研究'],
+      desc:'統計分析・データビジュアライゼーションの専門言語。研究者やデータサイエンティストに人気。',
+      code:`cat("Hello, World!\\n")`,
+      facts:['catはconcatenateの略','print()も使用可能','ベクトル演算が得意'] },
+
+    { id:'scala',      name:'Scala',        emoji:'🌊', year:'2004', tags:['JVM','関数型','Spark'],
+      desc:'JavaとFP（関数型プログラミング）を融合。Apache Sparkのネイティブ言語。',
+      code:`object HelloWorld extends App {\n  println("Hello, World!")\n}`,
+      facts:['objectでシングルトンを定義','App traitでmain不要','末尾のセミコロン省略可'] },
+
+    { id:'haskell',    name:'Haskell',      emoji:'λ', year:'1990', tags:['関数型','学術','純粋'],
+      desc:'純粋関数型言語の代表。副作用をMonadで管理。難しいが考え方を学ぶ価値がある。',
+      code:`main :: IO ()\nmain = putStrLn "Hello, World!"`,
+      facts:['::で型注釈','IO ()はI/Oアクションの型','putStrLnは改行付き出力'] },
+
+    { id:'elixir',     name:'Elixir',       emoji:'💜', year:'2011', tags:['並行処理','Erlang VM','Web'],
+      desc:'Erlang VM上で動作。高い並行性と耐障害性。Phoenixフレームワークでリアルタイムアプリを開発。',
+      code:`IO.puts("Hello, World!")`,
+      facts:['IO.putsが標準出力','パイプ演算子|>が強力','関数型でイミュータブル'] },
+
+    { id:'clojure',    name:'Clojure',      emoji:'🌀', year:'2007', tags:['Lisp','JVM','関数型'],
+      desc:'LispのJVM版。Immutableデータ構造が中心。Lispの括弧に慣れれば超強力。',
+      code:`(println "Hello, World!")`,
+      facts:['S式：(関数 引数 引数)','括弧が大量に登場','末尾の括弧は後ろにまとめる'] },
+
+    { id:'fsharp',     name:'F#',           emoji:'🔵', year:'2005', tags:['.NET','関数型','Microsoft'],
+      desc:'Microsoft製の関数型言語。.NET上で動き、C#と相互運用可能。ML系言語の影響を受けている。',
+      code:`printfn "Hello, World!"`,
+      facts:['printfnはprintf+改行','インデントが文法の一部','型推論が強力'] },
+
+    { id:'lua',        name:'Lua',          emoji:'🌙', year:'1993', tags:['ゲーム','組み込み','スクリプト'],
+      desc:'ブラジル生まれの軽量言語。Roblox・Defold・Neovimのプラグイン言語として有名。',
+      code:`print("Hello, World!")`,
+      facts:['printが標準出力','テーブルが唯一のデータ構造','配列は1始まり！'] },
+
+    { id:'dart',       name:'Dart',         emoji:'🎯', year:'2011', tags:['Flutter','Google','モバイル'],
+      desc:'Google製。Flutterフレームワークの言語。iOS/Androidのクロスプラットフォーム開発に使われる。',
+      code:`void main() {\n  print('Hello, World!');\n}`,
+      facts:['voidはreturn型なし','main()がエントリーポイント','print()でコンソール出力'] },
+
+    { id:'julia',      name:'Julia',        emoji:'🔬', year:'2012', tags:['科学計算','高速','数値解析'],
+      desc:'Pythonのように書けてCのように速い科学計算言語。数値解析・機械学習・シミュレーションに強い。',
+      code:`println("Hello, World!")`,
+      facts:['printlnが改行付き出力','print()は改行なし','MATLABの代替として人気'] },
+
+    { id:'matlab',     name:'MATLAB',       emoji:'📐', year:'1984', tags:['科学計算','行列','数値解析'],
+      desc:'数値解析と行列演算に特化した商用言語。大学の理工系でよく使われる。',
+      code:`disp('Hello, World!')`,
+      facts:['dispは表示のdisplay','fprintf()で書式付き出力','行列演算がネイティブ'] },
+
+    { id:'fortran',    name:'Fortran',      emoji:'🏛️', year:'1957', tags:['科学計算','古典','HPC'],
+      desc:'世界初の高水準言語。今もスパコンでの数値計算に現役。古いが速い。',
+      code:`program hello\n  print *, 'Hello, World!'\nend program hello`,
+      facts:['print *はリスト指向出力','最古の高水準言語（1957）','NASAでも現役'] },
+
+    { id:'cobol',      name:'COBOL',        emoji:'🏦', year:'1959', tags:['金融','レガシー','ビジネス'],
+      desc:'銀行・保険の基幹システムで現役。世界の金融トランザクションの95%がCOBOLで処理されているとも。',
+      code:`IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.`,
+      facts:['英語に近い文法','DIVISION構造で区切る','今も金融の基幹に現役'] },
+
+    { id:'assembly',   name:'Assembly',     emoji:'🔩', year:'1949', tags:['低レベル','CPU','最速'],
+      desc:'CPUの命令を直接記述する最低レベル言語。CPUアーキテクチャごとに異なる。最速だが難しい。',
+      code:`section .data\n    msg db 'Hello, World!', 0x0a\n    len equ $ - msg\n\nsection .text\n    global _start\n_start:\n    mov eax, 4\n    mov ebx, 1\n    mov ecx, msg\n    mov edx, len\n    int 0x80\n    mov eax, 1\n    xor ebx, ebx\n    int 0x80`,
+      facts:['x86 Linuxアセンブリ（NASM）','int 0x80でシステムコール','CPU命令を直接記述'] },
+
+    { id:'bash',       name:'Bash',         emoji:'🐚', year:'1989', tags:['シェル','Linux','自動化'],
+      desc:'LinuxのデフォルトシェルスクリプトLanguage。サーバー自動化・CI/CDパイプラインに必須。',
+      code:`#!/bin/bash\necho "Hello, World!"`,
+      facts:['#!はShebang（シバン）','echoが出力コマンド','スペース区切りが重要'] },
+
+    { id:'powershell', name:'PowerShell',   emoji:'🪟', year:'2006', tags:['Windows','自動化','Microsoft'],
+      desc:'Windowsの自動化に特化。.NETオブジェクトをパイプラインで渡せる。クロスプラットフォーム版もある。',
+      code:`Write-Host "Hello, World!"`,
+      facts:['Verb-Nounの命名規則','Write-HostとWrite-Outputは違う','#でコメント'] },
+
+    { id:'sql',        name:'SQL',          emoji:'🗄️', year:'1974', tags:['データベース','クエリ','標準'],
+      desc:'データベース操作の標準言語。SELECT・INSERT・UPDATE・DELETEの4大操作が基本。',
+      code:`SELECT 'Hello, World!' AS greeting;`,
+      facts:['SELECT文でデータを取得','AS で列に別名を付ける','WHERE句で条件絞り込み'] },
+
+    { id:'html',       name:'HTML',         emoji:'🌍', year:'1993', tags:['Web','マークアップ','標準'],
+      desc:'Webページの骨格を作るマークアップ言語。プログラミング言語ではないがWebの基礎。',
+      code:`<!DOCTYPE html>\n<html lang="ja">\n<head>\n    <meta charset="UTF-8">\n    <title>Hello</title>\n</head>\n<body>\n    <h1>Hello, World!</h1>\n</body>\n</html>`,
+      facts:['タグで構造を表現','DOCTYPE宣言が先頭に必要','CSSとJSと組み合わせて使う'] },
+
+    { id:'css',        name:'CSS',          emoji:'🎨', year:'1996', tags:['Web','スタイル','デザイン'],
+      desc:'HTMLの見た目を制御するスタイルシート言語。色・フォント・レイアウトを定義する。',
+      code:`body::before {\n    content: "Hello, World!";\n    display: block;\n    font-size: 2rem;\n    color: purple;\n}`,
+      facts:['セレクタ{プロパティ:値}の形式','::beforeで疑似要素を生成','contentプロパティでテキスト挿入'] },
+
+    { id:'wasm',       name:'WebAssembly',  emoji:'🕸️', year:'2017', tags:['Web','高速','バイナリ'],
+      desc:'ブラウザ上でネイティブ速度で動くバイナリ形式。C/C++/Rustからコンパイルして使う。',
+      code:`(module\n  (import "env" "print" (func $print (param i32 i32)))\n  (data (i32.const 0) "Hello, World!")\n  (func (export "main")\n    i32.const 0\n    i32.const 13\n    call $print\n  )\n)`,
+      facts:['WAT（WebAssembly Text Format）','S式で記述する','ブラウザでC/C++並みの速度'] },
+
+    { id:'prolog',     name:'Prolog',       emoji:'🧩', year:'1972', tags:['論理型','AI','学術'],
+      desc:'論理プログラミング言語。事実とルールを記述して質問する。AI研究や自然言語処理に使われた。',
+      code:`:- initialization(main).\nmain :- write('Hello, World!'), nl.`,
+      facts:['事実とルールを「宣言」する',':-は「ならば」の意味','バックトラッキングで探索'] },
+
+    { id:'erlang',     name:'Erlang',       emoji:'📡', year:'1986', tags:['並行処理','通信','耐障害性'],
+      desc:'エリクソン製。9個の9（99.9999999%）の可用性を実現した通信システムの言語。',
+      code:`-module(hello).\n-export([main/0]).\n\nmain() ->\n    io:format("Hello, World!~n").`,
+      facts:['-module()でモジュール宣言','-export()で公開関数を指定','Elixirの基盤となった言語'] },
+
+    { id:'ocaml',      name:'OCaml',        emoji:'🐪', year:'1996', tags:['関数型','型推論','ML'],
+      desc:'ML系の関数型言語。型推論が強力。Facebookの主要ツール群（Reason/Hack）のベース。',
+      code:`let () = print_endline "Hello, World!"`,
+      facts:['let ()がエントリーポイント','型推論で型注釈不要','関数型とOOPを融合'] },
+
+    { id:'nim',        name:'Nim',          emoji:'👑', year:'2008', tags:['高速','モダン','マクロ'],
+      desc:'Pythonのように書けてCのように速いマクロ言語。メタプログラミングが強力。',
+      code:`echo "Hello, World!"`,
+      facts:['echoが標準出力','Pythonに似た文法','CにコンパイルしてネイティブSpeed'] },
+
+    { id:'crystal',    name:'Crystal',      emoji:'💎', year:'2011', tags:['Ruby風','高速','型安全'],
+      desc:'Ruby風の文法でCのような速度。Rubyのコードがほぼそのまま動くこともある。',
+      code:`puts "Hello, World!"`,
+      facts:['Rubyと同じputsが使える','静的型付けだが型推論で普通は書かなくていい','バイナリにコンパイル'] },
+
+    { id:'zig',        name:'Zig',          emoji:'⚡', year:'2016', tags:['低レベル','C代替','高速'],
+      desc:'C言語の代替を目指す低レベル言語。安全性とシンプルさのバランスが良い。次世代システム言語候補。',
+      code:`const std = @import("std");\n\npub fn main() !void {\n    const stdout = std.io.getStdOut().writer();\n    try stdout.print("Hello, World!\\n", .{});\n}`,
+      facts:['@importで標準ライブラリ','!はエラー型','pub fnで公開関数'] },
+
+    { id:'v',          name:'V',            emoji:'✌️', year:'2019', tags:['高速','シンプル','新興'],
+      desc:'Goに影響を受けたシンプルな高速言語。コンパイル速度が非常に速い。',
+      code:`fn main() {\n    println('Hello, World!')\n}`,
+      facts:['Goに似た文法','println()が標準出力','シングルクォートで文字列'] },
+
+    { id:'d',          name:'D',            emoji:'🔷', year:'2001', tags:['C++代替','高速','安全'],
+      desc:'C++をより安全・快適にした言語。Unityの一部もDで書かれている。',
+      code:`import std.stdio;\n\nvoid main() {\n    writeln("Hello, World!");\n}`,
+      facts:['writeln()が改行付き出力','importで標準ライブラリ','C++互換の高速動作'] },
+
+    { id:'groovy',     name:'Groovy',       emoji:'🎸', year:'2003', tags:['JVM','スクリプト','Jenkins'],
+      desc:'Java互換のJVM言語。Jenkinsパイプラインの定義言語として有名。Gradle設定にも使う。',
+      code:`println "Hello, World!"`,
+      facts:['Javaコードがほぼそのまま動く','() や ; が省略可能','Gradleビルドで必須'] },
+
+    { id:'smalltalk',  name:'Smalltalk',    emoji:'💬', year:'1972', tags:['OOP原点','メッセージ','歴史的'],
+      desc:'オブジェクト指向の原点。全てがオブジェクトでメッセージを送り合う純粋OOP言語。',
+      code:`Transcript show: 'Hello, World!'.`,
+      facts:['Transcriptはコンソール出力オブジェクト','show:はメッセージ','クラスもオブジェクト'] },
+
+    { id:'racket',     name:'Racket',       emoji:'🏓', year:'1994', tags:['Lisp','教育','関数型'],
+      desc:'Scheme派生の教育用言語。言語設計の実験場としても使われる。PLT Schemeが前身。',
+      code:`#lang racket\n(displayln "Hello, World!")`,
+      facts:['#lang racketで言語宣言','displayln は println相当','S式ベースのLisp系'] },
+
+    { id:'coffeescript',name:'CoffeeScript',emoji:'☕', year:'2009', tags:['JavaScript','シンタックス糖衣'],
+      desc:'JavaScriptを簡潔に書くための言語。「It\'s just JavaScript」。現在はTypeScriptに押されている。',
+      code:`console.log "Hello, World!"`,
+      facts:['括弧なしで関数呼び出し可能','JSにコンパイルされる','Rubyに似た文法'] },
+
+    { id:'elm',        name:'Elm',          emoji:'🌳', year:'2012', tags:['関数型','Web','型安全'],
+      desc:'フロントエンド専用の純粋関数型言語。ランタイムエラーが事実上ゼロで有名。',
+      code:`module Main exposing (main)\nimport Html exposing (text)\n\nmain =\n    text "Hello, World!"`,
+      facts:['モジュール宣言が必須','Html.textでDOM生成','ランタイムエラーなし'] },
+
+    { id:'purescript', name:'PureScript',   emoji:'🔮', year:'2013', tags:['Haskell風','Web','関数型'],
+      desc:'HaskellをWebフロントエンド向けに実装した言語。型システムが非常に厳密。',
+      code:`module Main where\n\nimport Prelude\nimport Effect (Effect)\nimport Effect.Console (log)\n\nmain :: Effect Unit\nmain = log "Hello, World!"`,
+      facts:['Haskellとほぼ同じ文法','Effect型でI/O管理','型クラスが豊富'] },
+
+    { id:'solidity',   name:'Solidity',     emoji:'⛓️', year:'2014', tags:['ブロックチェーン','Ethereum','スマコン'],
+      desc:'Ethereumのスマートコントラクト言語。一度デプロイすると変更できない特性がある。',
+      code:`// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract Hello {\n    function greet() public pure returns (string memory) {\n        return "Hello, World!";\n    }\n}`,
+      facts:['contractがクラス相当','pragmaでバージョン指定','関数の可視性（public/private）が重要'] },
+
+    { id:'move',       name:'Move',         emoji:'♟️', year:'2019', tags:['ブロックチェーン','Sui','Aptos'],
+      desc:'Facebookが開発したブロックチェーン用言語。リソース型システムで安全な資産管理が可能。',
+      code:`module hello::world {\n    use std::debug;\n    \n    public fun say_hello() {\n        debug::print(&b"Hello, World!");\n    }\n}`,
+      facts:['モジュールシステムで管理','リソース型で資産の複製を防ぐ','SuiとAptosで採用'] },
+
+    { id:'mojo',       name:'Mojo',         emoji:'🔥', year:'2023', tags:['AI','Python互換','高速'],
+      desc:'Python互換で35000倍速いとされる新言語。AI開発向けに設計。まだ発展途上。',
+      code:`fn main():\n    print("Hello, World!")`,
+      facts:['Python文法とほぼ同じ','fn と def の両方が使える','MLIR上でネイティブコンパイル'] },
+
+    { id:'carbon',     name:'Carbon',       emoji:'⚗️', year:'2022', tags:['C++後継','Google','実験的'],
+      desc:'GoogleがC++の後継として開発中の言語。まだ実験段階だが注目されている。',
+      code:`package Hello api;\n\nfn Main() -> i32 {\n  Print("Hello, World!");\n  return 0;\n}`,
+      facts:['C++コードと相互運用可能','現在実験段階','パッケージシステムが特徴'] },
+  ];
+
+  // ---- State ----
+  const STORAGE_KEY = 'hello_world_tour_v1';
+  let learned = new Set();
+  let currentFilter = 'all';
+  let currentLangId = null;
+
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      learned = new Set(s);
+    } catch { learned = new Set(); }
+  }
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...learned]));
+  }
+
+  // ---- Grid ----
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      const active = b.dataset.f === f;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(156,163,175)';
+    });
+    renderGrid();
+  }
+
+  function renderGrid() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = LANGS.filter(l => {
+      const matchQ = !q || l.name.toLowerCase().includes(q) || l.tags.join(' ').toLowerCase().includes(q) || l.desc.toLowerCase().includes(q);
+      const matchF = currentFilter === 'all' || (currentFilter === 'done' && learned.has(l.id)) || (currentFilter === 'todo' && !learned.has(l.id));
+      return matchQ && matchF;
+    });
+
+    document.getElementById('langGrid').innerHTML = filtered.map(l => {
+      const isLearned = learned.has(l.id);
+      return `<div class="lang-card bg-white/5 rounded-2xl p-3 border ${isLearned ? 'border-green-400/30' : 'border-white/5'} text-center"
+        onclick="openDetail('${l.id}')">
+        <div class="text-3xl mb-1">${l.emoji}</div>
+        <div class="text-sm font-bold text-white leading-tight">${l.name}</div>
+        <div class="text-xs text-gray-500 mt-0.5">${l.year}</div>
+        ${isLearned ? '<div class="mt-1.5 text-xs text-green-400">✓ 学習済み</div>' : '<div class="mt-1.5 text-xs text-gray-600">未学習</div>'}
+      </div>`;
+    }).join('');
+
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const count = learned.size;
+    document.getElementById('learnedCount').textContent = count;
+    document.getElementById('progressRingText').textContent = count;
+    const circ = 2 * Math.PI * 22;
+    const offset = circ - (count / 50) * circ;
+    document.getElementById('progressRing').style.strokeDashoffset = offset;
+  }
+
+  // ---- Detail ----
+  function openDetail(id) {
+    const lang = LANGS.find(l => l.id === id);
+    if (!lang) return;
+    currentLangId = id;
+
+    document.getElementById('detailEmoji').textContent = lang.emoji;
+    document.getElementById('detailName').textContent = lang.name;
+    document.getElementById('detailYear').textContent = `${lang.year}年 生まれ`;
+    document.getElementById('detailDesc').textContent = lang.desc;
+    document.getElementById('detailLangLabel').textContent = lang.name;
+    document.getElementById('detailTags').innerHTML = lang.tags.map(t =>
+      `<span class="px-2 py-0.5 rounded-lg text-xs bg-purple-500/20 text-purple-300 border border-purple-400/20">${t}</span>`
+    ).join('');
+
+    // Syntax highlight (simple)
+    document.getElementById('detailCode').innerHTML = highlight(lang.code);
+
+    document.getElementById('detailFactList').innerHTML = lang.facts.map(f =>
+      `<li class="text-xs text-gray-300 flex gap-2"><span class="text-purple-400 flex-shrink-0">•</span><span>${f}</span></li>`
+    ).join('');
+
+    // Learn button state
+    const isLearned = learned.has(id);
+    const btn = document.getElementById('learnBtn');
+    btn.textContent = isLearned ? '✅ 学習済み（クリックで取り消し）' : '✅ 学習済みにする';
+    btn.style.background = isLearned
+      ? 'linear-gradient(135deg,#059669,#10b981)'
+      : 'linear-gradient(135deg,#9333ea,#ec4899)';
+
+    document.getElementById('transcribeArea').value = '';
+    document.getElementById('transcribeMsg').classList.add('hidden');
+
+    const panel = document.getElementById('detailPanel');
+    panel.classList.remove('hidden');
+    panel.classList.add('slide-in');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => panel.classList.remove('slide-in'), 300);
+  }
+
+  function closeDetail() {
+    document.getElementById('detailPanel').classList.add('hidden');
+    currentLangId = null;
+  }
+
+  function navLang(dir) {
+    const idx = LANGS.findIndex(l => l.id === currentLangId);
+    const next = (idx + dir + LANGS.length) % LANGS.length;
+    openDetail(LANGS[next].id);
+  }
+
+  function markLearned() {
+    if (!currentLangId) return;
+    if (learned.has(currentLangId)) {
+      learned.delete(currentLangId);
+    } else {
+      learned.add(currentLangId);
+    }
+    saveState();
+    openDetail(currentLangId);
+    renderGrid();
+  }
+
+  function copyCode() {
+    const lang = LANGS.find(l => l.id === currentLangId);
+    if (!lang) return;
+    navigator.clipboard.writeText(lang.code);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ コピー済み';
+    setTimeout(() => btn.textContent = '📋 コピー', 1500);
+    document.getElementById('detailCode').classList.add('copy-flash');
+    setTimeout(() => document.getElementById('detailCode').classList.remove('copy-flash'), 300);
+  }
+
+  function checkTranscription() {
+    const lang = LANGS.find(l => l.id === currentLangId);
+    if (!lang) return;
+    const input = document.getElementById('transcribeArea').value;
+    const target = lang.code.replace(/\r\n/g, '\n').trim();
+    const typed = input.replace(/\r\n/g, '\n').trim();
+    const msgEl = document.getElementById('transcribeMsg');
+    if (typed === target) {
+      msgEl.textContent = '🎉 完璧！写経完了！「学習済み」ボタンを押してチェックしよう';
+      msgEl.className = 'mt-1 text-xs text-center text-green-400';
+      msgEl.classList.remove('hidden');
+    } else if (target.startsWith(typed) && typed.length > 0) {
+      msgEl.textContent = `✏️ ${Math.round(typed.length / target.length * 100)}% 入力中...`;
+      msgEl.className = 'mt-1 text-xs text-center text-purple-300';
+      msgEl.classList.remove('hidden');
+    } else {
+      msgEl.classList.add('hidden');
+    }
+  }
+
+  // ---- Syntax highlighter (simple keyword-based) ----
+  function highlight(code) {
+    const esc = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return esc
+      .replace(/(\/\/[^\n]*)/g, '<span class="syntax-comment">$1</span>')
+      .replace(/(#[^\n!{]+)/g, '<span class="syntax-comment">$1</span>')
+      .replace(/\b(fn|fun|func|def|public|private|static|void|int|string|let|const|var|class|module|import|from|return|use|pub|async|await|new|extends|implements|interface|abstract|override|struct|enum|type|match|if|else|for|while|in|do|end|then|of|with|where|true|false|null|nil|None|Some|Ok|Err)\b/g, '<span class="syntax-keyword">$1</span>')
+      .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span class="syntax-string">$1</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="syntax-num">$1</span>');
+  }
+
+  // ---- Init ----
+  loadState();
+  renderGrid();
+
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.target.value = ''; renderGrid(); }
+  });
+</script>

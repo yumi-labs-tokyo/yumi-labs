@@ -289,7 +289,7 @@ export const tools: Tool[] = [
 		id: 43, slug: 'hello-world-tour',
 		name: 'プログラミング「Hello World」50言語',
 		description: '1日1言語、50言語のHello Worldを写経。Monaco Editor埋め込み。',
-		emoji: '💻', category: 'learning', badge: 'New', status: 'coming-soon',
+		emoji: '💻', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 44, slug: 'philosopher-chat',
