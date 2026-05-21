@@ -40,7 +40,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     <!-- Header -->
     <div class="text-center mb-8">
       <div class="text-5xl mb-3">📝</div>
-      <div class="text-3xl font-bold text-white mb-2">資格試験「1問1答」CSVアップロード式</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--gray-0);margin-bottom:0.3rem">資格試験「1問1答」CSVアップロード式</div>
       <div class="text-gray-400 text-sm">自分で作ったCSVを読み込むだけ。ランダム出題・4択・フラッシュカード対応。データは端末内のみ</div>
     </div>
 
@@ -224,9 +224,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <div class="text-2xl font-black text-white mb-1" id="resultTitle"></div>
         <div class="text-4xl font-black mb-4" id="resultScore"></div>
         <div class="grid grid-cols-3 gap-4 mb-6">
-          <div><div class="text-2xl font-bold text-green-300" id="resCorrect">0</div><div class="text-xs text-gray-400">正解</div></div>
-          <div><div class="text-2xl font-bold text-red-300" id="resWrong">0</div><div class="text-xs text-gray-400">不正解</div></div>
-          <div><div class="text-2xl font-bold text-yellow-300" id="resTotal">0</div><div class="text-xs text-gray-400">出題数</div></div>
+          <div><div style="font-size:1.8rem;font-weight:800;color:var(--gray-0);margin-bottom:0.3rem" id="resCorrect">0</div><div class="text-xs text-gray-400">正解</div></div>
+          <div><div style="font-size:1.8rem;font-weight:800;color:var(--gray-0);margin-bottom:0.3rem" id="resWrong">0</div><div class="text-xs text-gray-400">不正解</div></div>
+          <div><div style="font-size:1.8rem;font-weight:800;color:var(--gray-0);margin-bottom:0.3rem" id="resTotal">0</div><div class="text-xs text-gray-400">出題数</div></div>
         </div>
         <div class="flex gap-3 justify-center flex-wrap">
           <button onclick="retryAll()"
