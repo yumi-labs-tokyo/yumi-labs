@@ -337,7 +337,7 @@ export const tools: Tool[] = [
 		id: 51, slug: 'speed-reading',
 		name: '速読トレーニング',
 		description: 'テキストを貼り付け、表示速度を調整して1分間に何文字読めるか測定。',
-		emoji: '📰', category: 'learning', status: 'coming-soon',
+		emoji: '📰', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 52, slug: 'kanji-handwriting',
