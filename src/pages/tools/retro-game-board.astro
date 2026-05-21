@@ -1,0 +1,207 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="レトロゲーム「クリア記録」コレクション" description="タイトル・機種・クリア日を記録、SVGトロフィー風表示。">
+<main class="rgb-wrap">
+  <div class="rgb-header">
+    <div class="rgb-title">🕹️ レトロゲームクリア記録</div>
+    <div class="rgb-sub">思い出のゲームをコレクションとして記録しよう</div>
+  </div>
+
+  <div class="rgb-add-card">
+    <div class="rgb-card-title">クリア記録を追加</div>
+    <div class="rgb-add-row">
+      <input type="text" id="rgTitle" class="rgb-input" placeholder="ゲームタイトル" />
+      <select id="rgPlatform" class="rgb-select">
+        <option value="fc">ファミコン</option>
+        <option value="sfc">スーパーファミコン</option>
+        <option value="n64">ニンテンドー64</option>
+        <option value="gc">ゲームキューブ</option>
+        <option value="gb">ゲームボーイ</option>
+        <option value="gba">ゲームボーイアドバンス</option>
+        <option value="ds">ニンテンドーDS</option>
+        <option value="md">メガドライブ</option>
+        <option value="ss">セガサターン</option>
+        <option value="dc">ドリームキャスト</option>
+        <option value="ps1">プレイステーション</option>
+        <option value="ps2">プレイステーション2</option>
+        <option value="pc88">PC-88/98</option>
+        <option value="arcade">アーケード</option>
+        <option value="other">その他</option>
+      </select>
+      <input type="number" id="rgYear" class="rgb-input" placeholder="プレイ年（例:1995）" min="1970" max="2026" style="max-width:140px" />
+      <input type="date" id="rgClearDate" class="rgb-input" style="max-width:160px" />
+      <select id="rgRating" class="rgb-select">
+        <option value="5">⭐⭐⭐⭐⭐ 神ゲー</option>
+        <option value="4" selected>⭐⭐⭐⭐ 良作</option>
+        <option value="3">⭐⭐⭐ 普通</option>
+        <option value="2">⭐⭐ 微妙</option>
+        <option value="1">⭐ 積んでた</option>
+      </select>
+      <button class="rgb-btn green" onclick="addRecord()">追加</button>
+    </div>
+    <div class="rgb-add-row" style="margin-top:.5rem">
+      <input type="text" id="rgMemo" class="rgb-input" placeholder="思い出・コメント（任意）" style="flex:2" />
+      <select id="rgDifficulty" class="rgb-select">
+        <option value="easy">易しい</option>
+        <option value="normal" selected>普通</option>
+        <option value="hard">難しい</option>
+        <option value="extreme">激難</option>
+      </select>
+      <label class="rgb-check"><input type="checkbox" id="rgAllClear" /> 完全クリア（全実績）</label>
+    </div>
+  </div>
+
+  <div class="rgb-filter-bar">
+    <input type="text" id="searchGame" class="rgb-search" placeholder="🔍 タイトル検索..." oninput="render()" />
+    <select id="filterPlatform" class="rgb-select" onchange="render()">
+      <option value="all">全機種</option>
+    </select>
+    <select id="sortOrder" class="rgb-select" onchange="render()">
+      <option value="date_desc">クリア日（新しい順）</option>
+      <option value="date_asc">クリア日（古い順）</option>
+      <option value="rating">評価（高い順）</option>
+      <option value="title">タイトル順</option>
+    </select>
+  </div>
+
+  <div class="rgb-stats-bar" id="statsBar"></div>
+
+  <div id="recordGrid" class="rgb-grid"></div>
+</main>
+
+<script is:inline>
+let records = [];
+try { records = JSON.parse(localStorage.getItem('rgb_records') || '[]'); } catch(e) {}
+
+document.getElementById('rgClearDate').value = new Date().toISOString().split('T')[0];
+
+const PLATFORM_LABELS = {
+  fc:'ファミコン', sfc:'スーファミ', n64:'N64', gc:'ゲームキューブ', gb:'GB', gba:'GBA',
+  ds:'DS', md:'メガドライブ', ss:'SS', dc:'ドリームキャスト', ps1:'PS', ps2:'PS2',
+  pc88:'PC-88/98', arcade:'アーケード', other:'その他'
+};
+const PLATFORM_COLORS = {
+  fc:'#e11d48', sfc:'#7c3aed', n64:'#1d4ed8', gc:'#6d28d9', gb:'#5b21b6', gba:'#7c2d12',
+  ds:'#0369a1', md:'#1e3a5f', ss:'#9333ea', dc:'#f97316', ps1:'#1e40af', ps2:'#1e3a8a',
+  pc88:'#374151', arcade:'#b45309', other:'#374151'
+};
+const DIFF_LABELS = { easy:'易', normal:'普', hard:'難', extreme:'激難' };
+const DIFF_COLORS = { easy:'#4ade80', normal:'#60a5fa', hard:'#f97316', extreme:'#ef4444' };
+
+function save() { try { localStorage.setItem('rgb_records', JSON.stringify(records)); } catch(e) {} }
+
+function addRecord() {
+  const title = document.getElementById('rgTitle').value.trim();
+  const platform = document.getElementById('rgPlatform').value;
+  const year = parseInt(document.getElementById('rgYear').value) || null;
+  const clearDate = document.getElementById('rgClearDate').value;
+  const rating = parseInt(document.getElementById('rgRating').value);
+  const memo = document.getElementById('rgMemo').value.trim();
+  const difficulty = document.getElementById('rgDifficulty').value;
+  const allClear = document.getElementById('rgAllClear').checked;
+  if (!title) { alert('タイトルを入力してください'); return; }
+  records.push({ id: Date.now(), title, platform, year, clearDate, rating, memo, difficulty, allClear });
+  save();
+  document.getElementById('rgTitle').value = '';
+  document.getElementById('rgMemo').value = '';
+  document.getElementById('rgAllClear').checked = false;
+  updatePlatformFilter();
+  render();
+}
+
+function removeRecord(id) { records = records.filter(r => r.id !== id); save(); updatePlatformFilter(); render(); }
+
+function updatePlatformFilter() {
+  const platforms = [...new Set(records.map(r => r.platform))];
+  const sel = document.getElementById('filterPlatform');
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">全機種</option>' +
+    platforms.map(p => `<option value="${p}" ${p === current ? 'selected' : ''}>${PLATFORM_LABELS[p] || p}</option>`).join('');
+}
+
+function render() {
+  const search = document.getElementById('searchGame').value.toLowerCase();
+  const platform = document.getElementById('filterPlatform').value;
+  const sort = document.getElementById('sortOrder').value;
+
+  let filtered = records.filter(r =>
+    (!search || r.title.toLowerCase().includes(search)) &&
+    (platform === 'all' || r.platform === platform)
+  );
+
+  if (sort === 'date_desc') filtered.sort((a,b) => (b.clearDate||'').localeCompare(a.clearDate||''));
+  else if (sort === 'date_asc') filtered.sort((a,b) => (a.clearDate||'').localeCompare(b.clearDate||''));
+  else if (sort === 'rating') filtered.sort((a,b) => b.rating - a.rating);
+  else filtered.sort((a,b) => a.title.localeCompare(b.title, 'ja'));
+
+  const avgRating = records.length ? (records.reduce((s,r) => s + r.rating, 0) / records.length).toFixed(1) : '—';
+  const allClears = records.filter(r => r.allClear).length;
+  const platforms = new Set(records.map(r => r.platform)).size;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-chip">🕹️ ${records.length}本クリア</div>
+    <div class="stat-chip">⭐ 平均評価 ${avgRating}</div>
+    <div class="stat-chip">💯 完全クリア ${allClears}本</div>
+    <div class="stat-chip">🖥️ ${platforms}機種</div>
+  `;
+
+  if (!filtered.length) {
+    document.getElementById('recordGrid').innerHTML = '<div class="rgb-empty">まだ記録がありません</div>';
+    return;
+  }
+
+  document.getElementById('recordGrid').innerHTML = filtered.map(r => {
+    const stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+    const platColor = PLATFORM_COLORS[r.platform] || '#374151';
+    return `<div class="rgb-card">
+      <div class="rgb-trophy">🏆</div>
+      ${r.allClear ? '<div class="rgb-all-badge">ALL</div>' : ''}
+      <div class="rgb-plat" style="background:${platColor}">${PLATFORM_LABELS[r.platform] || r.platform}</div>
+      <div class="rgb-title-text">${r.title}</div>
+      <div class="rgb-stars">${stars}</div>
+      <div class="rgb-diff" style="color:${DIFF_COLORS[r.difficulty]}">${DIFF_LABELS[r.difficulty]}</div>
+      ${r.clearDate ? '<div class="rgb-date">' + r.clearDate + '</div>' : ''}
+      ${r.year ? '<div class="rgb-year">プレイ: ' + r.year + '</div>' : ''}
+      ${r.memo ? '<div class="rgb-memo">' + r.memo + '</div>' : ''}
+      <button class="rgb-del" onclick="removeRecord(${r.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+updatePlatformFilter();
+render();
+</script>
+
+<style>
+.rgb-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.rgb-header { text-align: center; margin-bottom: 2rem; }
+.rgb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.rgb-sub { color: var(--gray-400); margin-top: .3rem; }
+.rgb-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.rgb-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.rgb-add-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.rgb-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; flex: 1; min-width: 120px; }
+.rgb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .82rem; }
+.rgb-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.rgb-btn.green { background: #16a34a; color: #fff; }
+.rgb-check { display: flex; align-items: center; gap: .4rem; color: var(--gray-200); font-size: .85rem; cursor: pointer; }
+.rgb-search { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .8rem; font-size: .9rem; flex: 1; min-width: 180px; }
+.rgb-filter-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .8rem; }
+.rgb-stats-bar { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.stat-chip { background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 20px; padding: .25rem .7rem; font-size: .8rem; color: var(--gray-300); }
+.rgb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: .8rem; }
+.rgb-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; position: relative; text-align: center; }
+.rgb-trophy { font-size: 2rem; }
+.rgb-all-badge { position: absolute; top: .5rem; right: .5rem; background: #fbbf24; color: #000; font-weight: 800; font-size: .65rem; padding: .15rem .4rem; border-radius: 4px; }
+.rgb-plat { font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 4px; color: #fff; margin: .4rem auto; display: inline-block; }
+.rgb-title-text { font-weight: 700; color: var(--gray-100); font-size: .9rem; margin: .4rem 0; line-height: 1.3; }
+.rgb-stars { font-size: .9rem; margin: .3rem 0; }
+.rgb-diff { font-size: .78rem; font-weight: 700; }
+.rgb-date, .rgb-year { font-size: .72rem; color: var(--gray-400); margin-top: .2rem; }
+.rgb-memo { font-size: .75rem; color: var(--gray-400); margin-top: .4rem; font-style: italic; line-height: 1.4; }
+.rgb-del { margin-top: .6rem; background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .75rem; }
+.rgb-del:hover { color: #ef4444; }
+.rgb-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; grid-column: 1/-1; }
+</style>
+</BaseLayout>

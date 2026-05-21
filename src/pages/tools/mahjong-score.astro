@@ -1,0 +1,243 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="麻雀「点数計算」練習アプリ" description="ランダムな手牌から点数申告→答え合わせ。点数早見表機能付き。">
+<main class="mj-wrap">
+  <div class="mj-header">
+    <div class="mj-title">🀄 麻雀点数計算練習</div>
+    <div class="mj-sub">役と符・翻を入力して点数計算の練習をしよう</div>
+  </div>
+
+  <div class="mj-tabs">
+    <button class="mj-tab active" onclick="selTab('practice',this)">練習モード</button>
+    <button class="mj-tab" onclick="selTab('table',this)">点数早見表</button>
+    <button class="mj-tab" onclick="selTab('yaku',this)">役一覧</button>
+  </div>
+
+  <div id="tabPractice" class="mj-panel">
+    <div class="mj-practice">
+      <div class="mj-q-card" id="questionCard">
+        <div class="mj-q-title">問題</div>
+        <div id="questionContent"></div>
+        <button class="mj-gen-btn" onclick="generateQuestion()">🎲 新しい問題</button>
+      </div>
+      <div class="mj-ans-card">
+        <div class="mj-q-title">点数を答えてください</div>
+        <div class="mj-ans-form">
+          <div class="mj-ans-row">
+            <label class="mj-label">点数</label>
+            <input type="number" id="ansPoints" class="mj-input" placeholder="例：8000" step="100" />
+          </div>
+          <button class="mj-check-btn" onclick="checkAnswer()">答え合わせ</button>
+        </div>
+        <div id="answerResult" class="mj-result-area"></div>
+      </div>
+      <div class="mj-score-card">
+        <div class="mj-q-title">スコア</div>
+        <div id="scoreDisplay" class="mj-score-display">
+          <span>正解: <strong id="correct">0</strong></span>
+          <span>問題数: <strong id="total">0</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabTable" class="mj-panel" style="display:none">
+    <div class="mj-table-note">親のツモ / 子のロン・ツモ の点数早見表</div>
+    <div class="mj-table-section">
+      <div class="mj-q-title">子のロン（基本点）</div>
+      <div class="mj-scroll">
+        <table class="mj-table" id="ronTable"></table>
+      </div>
+    </div>
+    <div class="mj-table-section">
+      <div class="mj-q-title">親のロン</div>
+      <div class="mj-scroll">
+        <table class="mj-table" id="parentRonTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabYaku" class="mj-panel" style="display:none">
+    <div id="yakuList" class="mj-yaku-list"></div>
+  </div>
+</main>
+
+<script is:inline>
+const YAKU = [
+  { name:'立直（リーチ）', han:1, desc:'テンパイ時にリーチ宣言。1翻。ダブルリーチは2翻。' },
+  { name:'門前清自摸（メンタンピン）', han:1, desc:'メンゼンでツモあがり。1翻（子のみ）。' },
+  { name:'タンヤオ', han:1, desc:'手牌が全て2〜8の牌。食い下がりなし。' },
+  { name:'ピンフ', han:1, desc:'全て順子（シュンツ）で構成、雀頭は役牌以外、両面待ち。' },
+  { name:'一盃口（イーペーコー）', han:1, desc:'同じ順子が2組。食い下がりなし。' },
+  { name:'役牌（白・発・中）', han:1, desc:'三元牌の刻子（コーツ）。白・発・中それぞれ1翻。' },
+  { name:'場風・自風', han:1, desc:'場の風牌や自分の門風の刻子。それぞれ1翻。' },
+  { name:'七対子（チートイツ）', han:2, desc:'7種類の対子で構成。25符固定。食い下がりなし。' },
+  { name:'対々和（トイトイ）', han:2, desc:'全て刻子（コーツ）で構成。' },
+  { name:'三色同順（サンショク）', han:2, desc:'3種類の牌で同じ数字の順子。食い下がり1翻。' },
+  { name:'一気通貫（イッツー）', han:2, desc:'1〜9の順子を3組揃える。食い下がり1翻。' },
+  { name:'混全帯么九（チャンタ）', han:2, desc:'全メンツと雀頭に一九字牌が含まれる。食い下がり1翻。' },
+  { name:'三暗刻（サンアンコー）', han:2, desc:'3組の暗刻（アンコー）を含む。' },
+  { name:'混老頭（ホンロウトウ）', han:2, desc:'全て一九字牌で構成。' },
+  { name:'二盃口（リャンペーコー）', han:3, desc:'同じ順子が2組×2セット。食い下がりなし。' },
+  { name:'混一色（ホンイツ）', han:3, desc:'1種類の数牌と字牌のみ。食い下がり2翻。' },
+  { name:'純全帯么九（ジュンチャン）', han:3, desc:'全メンツに一か九の牌が含まれる。食い下がり2翻。' },
+  { name:'清一色（チンイツ）', han:6, desc:'1種類の数牌のみ。食い下がり5翻。' },
+  { name:'国士無双（コクシムソウ）', han:'役満', desc:'一九字牌13種類を集める。' },
+  { name:'四暗刻（スーアンコー）', han:'役満', desc:'4組の暗刻を作る。' },
+  { name:'大三元（ダイサンゲン）', han:'役満', desc:'白・発・中の刻子3つ全てを揃える。' },
+  { name:'字一色（ツーイーソー）', han:'役満', desc:'全て字牌で構成。' },
+  { name:'緑一色（リューイーソー）', han:'役満', desc:'緑の牌のみで構成（234689索＋発）。' },
+  { name:'清老頭（チンロウトウ）', han:'役満', desc:'全て一か九の牌で構成。' },
+  { name:'九連宝灯（チューレンポウトウ）', han:'役満', desc:'1種類の数牌で1112345678999の形。' },
+  { name:'天和・地和・人和', han:'役満', desc:'天和（親の配牌で和了）、地和（子の第一ツモ）、人和（第一捨て牌での和了）。' },
+];
+
+// Basic scoring: points = fu * 2^(han+2), rounded up to nearest 100
+function calcScore(fu, han) {
+  if (han >= 13) return { child_ron: 32000, child_tsumo: 8000, parent_ron: 48000, parent_tsumo: 16000, name: '役満' };
+  if (han >= 11) return { child_ron: 24000, child_tsumo: 6000, parent_ron: 36000, parent_tsumo: 12000, name: '三倍満' };
+  if (han >= 8) return { child_ron: 16000, child_tsumo: 4000, parent_ron: 24000, parent_tsumo: 8000, name: '倍満' };
+  if (han >= 6) return { child_ron: 12000, child_tsumo: 3000, parent_ron: 18000, parent_tsumo: 6000, name: '跳満' };
+  if (han >= 5 || (han >= 4 && fu >= 30) || (han >= 3 && fu >= 70)) {
+    return { child_ron: 8000, child_tsumo: 2000, parent_ron: 12000, parent_tsumo: 4000, name: '満貫' };
+  }
+  const basic = fu * Math.pow(2, han + 2);
+  const child_ron = Math.ceil(basic * 4 / 100) * 100;
+  const parent_ron = Math.ceil(basic * 6 / 100) * 100;
+  const child_tsumo_dealer = Math.ceil(basic * 2 / 100) * 100;
+  const child_tsumo_child = Math.ceil(basic / 100) * 100;
+  return { child_ron, parent_ron, child_tsumo: child_tsumo_dealer, child_tsumo_others: child_tsumo_child, name: `${fu}符${han}翻` };
+}
+
+const FU_OPTIONS = [20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110];
+const HAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+let currentQ = null;
+let correct = 0, total = 0;
+
+function generateQuestion() {
+  const han = HAN_OPTIONS[Math.floor(Math.random() * 5)]; // 1-5翻
+  const fu = han === 1 ? FU_OPTIONS[Math.floor(Math.random() * 5) + 1] : FU_OPTIONS[Math.floor(Math.random() * 7)];
+  const situation = Math.random() > 0.5 ? 'child_ron' : 'parent_ron';
+  const score = calcScore(fu, han);
+  currentQ = { fu, han, situation, answer: score[situation] };
+
+  document.getElementById('questionContent').innerHTML = `
+    <div class="q-row"><span class="q-label">符（フー）</span><span class="q-val">${fu}符</span></div>
+    <div class="q-row"><span class="q-label">翻（ハン）</span><span class="q-val">${han}翻</span></div>
+    <div class="q-row"><span class="q-label">状況</span><span class="q-val">${situation === 'child_ron' ? '子のロン' : '親のロン'}</span></div>
+    <div class="q-note">${score.name}</div>
+  `;
+  document.getElementById('ansPoints').value = '';
+  document.getElementById('answerResult').innerHTML = '';
+}
+
+function checkAnswer() {
+  if (!currentQ) return;
+  const ans = parseInt(document.getElementById('ansPoints').value);
+  const correct_ans = currentQ.answer;
+  total++;
+  const isCorrect = Math.abs(ans - correct_ans) < 100;
+  if (isCorrect) correct++;
+  document.getElementById('answerResult').innerHTML = `
+    <div class="result-box ${isCorrect ? 'correct' : 'wrong'}">
+      ${isCorrect ? '✅ 正解！' : '❌ 不正解'}
+      <div class="result-detail">正解: <strong>${correct_ans.toLocaleString()}点</strong>
+      ${!isCorrect ? '（あなたの答え: ' + (ans || '未入力') + '）' : ''}
+      </div>
+    </div>
+  `;
+  document.getElementById('correct').textContent = correct;
+  document.getElementById('total').textContent = total;
+}
+
+function buildTables() {
+  const fuList = [20, 25, 30, 40, 50, 60, 70, 80];
+  const hanList = [1, 2, 3, 4, 5];
+
+  function buildTable(tableId, isParent) {
+    const table = document.getElementById(tableId);
+    const header = '<tr><th>符\翻</th>' + hanList.map(h => '<th>' + h + '翻</th>').join('') + '</tr>';
+    const rows = fuList.map(fu => {
+      const cells = hanList.map(han => {
+        const s = calcScore(fu, han);
+        const pts = isParent ? s.parent_ron : s.child_ron;
+        return '<td>' + pts.toLocaleString() + '</td>';
+      }).join('');
+      return '<tr><td>' + fu + '符</td>' + cells + '</tr>';
+    }).join('');
+    table.innerHTML = '<thead>' + header + '</thead><tbody>' + rows + '</tbody>';
+  }
+
+  buildTable('ronTable', false);
+  buildTable('parentRonTable', true);
+}
+
+function buildYaku() {
+  document.getElementById('yakuList').innerHTML = YAKU.map(y => `
+    <div class="yaku-item">
+      <div class="yaku-name">${y.name}</div>
+      <div class="yaku-han">${typeof y.han === 'number' ? y.han + '翻' : y.han}</div>
+      <div class="yaku-desc">${y.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selTab(tab, btn) {
+  document.querySelectorAll('.mj-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabPractice').style.display = tab === 'practice' ? 'block' : 'none';
+  document.getElementById('tabTable').style.display = tab === 'table' ? 'block' : 'none';
+  document.getElementById('tabYaku').style.display = tab === 'yaku' ? 'block' : 'none';
+}
+
+generateQuestion();
+buildTables();
+buildYaku();
+</script>
+
+<style>
+.mj-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.mj-header { text-align: center; margin-bottom: 2rem; }
+.mj-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.mj-sub { color: var(--gray-400); margin-top: .3rem; }
+.mj-tabs { display: flex; gap: .4rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--gray-700); padding-bottom: .8rem; }
+.mj-tab { padding: .4rem 1rem; border-radius: 8px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .85rem; cursor: pointer; }
+.mj-tab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.mj-practice { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 650px) { .mj-practice { grid-template-columns: 1fr; } }
+.mj-q-card, .mj-ans-card, .mj-score-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.mj-q-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.q-row { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid var(--gray-700); font-size: .9rem; }
+.q-label { color: var(--gray-400); }
+.q-val { font-weight: 700; color: #fbbf24; }
+.q-note { font-size: .8rem; color: var(--gray-400); margin-top: .5rem; }
+.mj-gen-btn { width: 100%; margin-top: 1rem; padding: .55rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.mj-ans-form { display: flex; flex-direction: column; gap: .6rem; margin-bottom: .8rem; }
+.mj-ans-row { display: flex; flex-direction: column; gap: .3rem; }
+.mj-label { font-size: .75rem; color: var(--gray-400); }
+.mj-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
+.mj-check-btn { padding: .55rem; background: #16a34a; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.mj-result-area { min-height: 60px; }
+.result-box { padding: .8rem; border-radius: 8px; font-size: .9rem; }
+.result-box.correct { background: #14532d; color: #4ade80; }
+.result-box.wrong { background: #7f1d1d; color: #f87171; }
+.result-detail { margin-top: .4rem; color: var(--gray-200); font-size: .85rem; }
+.result-detail strong { color: #fbbf24; font-size: 1.1rem; }
+.mj-score-display { display: flex; gap: 1.5rem; font-size: .95rem; color: var(--gray-300); }
+.mj-score-display strong { color: #fbbf24; font-size: 1.2rem; }
+.mj-table-note { font-size: .82rem; color: var(--gray-400); margin-bottom: 1rem; }
+.mj-table-section { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.mj-scroll { overflow-x: auto; }
+.mj-table { border-collapse: collapse; font-size: .82rem; min-width: 400px; }
+.mj-table th { background: var(--gray-700); padding: .4rem .8rem; color: var(--gray-200); text-align: center; }
+.mj-table td { padding: .35rem .8rem; border: 1px solid var(--gray-700); text-align: center; color: var(--gray-300); }
+.mj-table tr:hover td { background: var(--gray-700); }
+.mj-yaku-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: .7rem; }
+.yaku-item { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .8rem; }
+.yaku-name { font-weight: 700; color: var(--gray-100); margin-bottom: .2rem; }
+.yaku-han { font-size: .8rem; color: #fbbf24; font-weight: 700; margin-bottom: .3rem; }
+.yaku-desc { font-size: .78rem; color: var(--gray-400); line-height: 1.5; }
+</style>
+</BaseLayout>

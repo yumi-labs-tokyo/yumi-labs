@@ -1,0 +1,226 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="積みゲー消化計画ツール" description="プレイ予定時間・所要時間を入れると終了予定日を計算。">
+<main class="bp-wrap">
+  <div class="bp-header">
+    <div class="bp-title">🎮 積みゲー消化計画ツール</div>
+    <div class="bp-sub">積みゲーリストを整理して消化スケジュールを立てよう</div>
+  </div>
+
+  <div class="bp-add-card">
+    <div class="bp-card-title">ゲームを追加</div>
+    <div class="bp-add-row">
+      <input type="text" id="gameName" class="bp-input" placeholder="ゲームタイトル" />
+      <select id="gamePlatform" class="bp-select">
+        <option value="switch">Switch</option>
+        <option value="ps5">PS5</option>
+        <option value="ps4">PS4</option>
+        <option value="xbox">Xbox</option>
+        <option value="steam">Steam (PC)</option>
+        <option value="mobile">スマホ</option>
+        <option value="other">その他</option>
+      </select>
+      <input type="number" id="gameHours" class="bp-input" placeholder="推定プレイ時間(h)" min="1" max="500" step="0.5" />
+      <select id="gamePriority" class="bp-select">
+        <option value="high">🔴 高（すぐやりたい）</option>
+        <option value="mid" selected>🟡 中（いつかやる）</option>
+        <option value="low">🟢 低（気が向いたら）</option>
+      </select>
+      <select id="gameGenre" class="bp-select">
+        <option value="rpg">RPG</option>
+        <option value="action">アクション</option>
+        <option value="strategy">ストラテジー</option>
+        <option value="adventure">アドベンチャー</option>
+        <option value="sim">シミュレーション</option>
+        <option value="puzzle">パズル</option>
+        <option value="sports">スポーツ</option>
+        <option value="vn">ビジュアルノベル</option>
+        <option value="other">その他</option>
+      </select>
+      <button class="bp-btn green" onclick="addGame()">追加</button>
+    </div>
+  </div>
+
+  <div class="bp-settings">
+    <div class="bp-set-row">
+      <div class="bp-set-item">
+        <label class="bp-label">週あたりのプレイ時間（時間）</label>
+        <input type="number" id="weeklyHours" class="bp-input-sm" value="10" min="1" max="80" oninput="recalcAll()" />
+      </div>
+      <div class="bp-filter-btns">
+        <button class="bp-filter active" onclick="setFilter('all',this)">すべて</button>
+        <button class="bp-filter" onclick="setFilter('high',this)">🔴 高</button>
+        <button class="bp-filter" onclick="setFilter('mid',this)">🟡 中</button>
+        <button class="bp-filter" onclick="setFilter('low',this)">🟢 低</button>
+        <button class="bp-filter" onclick="setFilter('done',this)">✅ 完了</button>
+      </div>
+      <div class="bp-total-info" id="totalInfo"></div>
+    </div>
+  </div>
+
+  <div id="gameList" class="bp-game-list"></div>
+</main>
+
+<script is:inline>
+let games = [];
+try { games = JSON.parse(localStorage.getItem('bp_games') || '[]'); } catch(e) {}
+
+let currentFilter = 'all';
+
+const PLATFORM_EMOJI = { switch:'🎮', ps5:'🎮', ps4:'🎮', xbox:'🎮', steam:'💻', mobile:'📱', other:'🕹️' };
+const PRIORITY_LABEL = { high:'🔴 高', mid:'🟡 中', low:'🟢 低' };
+const GENRE_LABEL = { rpg:'RPG', action:'アクション', strategy:'ストラテジー', adventure:'アドベンチャー', sim:'シミュレーション', puzzle:'パズル', sports:'スポーツ', vn:'ビジュアルノベル', other:'その他' };
+
+function save() { try { localStorage.setItem('bp_games', JSON.stringify(games)); } catch(e) {} }
+
+function addGame() {
+  const name = document.getElementById('gameName').value.trim();
+  const platform = document.getElementById('gamePlatform').value;
+  const hours = parseFloat(document.getElementById('gameHours').value) || 20;
+  const priority = document.getElementById('gamePriority').value;
+  const genre = document.getElementById('gameGenre').value;
+  if (!name) { alert('ゲームタイトルを入力してください'); return; }
+  games.push({ id: Date.now(), name, platform, hours, priority, genre, done: false, played: 0, added: new Date().toISOString().split('T')[0] });
+  save();
+  document.getElementById('gameName').value = '';
+  document.getElementById('gameHours').value = '';
+  render();
+}
+
+function removeGame(id) { games = games.filter(g => g.id !== id); save(); render(); }
+function toggleDone(id) {
+  const g = games.find(g => g.id === id);
+  if (g) { g.done = !g.done; if (g.done) g.completedDate = new Date().toISOString().split('T')[0]; else delete g.completedDate; }
+  save(); render();
+}
+function updatePlayed(id, val) {
+  const g = games.find(g => g.id === id);
+  if (g) { g.played = Math.min(parseFloat(val) || 0, g.hours); }
+  save(); recalcAll();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.bp-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function recalcAll() { render(); }
+
+function render() {
+  const weeklyHours = parseFloat(document.getElementById('weeklyHours').value) || 10;
+  const pending = games.filter(g => !g.done).sort((a, b) => {
+    const p = { high: 0, mid: 1, low: 2 };
+    return p[a.priority] - p[b.priority];
+  });
+
+  const totalRemaining = pending.reduce((s, g) => s + (g.hours - (g.played || 0)), 0);
+  const totalWeeks = totalRemaining / weeklyHours;
+  const doneCount = games.filter(g => g.done).length;
+
+  document.getElementById('totalInfo').innerHTML = `
+    <span>未消化: <strong>${pending.length}本</strong></span>
+    <span>完了: <strong>${doneCount}本</strong></span>
+    <span>残り: <strong>${totalRemaining.toFixed(0)}時間</strong> (${totalWeeks.toFixed(1)}週間)</span>
+  `;
+
+  let cumulativeHours = 0;
+  const today = new Date();
+
+  let filtered;
+  if (currentFilter === 'done') filtered = games.filter(g => g.done);
+  else if (currentFilter === 'all') filtered = games;
+  else filtered = games.filter(g => !g.done && g.priority === currentFilter);
+
+  const list = document.getElementById('gameList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="bp-empty">ゲームを追加してください</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(g => {
+    const remaining = g.hours - (g.played || 0);
+    const progress = Math.round(((g.played || 0) / g.hours) * 100);
+
+    let endDate = '';
+    if (!g.done) {
+      cumulativeHours += remaining;
+      const weeksToFinish = cumulativeHours / weeklyHours;
+      const finishDate = new Date(today);
+      finishDate.setDate(finishDate.getDate() + Math.round(weeksToFinish * 7));
+      endDate = finishDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }) + '頃';
+    }
+
+    return `<div class="game-card ${g.done ? 'done' : ''}">
+      <div class="gc-left">
+        <div class="gc-platform">${PLATFORM_EMOJI[g.platform]} ${g.platform.toUpperCase()}</div>
+        <div class="gc-name">${g.name}</div>
+        <div class="gc-meta">${GENRE_LABEL[g.genre]} ／ ${PRIORITY_LABEL[g.priority]}</div>
+        <div class="gc-progress-row">
+          <div class="gc-progress-bar"><div class="gc-bar-fill" style="width:${progress}%"></div></div>
+          <span class="gc-pct">${progress}%</span>
+        </div>
+        <div class="gc-hours-row">
+          プレイ済: <input type="number" class="gc-hours-input" value="${g.played || 0}" min="0" max="${g.hours}" step="0.5" onchange="updatePlayed(${g.id},this.value)" /> / ${g.hours}h
+        </div>
+      </div>
+      <div class="gc-right">
+        ${!g.done ? '<div class="gc-enddate">' + endDate + '</div>' : '<div class="gc-done-badge">✅ クリア済<br><small>' + (g.completedDate || '') + '</small></div>'}
+        <button class="gc-done-btn ${g.done ? 'undo' : ''}" onclick="toggleDone(${g.id})">${g.done ? '↩️ 未完' : '✅ クリア'}</button>
+        <button class="gc-del-btn" onclick="removeGame(${g.id})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+
+<style>
+.bp-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.bp-header { text-align: center; margin-bottom: 2rem; }
+.bp-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.bp-sub { color: var(--gray-400); margin-top: .3rem; }
+.bp-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.bp-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.bp-add-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.bp-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; flex: 1; min-width: 120px; }
+.bp-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .82rem; }
+.bp-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.bp-btn.green { background: #16a34a; color: #fff; }
+.bp-settings { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem 1.2rem; margin-bottom: 1rem; }
+.bp-set-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.bp-set-item { display: flex; align-items: center; gap: .5rem; }
+.bp-label { font-size: .8rem; color: var(--gray-400); }
+.bp-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .6rem; font-size: .85rem; width: 70px; }
+.bp-filter-btns { display: flex; gap: .4rem; flex-wrap: wrap; }
+.bp-filter { padding: .3rem .7rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .8rem; cursor: pointer; }
+.bp-filter.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.bp-total-info { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .82rem; color: var(--gray-300); margin-left: auto; }
+.bp-total-info strong { color: #fbbf24; }
+.bp-game-list { display: flex; flex-direction: column; gap: .8rem; }
+.game-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .9rem 1rem; display: flex; gap: 1rem; align-items: flex-start; }
+.game-card.done { opacity: 0.6; border-color: #16a34a; }
+.gc-left { flex: 1; }
+.gc-platform { font-size: .72rem; color: var(--gray-400); }
+.gc-name { font-weight: 700; color: var(--gray-100); font-size: 1rem; margin: .2rem 0; }
+.gc-meta { font-size: .78rem; color: var(--gray-400); margin-bottom: .5rem; }
+.gc-progress-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.gc-progress-bar { flex: 1; height: 6px; background: var(--gray-700); border-radius: 3px; }
+.gc-bar-fill { height: 100%; background: #7c3aed; border-radius: 3px; transition: width .3s; }
+.gc-pct { font-size: .75rem; color: var(--gray-400); min-width: 30px; }
+.gc-hours-row { font-size: .8rem; color: var(--gray-400); }
+.gc-hours-input { background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 4px; color: var(--gray-100); padding: .2rem .4rem; font-size: .8rem; width: 55px; }
+.gc-right { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; min-width: 90px; }
+.gc-enddate { font-size: .85rem; font-weight: 700; color: #fbbf24; text-align: right; }
+.gc-done-badge { font-size: .82rem; color: #4ade80; text-align: right; }
+.gc-done-badge small { color: var(--gray-400); display: block; }
+.gc-done-btn { padding: .3rem .6rem; background: #16a34a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: .78rem; font-weight: 700; }
+.gc-done-btn.undo { background: var(--gray-700); color: var(--gray-300); }
+.gc-del-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .78rem; }
+.gc-del-btn:hover { color: #ef4444; }
+.bp-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

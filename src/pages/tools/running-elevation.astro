@@ -1,0 +1,305 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ランニングコース「標高プロフィール」" description="コース距離・坂の場所を手動入力するとSVGで起伏を可視化。">
+<main class="re-wrap">
+  <div class="re-header">
+    <div class="re-title">🏃 ランニングコース 標高プロフィール</div>
+    <div class="re-sub">区間ごとの標高を入力してコースの起伏を可視化</div>
+  </div>
+
+  <div class="re-body">
+    <div class="re-left">
+      <div class="re-card">
+        <div class="re-card-title">コース設定</div>
+        <div class="re-fg">
+          <label class="re-label">コース名</label>
+          <input type="text" id="courseName" class="re-input" placeholder="例：皇居ランコース" />
+        </div>
+        <div class="re-fg">
+          <label class="re-label">コース種別</label>
+          <select id="courseType" class="re-select" onchange="updateDifficulty()">
+            <option value="flat">フラット（高低差50m以下）</option>
+            <option value="rolling">丘陵（50〜200m）</option>
+            <option value="hilly">山岳（200〜500m）</option>
+            <option value="mountain">急峻（500m以上）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="re-card">
+        <div class="re-card-title">区間データ入力</div>
+        <div class="re-table-head">
+          <span>距離(km)</span><span>標高(m)</span><span>ポイント名</span><span></span>
+        </div>
+        <div id="segmentList"></div>
+        <button class="re-add-seg-btn" onclick="addSegment()">＋ 区間を追加</button>
+        <div class="re-presets">
+          <div class="re-label" style="margin-top:.8rem">プリセット</div>
+          <div class="re-preset-grid">
+            <button class="re-pbtn" onclick="loadPreset('flat5k')">平坦5km</button>
+            <button class="re-pbtn" onclick="loadPreset('hilly10k')">丘陵10km</button>
+            <button class="re-pbtn" onclick="loadPreset('tokyo_marathon')">東京M（一部）</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="re-right">
+      <div class="re-chart-card">
+        <div class="re-card-title">標高プロフィール</div>
+        <svg id="elevSvg" viewBox="0 0 500 250" style="width:100%;max-height:250px;background:var(--gray-900);border-radius:8px"></svg>
+      </div>
+
+      <div class="re-stats" id="courseStats"></div>
+
+      <div class="re-difficulty" id="difficultyCard"></div>
+
+      <div class="re-pacing">
+        <div class="re-card-title">⏱️ 区間別ペース提案</div>
+        <div id="pacingContent"><div style="color:var(--gray-400);font-size:.85rem">区間データを入力してください</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+let segments = [
+  { dist: 0, elev: 0, label: 'スタート' },
+  { dist: 2.5, elev: 20, label: '' },
+  { dist: 5.0, elev: 0, label: 'ゴール' },
+];
+
+const PRESETS = {
+  flat5k: [
+    { dist:0, elev:5, label:'スタート' },
+    { dist:1, elev:8, label:'' },
+    { dist:2, elev:6, label:'折り返し' },
+    { dist:3, elev:8, label:'' },
+    { dist:4, elev:5, label:'' },
+    { dist:5, elev:5, label:'ゴール' },
+  ],
+  hilly10k: [
+    { dist:0, elev:0, label:'スタート' },
+    { dist:1, elev:30, label:'登り始め' },
+    { dist:2.5, elev:120, label:'峠' },
+    { dist:4, elev:50, label:'下り' },
+    { dist:6, elev:80, label:'第2ヒル' },
+    { dist:8, elev:20, label:'下り' },
+    { dist:10, elev:0, label:'ゴール' },
+  ],
+  tokyo_marathon: [
+    { dist:0, elev:5, label:'都庁前' },
+    { dist:5, elev:3, label:'新宿' },
+    { dist:10, elev:8, label:'四ツ谷' },
+    { dist:15, elev:15, label:'品川折返し' },
+    { dist:20, elev:5, label:'銀座' },
+    { dist:25, elev:8, label:'深川' },
+    { dist:30, elev:5, label:'浅草折返し' },
+    { dist:35, elev:3, label:'銀座再び' },
+    { dist:40, elev:5, label:'日比谷' },
+    { dist:42.195, elev:5, label:'東京駅ゴール' },
+  ],
+};
+
+function loadPreset(name) {
+  segments = PRESETS[name].map(s => ({...s}));
+  renderSegmentList();
+  drawChart();
+  calcStats();
+}
+
+function renderSegmentList() {
+  const el = document.getElementById('segmentList');
+  el.innerHTML = segments.map((s, i) => `
+    <div class="seg-row">
+      <input type="number" class="seg-input" value="${s.dist}" min="0" step="0.1" onchange="updateSeg(${i},'dist',this.value);drawAll()" />
+      <input type="number" class="seg-input" value="${s.elev}" min="-200" max="3000" onchange="updateSeg(${i},'elev',this.value);drawAll()" />
+      <input type="text" class="seg-input seg-label" value="${s.label}" placeholder="ポイント名" onchange="updateSeg(${i},'label',this.value);drawAll()" />
+      ${i > 0 ? '<button class="seg-del" onclick="delSeg(' + i + ')">×</button>' : '<div></div>'}
+    </div>
+  `).join('');
+}
+
+function updateSeg(i, key, val) {
+  segments[i][key] = key === 'label' ? val : parseFloat(val) || 0;
+}
+
+function addSegment() {
+  const last = segments[segments.length - 1];
+  segments.push({ dist: last.dist + 1, elev: last.elev, label: '' });
+  renderSegmentList();
+  drawAll();
+}
+
+function delSeg(i) {
+  segments.splice(i, 1);
+  renderSegmentList();
+  drawAll();
+}
+
+function drawAll() {
+  drawChart();
+  calcStats();
+}
+
+function drawChart() {
+  const svg = document.getElementById('elevSvg');
+  svg.innerHTML = '';
+  const sorted = [...segments].sort((a,b) => a.dist - b.dist);
+  if (sorted.length < 2) return;
+  const W = 500, H = 250, PL = 45, PR = 15, PT = 20, PB = 35;
+  const cW = W-PL-PR, cH = H-PT-PB;
+  const maxDist = Math.max(...sorted.map(s => s.dist));
+  const minElev = Math.min(...sorted.map(s => s.elev));
+  const maxElev = Math.max(...sorted.map(s => s.elev));
+  const elevRange = Math.max(maxElev - minElev, 10);
+  const ns = 'http://www.w3.org/2000/svg';
+
+  function x(d) { return PL + (d / maxDist) * cW; }
+  function y(e) { return PT + cH - ((e - minElev) / elevRange) * cH; }
+
+  function el(tag, attrs, txt) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  // Y grid
+  const yStep = elevRange <= 50 ? 10 : elevRange <= 200 ? 50 : elevRange <= 500 ? 100 : 200;
+  for (let e = Math.ceil(minElev / yStep) * yStep; e <= maxElev; e += yStep) {
+    const yy = y(e);
+    svg.appendChild(el('line', {x1:PL, x2:W-PR, y1:yy, y2:yy, stroke:'#374151', 'stroke-width':'0.5'}));
+    svg.appendChild(el('text', {x:PL-4, y:yy+3, 'font-size':'9', fill:'#6b7280', 'text-anchor':'end'}, e + 'm'));
+  }
+
+  // Path
+  const path = sorted.map((s, i) => (i===0?'M':'L') + x(s.dist) + ' ' + y(s.elev)).join(' ');
+  const fill = path + ' L' + x(maxDist) + ' ' + (PT+cH) + ' L' + PL + ' ' + (PT+cH) + ' Z';
+  svg.appendChild(el('path', {d:fill, fill:'#166534', opacity:'0.4'}));
+  svg.appendChild(el('path', {d:path, stroke:'#4ade80', 'stroke-width':'2', fill:'none'}));
+
+  // Points and labels
+  sorted.forEach(s => {
+    svg.appendChild(el('circle', {cx:x(s.dist), cy:y(s.elev), r:'4', fill:'#4ade80'}));
+    if (s.label) {
+      svg.appendChild(el('text', {x:x(s.dist), y:y(s.elev)-7, 'font-size':'8', fill:'#86efac', 'text-anchor':'middle'}, s.label));
+    }
+  });
+
+  // X axis labels
+  const xStep = maxDist <= 10 ? 2 : maxDist <= 25 ? 5 : 10;
+  for (let d = 0; d <= maxDist; d += xStep) {
+    svg.appendChild(el('text', {x:x(d), y:H-PB+13, 'font-size':'9', fill:'#6b7280', 'text-anchor':'middle'}, d + 'km'));
+  }
+}
+
+function calcStats() {
+  const sorted = [...segments].sort((a,b) => a.dist - b.dist);
+  if (sorted.length < 2) return;
+  const totalDist = sorted[sorted.length-1].dist;
+  let totalAscent = 0, totalDescent = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = sorted[i].elev - sorted[i-1].elev;
+    if (diff > 0) totalAscent += diff;
+    else totalDescent += Math.abs(diff);
+  }
+  const maxElev = Math.max(...sorted.map(s => s.elev));
+  const minElev = Math.min(...sorted.map(s => s.elev));
+
+  document.getElementById('courseStats').innerHTML = `
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-val">${totalDist.toFixed(1)}</div><div class="cs-lbl">総距離 km</div></div>
+      <div class="cs-item"><div class="cs-val up">+${Math.round(totalAscent)}</div><div class="cs-lbl">累積登り m</div></div>
+      <div class="cs-item"><div class="cs-val down">-${Math.round(totalDescent)}</div><div class="cs-lbl">累積下り m</div></div>
+      <div class="cs-item"><div class="cs-val">${Math.round(maxElev - minElev)}</div><div class="cs-lbl">最大高低差 m</div></div>
+    </div>
+  `;
+
+  // Pacing
+  const avgGrad = totalDist > 0 ? (totalAscent / (totalDist * 1000)) * 100 : 0;
+  const paceAdj = 1 + avgGrad * 0.1; // 1% grade ≈ +10% time
+  const baseKm5 = 6.0, baseKm10 = 6.5; // min/km
+
+  document.getElementById('pacingContent').innerHTML = sorted.slice(1).map((s, i) => {
+    const prev = sorted[i];
+    const segDist = s.dist - prev.dist;
+    const segElev = s.elev - prev.elev;
+    const segGrad = segDist > 0 ? (segElev / (segDist * 1000)) * 100 : 0;
+    const paceMin = baseKm5 * (1 + segGrad * 0.08);
+    const emoji = segGrad > 3 ? '⬆️' : segGrad < -3 ? '⬇️' : '➡️';
+    return `<div class="pace-row">
+      <span class="pace-seg">${prev.dist}→${s.dist}km</span>
+      <span class="pace-grad">${emoji} ${segGrad > 0 ? '+' : ''}${segGrad.toFixed(1)}%</span>
+      <span class="pace-pace">${paceMin.toFixed(1)} min/km</span>
+    </div>`;
+  }).join('');
+
+  updateDifficulty(totalAscent, totalDist);
+}
+
+function updateDifficulty(ascent, dist) {
+  if (ascent === undefined) {
+    const sorted = [...segments].sort((a,b) => a.dist - b.dist);
+    ascent = 0; dist = sorted[sorted.length-1]?.dist || 0;
+    for (let i = 1; i < sorted.length; i++) {
+      const diff = sorted[i].elev - sorted[i-1].elev;
+      if (diff > 0) ascent += diff;
+    }
+  }
+  const score = ascent / Math.max(dist, 0.1);
+  let diff, color;
+  if (score < 5) { diff = 'フラット（楽）'; color = '#4ade80'; }
+  else if (score < 20) { diff = '丘陵（やや辛い）'; color = '#fbbf24'; }
+  else if (score < 40) { diff = '山岳（きつい）'; color = '#f97316'; }
+  else { diff = '上級山岳（非常にきつい）'; color = '#ef4444'; }
+
+  document.getElementById('difficultyCard').innerHTML = `
+    <div class="diff-badge" style="background:${color}20;border:1.5px solid ${color};color:${color}">
+      コース難易度: ${diff}
+    </div>
+  `;
+}
+
+renderSegmentList();
+drawAll();
+</script>
+
+<style>
+.re-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.re-header { text-align: center; margin-bottom: 2rem; }
+.re-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.re-sub { color: var(--gray-400); margin-top: .3rem; }
+.re-body { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; }
+@media (max-width: 800px) { .re-body { grid-template-columns: 1fr; } }
+.re-card, .re-chart-card, .re-stats, .re-difficulty, .re-pacing { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.re-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.re-fg { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .7rem; }
+.re-label { font-size: .75rem; color: var(--gray-400); }
+.re-input, .re-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.re-table-head { display: grid; grid-template-columns: 80px 80px 1fr 24px; gap: .4rem; font-size: .72rem; color: var(--gray-400); margin-bottom: .4rem; }
+.seg-row { display: grid; grid-template-columns: 80px 80px 1fr 24px; gap: .4rem; margin-bottom: .4rem; align-items: center; }
+.seg-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 6px; color: var(--gray-100); padding: .35rem .5rem; font-size: .82rem; width: 100%; box-sizing: border-box; }
+.seg-label { }
+.seg-del { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .9rem; }
+.seg-del:hover { color: #ef4444; }
+.re-add-seg-btn { width: 100%; padding: .45rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 8px; cursor: pointer; font-size: .85rem; margin-top: .3rem; }
+.re-presets { }
+.re-preset-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .4rem; margin-top: .4rem; }
+.re-pbtn { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .35rem .3rem; font-size: .78rem; cursor: pointer; color: var(--gray-300); }
+.re-pbtn:hover { border-color: #4ade80; }
+.cs-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .6rem; }
+.cs-item { text-align: center; }
+.cs-val { font-size: 1.3rem; font-weight: 800; color: var(--gray-100); }
+.cs-val.up { color: #4ade80; }
+.cs-val.down { color: #60a5fa; }
+.cs-lbl { font-size: .7rem; color: var(--gray-400); }
+.diff-badge { padding: .5rem 1rem; border-radius: 8px; font-weight: 700; font-size: .9rem; text-align: center; }
+.pace-row { display: flex; justify-content: space-between; font-size: .83rem; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.pace-row:last-child { border-bottom: none; }
+.pace-seg { color: var(--gray-400); min-width: 100px; }
+.pace-grad { min-width: 80px; }
+.pace-pace { color: #60a5fa; font-weight: 700; }
+</style>
+</BaseLayout>
