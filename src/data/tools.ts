@@ -301,7 +301,7 @@ export const tools: Tool[] = [
 		id: 45, slug: 'csv-quiz',
 		name: '資格試験「1問1答」CSVアップロード式',
 		description: 'CSVを読み込ませるだけのランダム出題アプリ。データベース不要。',
-		emoji: '📝', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '📝', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 46, slug: 'typing-symbols',

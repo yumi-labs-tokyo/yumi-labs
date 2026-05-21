@@ -1,0 +1,677 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="資格試験「1問1答」CSVアップロード式 | yumi Labs">
+  <style>
+    @keyframes card-reveal {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .card-reveal { animation: card-reveal 0.3s ease-out forwards; }
+    @keyframes correct-flash {
+      0%   { background: rgba(74,222,128,0.2); }
+      100% { background: transparent; }
+    }
+    @keyframes wrong-flash {
+      0%   { background: rgba(248,113,113,0.2); }
+      100% { background: transparent; }
+    }
+    .correct-flash { animation: correct-flash 0.5s ease-out; }
+    .wrong-flash   { animation: wrong-flash 0.5s ease-out; }
+    .option-btn {
+      transition: all 0.15s;
+    }
+    .option-btn:hover:not(:disabled) {
+      transform: translateX(4px);
+    }
+    .option-btn:disabled { cursor: default; }
+    .prog-fill { transition: width 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+    input[type=range] { accent-color: #9333ea; }
+    .tab-active {
+      background: rgba(147,51,234,0.3);
+      border-color: rgba(147,51,234,0.5);
+      color: white;
+    }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">📝</div>
+      <div class="text-3xl font-bold text-white mb-2">資格試験「1問1答」CSVアップロード式</div>
+      <div class="text-gray-400 text-sm">自分で作ったCSVを読み込むだけ。ランダム出題・4択・フラッシュカード対応。データは端末内のみ</div>
+    </div>
+
+    <!-- ===== SETUP SCREEN ===== -->
+    <div id="setupScreen">
+
+      <!-- CSV format guide -->
+      <div class="bg-white/5 rounded-2xl p-5 mb-5">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">📄 CSVの形式</div>
+        <div class="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-300 mb-3 overflow-x-auto">
+          <div class="text-gray-500 mb-1"># 形式: 問題,答え[,解説（省略可）]</div>
+          <div>日本の首都は？,東京,東京は1869年から首都</div>
+          <div>水の化学式は？,H2O</div>
+          <div>著作権の保護期間は？,著作者の死後70年,2018年改正後</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-gray-400">
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> 1行1問題</div>
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> カンマ区切り</div>
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> 文字コード: UTF-8</div>
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> ヘッダ行: 任意</div>
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> 解説列: 省略可</div>
+          <div class="flex gap-1.5"><span class="text-green-400">✓</span> 行数制限: なし</div>
+        </div>
+      </div>
+
+      <!-- Upload area -->
+      <div class="bg-white/5 rounded-2xl p-5 mb-5">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">📂 CSVを読み込む</div>
+
+        <div id="dropzone"
+          onclick="document.getElementById('csvInput').click()"
+          ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)"
+          class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-purple-400/50 transition-all mb-3">
+          <div class="text-4xl mb-2">📁</div>
+          <div class="text-sm text-gray-300">クリックまたはドラッグ&ドロップ</div>
+          <div class="text-xs text-gray-500 mt-1">.csv ファイル</div>
+        </div>
+        <input type="file" id="csvInput" accept=".csv,text/csv" class="hidden" onchange="loadCsv(this)" />
+
+        <!-- Paste -->
+        <div class="mt-3">
+          <div class="text-xs text-gray-400 mb-1">またはテキストを直接貼り付け</div>
+          <textarea id="csvPaste" placeholder="問題1,答え1,解説1&#10;問題2,答え2&#10;..." rows="4"
+            class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-xs font-mono resize-none"></textarea>
+          <button onclick="loadFromPaste()"
+            class="mt-2 px-4 py-2 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">
+            貼り付けから読み込む
+          </button>
+        </div>
+
+        <!-- Sample -->
+        <div class="mt-3 flex gap-2">
+          <button onclick="loadSample()"
+            class="text-xs text-purple-400 hover:text-purple-300 transition-all underline">
+            サンプルデータで試す（ITパスポート風）
+          </button>
+        </div>
+      </div>
+
+      <!-- Saved sets -->
+      <div class="bg-white/5 rounded-2xl p-5" id="savedSetsArea">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">💾 保存済み問題セット</div>
+        </div>
+        <div id="savedSets" class="space-y-2">
+          <div class="text-xs text-gray-600 text-center py-2">保存済みセットはありません</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== QUIZ SCREEN ===== -->
+    <div id="quizScreen" class="hidden">
+
+      <!-- Header bar -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="text-sm font-bold text-white" id="quizSetName"></div>
+          <div class="text-xs text-gray-400" id="quizStats"></div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="openSettings()" class="px-3 py-1.5 rounded-lg text-xs bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">⚙️</button>
+          <button onclick="exitQuiz()" class="px-3 py-1.5 rounded-lg text-xs bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">← 戻る</button>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+        <div id="progressBar" class="prog-fill h-full rounded-full" style="width:0%;background:linear-gradient(90deg,#9333ea,#ec4899);"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-500 mb-5">
+        <span id="progressLabel">0 / 0</span>
+        <span>正解率: <span id="accuracyLabel" class="text-white">--</span></span>
+      </div>
+
+      <!-- Mode tabs -->
+      <div class="flex gap-1 bg-white/5 rounded-xl p-1 mb-5" id="modeTabs">
+        <button onclick="setMode('flash')" data-mode="flash" class="mode-tab flex-1 py-1.5 rounded-lg text-xs font-medium border border-transparent text-gray-400 transition-all tab-active">
+          🃏 フラッシュカード
+        </button>
+        <button onclick="setMode('choice')" data-mode="choice" class="mode-tab flex-1 py-1.5 rounded-lg text-xs font-medium border border-transparent text-gray-400 transition-all">
+          📋 4択
+        </button>
+        <button onclick="setMode('type')" data-mode="type" class="mode-tab flex-1 py-1.5 rounded-lg text-xs font-medium border border-transparent text-gray-400 transition-all">
+          ✏️ 記述
+        </button>
+      </div>
+
+      <!-- Question card -->
+      <div id="questionCard" class="bg-white/5 rounded-2xl p-6 mb-4 border border-white/10 card-reveal">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2" id="qNumber"></div>
+        <div class="text-lg font-bold text-white leading-relaxed mb-1" id="questionText"></div>
+        <div class="text-xs text-gray-500" id="questionCategory"></div>
+      </div>
+
+      <!-- Flash card mode -->
+      <div id="flashMode">
+        <button onclick="showAnswer()" id="showAnswerBtn"
+          class="w-full py-3 rounded-xl font-bold text-sm mb-3 bg-white/10 text-gray-200 hover:bg-white/20 border border-white/10 transition-all">
+          答えを見る
+        </button>
+        <div id="answerReveal" class="hidden mb-4">
+          <div class="bg-white/5 rounded-2xl p-5 border border-green-400/20 mb-3 card-reveal">
+            <div class="text-xs text-green-400 font-semibold mb-1">✅ 答え</div>
+            <div class="text-xl font-black text-white" id="flashAnswer"></div>
+            <div class="text-sm text-gray-400 mt-2 leading-relaxed" id="flashExplanation"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="flashRate(false)"
+              class="py-3 rounded-xl font-bold text-sm bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all">
+              😖 わからなかった
+            </button>
+            <button onclick="flashRate(true)"
+              class="py-3 rounded-xl font-bold text-sm bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 transition-all">
+              😊 わかった！
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4-choice mode -->
+      <div id="choiceMode" class="hidden">
+        <div id="choiceOptions" class="space-y-2 mb-4"></div>
+        <div id="choiceResult" class="hidden rounded-xl p-4 mb-3">
+          <div class="font-bold mb-1" id="choiceResultTitle"></div>
+          <div class="text-sm text-gray-300" id="choiceExplanation"></div>
+        </div>
+        <button onclick="nextQuestion()" id="choiceNextBtn" class="hidden w-full py-3 rounded-xl font-bold text-sm text-white transition-all" style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+          次の問題 →
+        </button>
+      </div>
+
+      <!-- Type answer mode -->
+      <div id="typeMode" class="hidden">
+        <div class="flex gap-2 mb-3">
+          <input id="typeInput" type="text" placeholder="答えを入力..."
+            onkeydown="if(event.key==='Enter') checkType()"
+            class="flex-1 bg-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          <button onclick="checkType()"
+            class="px-5 rounded-xl font-bold text-white text-sm transition-all"
+            style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+            確認
+          </button>
+        </div>
+        <div id="typeResult" class="hidden rounded-xl p-4 mb-3">
+          <div class="font-bold mb-1" id="typeResultTitle"></div>
+          <div class="text-sm" id="typeCorrectAnswer"></div>
+          <div class="text-sm text-gray-400 mt-1" id="typeExplanation"></div>
+        </div>
+        <button onclick="nextQuestion()" id="typeNextBtn" class="hidden w-full py-3 rounded-xl font-bold text-sm text-white transition-all" style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+          次の問題 →
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ===== RESULT SCREEN ===== -->
+    <div id="resultScreen" class="hidden">
+      <div class="bg-white/5 rounded-2xl p-8 text-center mb-5">
+        <div class="text-6xl mb-4" id="resultEmoji">🎉</div>
+        <div class="text-2xl font-black text-white mb-1" id="resultTitle"></div>
+        <div class="text-4xl font-black mb-4" id="resultScore"></div>
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div><div class="text-2xl font-bold text-green-300" id="resCorrect">0</div><div class="text-xs text-gray-400">正解</div></div>
+          <div><div class="text-2xl font-bold text-red-300" id="resWrong">0</div><div class="text-xs text-gray-400">不正解</div></div>
+          <div><div class="text-2xl font-bold text-yellow-300" id="resTotal">0</div><div class="text-xs text-gray-400">出題数</div></div>
+        </div>
+        <div class="flex gap-3 justify-center flex-wrap">
+          <button onclick="retryAll()"
+            class="px-6 py-3 rounded-xl font-bold text-white text-sm transition-all"
+            style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+            🔄 全問やり直し
+          </button>
+          <button onclick="retryWrong()"
+            class="px-6 py-3 rounded-xl font-bold text-sm bg-white/10 text-gray-200 hover:bg-white/20 border border-white/10 transition-all" id="retryWrongBtn">
+            ❌ 不正解のみ
+          </button>
+          <button onclick="exitQuiz()"
+            class="px-6 py-3 rounded-xl font-bold text-sm bg-white/10 text-gray-200 hover:bg-white/20 border border-white/10 transition-all">
+            ← 問題セット選択
+          </button>
+        </div>
+      </div>
+
+      <!-- Wrong list -->
+      <div id="wrongList" class="space-y-2"></div>
+    </div>
+
+    <!-- Settings modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.7);">
+      <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-sm border border-white/20">
+        <div class="flex justify-between items-center mb-4">
+          <div class="text-white font-bold">⚙️ 出題設定</div>
+          <button onclick="closeSettings()" class="text-gray-400 hover:text-white">✕</button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <div class="text-xs text-gray-400 mb-1">出題数（全 <span id="totalQCount">0</span> 問）</div>
+            <div class="flex items-center gap-2">
+              <input id="quizCountSlider" type="range" min="5" max="100" value="20" oninput="updateQuizCount(this.value)" class="flex-1" />
+              <span id="quizCountLabel" class="text-white text-sm w-12 text-right">20問</span>
+            </div>
+          </div>
+          <div>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optShuffle" checked class="accent-purple-400" />
+              ランダム順
+            </label>
+          </div>
+          <div>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optWeakFocus" class="accent-purple-400" />
+              苦手問題を優先出題
+            </label>
+          </div>
+          <button onclick="applySettings(); closeSettings();"
+            class="w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all"
+            style="background:linear-gradient(135deg,#9333ea,#ec4899);">
+            適用して再スタート
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const STORAGE_KEY = 'csv_quiz_sets_v1';
+  const WEAK_KEY    = 'csv_quiz_weak_v1';
+
+  const SAMPLE_CSV = `問題,答え,解説
+AIとは何の略ですか？,Artificial Intelligence,人工知能の英略語
+IoTとは何の略ですか？,Internet of Things,モノのインターネット
+OSとは何の略ですか？,Operating System,基本ソフトウェア
+RDBMSとは何ですか？,リレーショナルデータベース管理システム,SQLで操作する
+HTTPSのSは何を意味しますか？,Secure（セキュア）,SSLで暗号化された通信
+CPUの正式名称は？,Central Processing Unit,中央処理装置
+RAMの特徴は？,揮発性メモリ（電源を切ると消える）,ランダムアクセスメモリ
+ビット（bit）の基本単位は？,0または1の2進数1桁,バイナリの最小単位
+1バイトは何ビットですか？,8ビット,コンピュータの基本データ単位
+URLとは何の略ですか？,Uniform Resource Locator,ウェブアドレスの形式
+IPアドレスのIPは何の略ですか？,Internet Protocol,ネットワーク上の住所
+SQLとは何の略ですか？,Structured Query Language,構造化照会言語
+「フィッシング」とは何ですか？,偽サイトに誘導して情報を騙し取る攻撃,Phishingと綴る
+バックアップの「世代管理」とは？,複数の時点のデータを保存すること,最新1つだけでは不十分
+著作権の英語は？,Copyright,©マークで表示される
+プロバイダとは何ですか？,インターネット接続サービスを提供する企業,ISP（Internet Service Provider）
+クラウドコンピューティングとは？,インターネット経由でコンピュータ資源を利用すること,AWS・Azure・GCPなど
+二要素認証とは？,パスワード＋別の認証手段を組み合わせること,SMS・認証アプリなど
+暗号化とは？,データを第三者が読めない形式に変換すること,復号化で元に戻す
+ITパスポートの受験資格は？,特になし（誰でも受験可能）,国家試験だが制限なし`;
+
+  // ---- State ----
+  let sets = [];        // [{name, questions:[{q,a,exp}], createdAt}]
+  let weakMap = {};     // {hash: wrongCount}
+  let currentSet = null;
+  let queue = [];
+  let qIdx = 0;
+  let correct = 0;
+  let wrong = 0;
+  let wrongItems = [];
+  let mode = 'flash';
+  let quizCount = 20;
+
+  // ---- Storage ----
+  function loadData() {
+    try { sets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { sets = []; }
+    try { weakMap = JSON.parse(localStorage.getItem(WEAK_KEY) || '{}'); } catch { weakMap = {}; }
+  }
+  function saveSets() { localStorage.setItem(STORAGE_KEY, JSON.stringify(sets)); }
+  function saveWeak()  { localStorage.setItem(WEAK_KEY, JSON.stringify(weakMap)); }
+
+  function qHash(q) { return q.q.slice(0,30) + '|' + q.a.slice(0,10); }
+
+  // ---- CSV parsing ----
+  function parseCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.trim().startsWith('#'));
+    const questions = [];
+    for (const line of lines) {
+      const cols = splitCsvLine(line);
+      if (cols.length < 2) continue;
+      const q = cols[0].trim();
+      const a = cols[1].trim();
+      const exp = cols[2]?.trim() || '';
+      if (q && a) questions.push({ q, a, exp });
+    }
+    return questions;
+  }
+
+  function splitCsvLine(line) {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"' && !inQ) { inQ = true; continue; }
+      if (c === '"' && inQ) { if (line[i+1] === '"') { cur += '"'; i++; } else { inQ = false; } continue; }
+      if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    result.push(cur);
+    return result;
+  }
+
+  // ---- Load CSV ----
+  function loadCsv(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => processCsvText(e.target.result, file.name.replace(/\.csv$/i, ''));
+    reader.readAsText(file, 'UTF-8');
+    input.value = '';
+  }
+
+  function loadFromPaste() {
+    const text = document.getElementById('csvPaste').value.trim();
+    if (!text) return;
+    processCsvText(text, '貼り付けデータ');
+  }
+
+  function loadSample() {
+    processCsvText(SAMPLE_CSV, 'ITパスポートサンプル');
+  }
+
+  function dragOver(e) { e.preventDefault(); document.getElementById('dropzone').style.borderColor = 'rgba(147,51,234,0.7)'; }
+  function dragLeave()  { document.getElementById('dropzone').style.borderColor = 'rgba(255,255,255,0.2)'; }
+  function dropFile(e)  {
+    e.preventDefault(); dragLeave();
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.name.endsWith('.csv')) { alert('.csvファイルを選択してください'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => processCsvText(ev.target.result, file.name.replace(/\.csv$/i, ''));
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function processCsvText(text, name) {
+    const questions = parseCsv(text);
+    if (questions.length === 0) { alert('有効な問題が見つかりませんでした。CSVの形式を確認してください。'); return; }
+
+    // Check for duplicate name, update or add
+    const existing = sets.findIndex(s => s.name === name);
+    const entry = { name, questions, createdAt: Date.now() };
+    if (existing >= 0) { sets[existing] = entry; } else { sets.unshift(entry); }
+    saveSets();
+    renderSavedSets();
+    startQuiz(entry);
+  }
+
+  // ---- Saved sets ----
+  function renderSavedSets() {
+    const el = document.getElementById('savedSets');
+    if (sets.length === 0) {
+      el.innerHTML = '<div class="text-xs text-gray-600 text-center py-2">保存済みセットはありません</div>';
+      return;
+    }
+    el.innerHTML = sets.map((s, i) => `
+      <div class="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-white/5 transition-all">
+        <button onclick="startQuiz(sets[${i}])" class="flex-1 text-left">
+          <div class="text-sm font-medium text-white">${escHtml(s.name)}</div>
+          <div class="text-xs text-gray-500">${s.questions.length}問 · ${new Date(s.createdAt).toLocaleDateString('ja-JP')}</div>
+        </button>
+        <button onclick="deleteSet(${i})" class="ml-3 text-gray-600 hover:text-red-400 transition-all text-xs">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function deleteSet(i) {
+    if (!confirm(`「${sets[i].name}」を削除しますか？`)) return;
+    sets.splice(i, 1);
+    saveSets();
+    renderSavedSets();
+  }
+
+  // ---- Start quiz ----
+  function startQuiz(set) {
+    currentSet = set;
+    document.getElementById('totalQCount').textContent = set.questions.length;
+    const max = Math.min(100, set.questions.length);
+    document.getElementById('quizCountSlider').max = max;
+    quizCount = Math.min(quizCount, max);
+    document.getElementById('quizCountSlider').value = quizCount;
+    document.getElementById('quizCountLabel').textContent = quizCount + '問';
+    buildQueue();
+    showQuizScreen();
+  }
+
+  function buildQueue() {
+    let pool = [...currentSet.questions];
+    if (document.getElementById('optWeakFocus').checked) {
+      pool.sort((a, b) => (weakMap[qHash(b)] || 0) - (weakMap[qHash(a)] || 0));
+    } else if (document.getElementById('optShuffle').checked) {
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+    }
+    queue = pool.slice(0, quizCount);
+    qIdx = 0; correct = 0; wrong = 0; wrongItems = [];
+  }
+
+  function showQuizScreen() {
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('resultScreen').classList.add('hidden');
+    document.getElementById('quizScreen').classList.remove('hidden');
+    document.getElementById('quizSetName').textContent = currentSet.name;
+    showQuestion();
+  }
+
+  function showQuestion() {
+    if (qIdx >= queue.length) { showResult(); return; }
+    const q = queue[qIdx];
+    document.getElementById('qNumber').textContent = `問 ${qIdx + 1} / ${queue.length}`;
+    document.getElementById('questionText').textContent = q.q;
+    document.getElementById('questionCategory').textContent = '';
+    updateProgress();
+
+    // Reset mode UIs
+    document.getElementById('answerReveal').classList.add('hidden');
+    document.getElementById('showAnswerBtn').classList.remove('hidden');
+    document.getElementById('choiceResult').classList.add('hidden');
+    document.getElementById('choiceNextBtn').classList.add('hidden');
+    document.getElementById('typeResult').classList.add('hidden');
+    document.getElementById('typeNextBtn').classList.add('hidden');
+    document.getElementById('typeInput').value = '';
+
+    if (mode === 'choice') renderChoices(q);
+    if (mode === 'type') setTimeout(() => document.getElementById('typeInput').focus(), 100);
+
+    // Animate card
+    const card = document.getElementById('questionCard');
+    card.classList.remove('card-reveal');
+    void card.offsetWidth;
+    card.classList.add('card-reveal');
+  }
+
+  function updateProgress() {
+    const pct = queue.length > 0 ? (qIdx / queue.length) * 100 : 0;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${qIdx} / ${queue.length}`;
+    const total = correct + wrong;
+    document.getElementById('accuracyLabel').textContent = total > 0 ? Math.round(correct / total * 100) + '%' : '--';
+    document.getElementById('quizStats').textContent = `✅${correct} ❌${wrong}`;
+  }
+
+  // ---- Flash card ----
+  function showAnswer() {
+    const q = queue[qIdx];
+    document.getElementById('flashAnswer').textContent = q.a;
+    document.getElementById('flashExplanation').textContent = q.exp || '';
+    document.getElementById('answerReveal').classList.remove('hidden');
+    document.getElementById('showAnswerBtn').classList.add('hidden');
+  }
+
+  function flashRate(isCorrect) {
+    const q = queue[qIdx];
+    if (isCorrect) { correct++; }
+    else {
+      wrong++;
+      wrongItems.push(q);
+      weakMap[qHash(q)] = (weakMap[qHash(q)] || 0) + 1;
+      saveWeak();
+    }
+    qIdx++;
+    showQuestion();
+  }
+
+  // ---- 4-choice ----
+  function renderChoices(q) {
+    // Pick 3 wrong answers from pool
+    const pool = currentSet.questions.filter(x => x.a !== q.a);
+    const wrongs = shuffleArr(pool).slice(0, 3).map(x => x.a);
+    const options = shuffleArr([q.a, ...wrongs]);
+    const container = document.getElementById('choiceOptions');
+    container.innerHTML = options.map((opt, i) => `
+      <button onclick="checkChoice('${escAttr(opt)}', '${escAttr(q.a)}')"
+        class="option-btn w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-gray-200 bg-white/5 border border-white/10 hover:border-purple-400/40 hover:bg-purple-500/10 transition-all"
+        data-opt="${escAttr(opt)}">
+        <span class="text-purple-400 font-bold mr-2">${['A','B','C','D'][i]}</span>${escHtml(opt)}
+      </button>
+    `).join('');
+  }
+
+  function checkChoice(selected, correct_ans) {
+    const isCorrect = selected === correct_ans;
+    const q = queue[qIdx];
+    document.querySelectorAll('.option-btn').forEach(b => {
+      b.disabled = true;
+      if (b.dataset.opt === correct_ans) {
+        b.style.borderColor = 'rgba(74,222,128,0.6)';
+        b.style.background = 'rgba(74,222,128,0.1)';
+        b.style.color = '#4ade80';
+      } else if (b.dataset.opt === selected && !isCorrect) {
+        b.style.borderColor = 'rgba(248,113,113,0.6)';
+        b.style.background = 'rgba(248,113,113,0.1)';
+        b.style.color = '#f87171';
+      }
+    });
+
+    const resEl = document.getElementById('choiceResult');
+    const titleEl = document.getElementById('choiceResultTitle');
+    const expEl = document.getElementById('choiceExplanation');
+    resEl.classList.remove('hidden');
+    resEl.style.background = isCorrect ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)';
+    resEl.style.borderColor = isCorrect ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)';
+    resEl.style.border = '1px solid';
+    titleEl.textContent = isCorrect ? '✅ 正解！' : `❌ 不正解。正解は「${correct_ans}」`;
+    titleEl.style.color = isCorrect ? '#4ade80' : '#f87171';
+    expEl.textContent = q.exp || '';
+    document.getElementById('choiceNextBtn').classList.remove('hidden');
+
+    if (isCorrect) { correct++; } else { wrong++; wrongItems.push(q); weakMap[qHash(q)] = (weakMap[qHash(q)] || 0) + 1; saveWeak(); }
+    updateProgress();
+  }
+
+  // ---- Type answer ----
+  function checkType() {
+    const input = document.getElementById('typeInput').value.trim();
+    if (!input) return;
+    const q = queue[qIdx];
+    const isCorrect = normalize(input) === normalize(q.a);
+    const resEl = document.getElementById('typeResult');
+    resEl.classList.remove('hidden');
+    resEl.style.background = isCorrect ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)';
+    resEl.style.border = `1px solid ${isCorrect ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`;
+    document.getElementById('typeResultTitle').textContent = isCorrect ? '✅ 正解！' : '❌ 不正解';
+    document.getElementById('typeResultTitle').style.color = isCorrect ? '#4ade80' : '#f87171';
+    document.getElementById('typeCorrectAnswer').textContent = isCorrect ? '' : `正解: ${q.a}`;
+    document.getElementById('typeCorrectAnswer').style.color = '#facc15';
+    document.getElementById('typeExplanation').textContent = q.exp || '';
+    document.getElementById('typeNextBtn').classList.remove('hidden');
+    document.getElementById('typeInput').disabled = true;
+
+    if (isCorrect) { correct++; } else { wrong++; wrongItems.push(q); weakMap[qHash(q)] = (weakMap[qHash(q)] || 0) + 1; saveWeak(); }
+    updateProgress();
+  }
+
+  function normalize(s) { return s.replace(/\s+/g, '').toLowerCase(); }
+
+  function nextQuestion() {
+    qIdx++;
+    showQuestion();
+  }
+
+  // ---- Mode switch ----
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-tab').forEach(b => {
+      b.classList.toggle('tab-active', b.dataset.mode === m);
+    });
+    document.getElementById('flashMode').classList.toggle('hidden', m !== 'flash');
+    document.getElementById('choiceMode').classList.toggle('hidden', m !== 'choice');
+    document.getElementById('typeMode').classList.toggle('hidden', m !== 'type');
+    // Re-render current question
+    if (qIdx < queue.length) showQuestion();
+  }
+
+  // ---- Result ----
+  function showResult() {
+    document.getElementById('quizScreen').classList.add('hidden');
+    document.getElementById('resultScreen').classList.remove('hidden');
+    const total = correct + wrong;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    const emojis = pct >= 90 ? '🏆' : pct >= 70 ? '🎉' : pct >= 50 ? '😊' : '😅';
+    const titles = pct >= 90 ? '完璧！' : pct >= 70 ? 'よくできました！' : pct >= 50 ? 'まずまず' : 'もう少し練習しよう';
+    document.getElementById('resultEmoji').textContent = emojis;
+    document.getElementById('resultTitle').textContent = titles;
+    document.getElementById('resultScore').textContent = pct + '%';
+    document.getElementById('resultScore').style.color = pct >= 70 ? '#4ade80' : pct >= 50 ? '#facc15' : '#f87171';
+    document.getElementById('resCorrect').textContent = correct;
+    document.getElementById('resWrong').textContent = wrong;
+    document.getElementById('resTotal').textContent = total;
+    document.getElementById('retryWrongBtn').disabled = wrongItems.length === 0;
+    document.getElementById('retryWrongBtn').style.opacity = wrongItems.length === 0 ? '0.4' : '1';
+
+    // Wrong list
+    document.getElementById('wrongList').innerHTML = wrongItems.length > 0
+      ? `<div class="text-xs text-gray-500 mb-2">不正解一覧（${wrongItems.length}問）</div>` +
+        wrongItems.map(w => `
+          <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-2">
+            <div class="text-sm text-white font-medium">${escHtml(w.q)}</div>
+            <div class="text-sm text-green-300 mt-1">▶ ${escHtml(w.a)}</div>
+            ${w.exp ? `<div class="text-xs text-gray-400 mt-0.5">${escHtml(w.exp)}</div>` : ''}
+          </div>`).join('')
+      : '';
+  }
+
+  function retryAll()   { qIdx = 0; correct = 0; wrong = 0; wrongItems = []; buildQueue(); showQuizScreen(); }
+  function retryWrong() { if (!wrongItems.length) return; queue = shuffleArr([...wrongItems]); qIdx = 0; correct = 0; wrong = 0; wrongItems = []; showQuizScreen(); }
+
+  // ---- Settings ----
+  function openSettings()  { document.getElementById('settingsModal').classList.remove('hidden'); }
+  function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
+  function updateQuizCount(v) { quizCount = parseInt(v); document.getElementById('quizCountLabel').textContent = v + '問'; }
+  function applySettings()    { buildQueue(); showQuestion(); }
+
+  function exitQuiz() {
+    document.getElementById('quizScreen').classList.add('hidden');
+    document.getElementById('resultScreen').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
+  }
+
+  // ---- Utils ----
+  function shuffleArr(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+    return a;
+  }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+  // ---- Init ----
+  loadData();
+  renderSavedSets();
+</script>
