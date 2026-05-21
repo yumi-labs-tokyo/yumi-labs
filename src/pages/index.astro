@@ -259,45 +259,41 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		font-size: var(--text-xl);
 	}
 
-	/* Hero — mobile: 縦積み */
+	/* Hero — 常に横並び */
 	.hero {
 		display: flex;
 		align-items: flex-start;
-		gap: 1.5rem;
-		padding-block: 2.5rem 2rem;
-		flex-direction: column;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-block: 2rem 1.5rem;
 	}
 
-	/* Hero photo — mobile: 小さく中央揃え */
+	/* Hero photo — モバイル: 小さめ */
 	.hero-visual {
 		flex-shrink: 0;
-		display: flex;
-		justify-content: center;
-		width: 100%;
 	}
 
 	.hero-photo {
-		width: 110px;
+		width: 80px;
 		height: auto;
-		border-radius: 1.5rem;
+		border-radius: 1.2rem;
 		object-fit: cover;
 		object-position: top;
 		border: 3px solid var(--accent-light);
 		box-shadow: var(--shadow-md);
 	}
 
-	/* Desktop: 元の横並びレイアウトに戻す */
+	/* モバイルのタイトルを少し小さく（画像と共存できるサイズに） */
+	.hero-title {
+		font-size: clamp(1.45rem, 5vw, 3.5rem);
+	}
+
+	/* Desktop: 余裕があるので大きく */
 	@media (min-width: 50em) {
 		.hero {
-			flex-direction: row;
 			align-items: center;
-			justify-content: space-between;
+			gap: 2rem;
 			padding-block: 4rem 2rem;
-		}
-
-		.hero-visual {
-			display: block;
-			width: auto;
 		}
 
 		.hero-photo {
