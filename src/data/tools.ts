@@ -283,7 +283,7 @@ export const tools: Tool[] = [
 		id: 42, slug: 'vocab-forgetting-curve',
 		name: '英単語「忘却曲線」復習アプリ',
 		description: 'エビングハウス曲線に基づき次回復習日をブラウザ通知。',
-		emoji: '🔁', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '🔁', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 43, slug: 'hello-world-tour',
