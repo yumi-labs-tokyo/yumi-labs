@@ -1,0 +1,273 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="化学反応式バランス調整" description="化学式を入力すると係数を自動計算。元素別収支を表で表示。">
+<main class="cb-wrap">
+  <div class="cb-header">
+    <div class="cb-title">⚗️ 化学反応式バランス調整</div>
+    <div class="cb-sub">化学式を入力すると係数を自動計算します</div>
+  </div>
+
+  <div class="cb-input-area">
+    <div class="cb-input-row">
+      <input id="eqInput" class="cb-input" type="text" placeholder="例: H2 + O2 -> H2O  /  Fe + O2 -> Fe2O3" value="H2 + O2 -> H2O" />
+      <button class="cb-btn" onclick="balance()">バランス調整</button>
+    </div>
+    <div class="cb-examples">
+      <span class="ex-label">例：</span>
+      <button class="ex-btn" onclick="setEq('H2 + O2 -> H2O')">H2+O2→H2O</button>
+      <button class="ex-btn" onclick="setEq('Fe + O2 -> Fe2O3')">Fe+O2→Fe2O3</button>
+      <button class="ex-btn" onclick="setEq('C3H8 + O2 -> CO2 + H2O')">C3H8+O2→CO2+H2O</button>
+      <button class="ex-btn" onclick="setEq('Al + HCl -> AlCl3 + H2')">Al+HCl→AlCl3+H2</button>
+      <button class="ex-btn" onclick="setEq('Ca(OH)2 + H3PO4 -> Ca3(PO4)2 + H2O')">Ca(OH)2+H3PO4→...</button>
+      <button class="ex-btn" onclick="setEq('KMnO4 + HCl -> KCl + MnCl2 + H2O + Cl2')">KMnO4+HCl→...</button>
+    </div>
+  </div>
+
+  <div id="result" class="cb-result" style="display:none"></div>
+  <div id="error" class="cb-error" style="display:none"></div>
+</main>
+
+<script is:inline>
+function setEq(s) {
+  document.getElementById('eqInput').value = s;
+  balance();
+}
+
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); return b === 0 ? a : gcd(b, a % b); }
+function lcm(a, b) { return a * b / gcd(a, b); }
+
+// Fraction: {n, d}
+function F(n, d) {
+  if (d === 0) return {n: 0, d: 1};
+  const g = gcd(Math.abs(n), Math.abs(d));
+  const sign = d < 0 ? -1 : 1;
+  return {n: sign * n / g, d: sign * d / g};
+}
+function fadd(a, b) { return F(a.n * b.d + b.n * a.d, a.d * b.d); }
+function fmul(a, b) { return F(a.n * b.n, a.d * b.d); }
+function fdiv(a, b) { return F(a.n * b.d, a.d * b.n); }
+function fneg(a) { return F(-a.n, a.d); }
+function fzero(a) { return a.n === 0; }
+
+// Parse formula like H2O, Ca(OH)2, Fe2(SO4)3
+function parseFormula(f) {
+  let i = 0;
+  function parseGroup() {
+    const counts = {};
+    while (i < f.length && f[i] !== ')') {
+      if (f[i] === '(') {
+        i++;
+        const sub = parseGroup();
+        if (f[i] === ')') i++;
+        let num = '';
+        while (i < f.length && /\d/.test(f[i])) { num += f[i]; i++; }
+        const m = num ? parseInt(num) : 1;
+        for (const [el, c] of Object.entries(sub)) counts[el] = (counts[el] || 0) + c * m;
+      } else if (/[A-Z]/.test(f[i])) {
+        let el = f[i++];
+        while (i < f.length && /[a-z]/.test(f[i])) el += f[i++];
+        let num = '';
+        while (i < f.length && /\d/.test(f[i])) { num += f[i]; i++; }
+        const c = num ? parseInt(num) : 1;
+        counts[el] = (counts[el] || 0) + c;
+      } else { i++; }
+    }
+    return counts;
+  }
+  try { return parseGroup(); } catch(e) { return null; }
+}
+
+// Gaussian elimination on matrix of fractions
+function gaussianElim(M, nRows, nCols) {
+  const m = M.map(r => [...r]);
+  const pivotCols = [];
+  let pr = 0;
+
+  for (let col = 0; col < nCols && pr < nRows; col++) {
+    let found = -1;
+    for (let r = pr; r < nRows; r++) { if (!fzero(m[r][col])) { found = r; break; } }
+    if (found < 0) continue;
+    [m[pr], m[found]] = [m[found], m[pr]];
+    const piv = m[pr][col];
+    for (let c = 0; c < nCols; c++) m[pr][c] = fdiv(m[pr][c], piv);
+    for (let r = 0; r < nRows; r++) {
+      if (r !== pr && !fzero(m[r][col])) {
+        const fac = m[r][col];
+        for (let c = 0; c < nCols; c++) m[r][c] = fadd(m[r][c], fneg(fmul(fac, m[pr][c])));
+      }
+    }
+    pivotCols.push(col);
+    pr++;
+  }
+  return { m, pivotCols };
+}
+
+function balance() {
+  const raw = document.getElementById('eqInput').value.trim();
+  const errEl = document.getElementById('error');
+  const resEl = document.getElementById('result');
+  errEl.style.display = 'none';
+  resEl.style.display = 'none';
+
+  const arrowMatch = raw.match(/^(.+?)\s*(?:->|→|=)\s*(.+)$/);
+  if (!arrowMatch) { showErr('矢印 (->, →) が見つかりません'); return; }
+
+  const leftStr = arrowMatch[1];
+  const rightStr = arrowMatch[2];
+
+  const splitMol = s => s.split(/\s*\+\s*/).map(x => x.trim()).filter(Boolean);
+  const reactants = splitMol(leftStr);
+  const products = splitMol(rightStr);
+  const allMols = [...reactants, ...products];
+  const nMols = allMols.length;
+
+  // Parse each molecule
+  const parsed = allMols.map(parseFormula);
+  if (parsed.some(p => !p || Object.keys(p).length === 0)) { showErr('化学式のパースに失敗しました。形式を確認してください。'); return; }
+
+  // Gather all elements
+  const elemSet = new Set();
+  parsed.forEach(p => Object.keys(p).forEach(e => elemSet.add(e)));
+  const elems = [...elemSet].sort();
+  const nElems = elems.length;
+
+  // Build matrix (each row = element, each col = molecule)
+  // Reactants positive, products negative
+  const M = [];
+  for (let ei = 0; ei < nElems; ei++) {
+    const row = [];
+    for (let mi = 0; mi < nMols; mi++) {
+      const cnt = parsed[mi][elems[ei]] || 0;
+      const sign = mi < reactants.length ? 1 : -1;
+      row.push(F(sign * cnt, 1));
+    }
+    M.push(row);
+  }
+
+  const { m, pivotCols } = gaussianElim(M, nElems, nMols);
+
+  // Find free variables
+  const freeCols = [];
+  for (let c = 0; c < nMols; c++) if (!pivotCols.includes(c)) freeCols.push(c);
+
+  if (freeCols.length === 0) { showErr('自由変数がありません。方程式が不定かもしれません。'); return; }
+
+  // Set first free variable = 1, others = 0
+  const sol = new Array(nMols).fill(null).map(() => F(0, 1));
+  sol[freeCols[0]] = F(1, 1);
+
+  // Back-substitute
+  for (let pi = pivotCols.length - 1; pi >= 0; pi--) {
+    const pc = pivotCols[pi];
+    let val = F(0, 1);
+    for (let c = 0; c < nMols; c++) {
+      if (c !== pc) val = fadd(val, fneg(fmul(m[pi][c], sol[c])));
+    }
+    sol[pc] = val;
+  }
+
+  // Scale to positive integers
+  let denom = 1;
+  for (const f of sol) { denom = lcm(denom, Math.abs(f.d)); }
+  let ints = sol.map(f => f.n * denom / f.d);
+
+  // All should be positive; check sign
+  if (ints.some(x => x <= 0)) {
+    // Try negating
+    const neg = ints.map(x => -x);
+    if (!neg.some(x => x <= 0)) ints = neg;
+    else { showErr('係数の計算に失敗しました（方程式が不整合の可能性）。'); return; }
+  }
+
+  // Divide by GCD
+  let g = ints[0];
+  for (const x of ints) g = gcd(g, x);
+  ints = ints.map(x => x / g);
+
+  // Check that ints are reasonable
+  if (ints.some(x => !Number.isInteger(x) || x <= 0 || x > 100)) {
+    showErr('係数が複雑すぎるか、反応式が不均衡です。'); return;
+  }
+
+  showResult(reactants, products, ints, elems, parsed);
+}
+
+function showErr(msg) {
+  const e = document.getElementById('error');
+  e.textContent = '⚠️ ' + msg;
+  e.style.display = 'block';
+}
+
+function showResult(reactants, products, coeffs, elems, parsed) {
+  const el = document.getElementById('result');
+  const nR = reactants.length;
+
+  // Build balanced equation string
+  const lhs = reactants.map((m, i) => (coeffs[i] === 1 ? '' : coeffs[i]) + m).join(' + ');
+  const rhs = products.map((m, i) => (coeffs[nR + i] === 1 ? '' : coeffs[nR + i]) + m).join(' + ');
+
+  // Element balance table
+  let tableRows = '';
+  for (const el of elems) {
+    const lCount = reactants.reduce((sum, m, i) => sum + (parsed[i][el] || 0) * coeffs[i], 0);
+    const rCount = products.reduce((sum, m, i) => sum + (parsed[nR + i][el] || 0) * coeffs[nR + i], 0);
+    const ok = lCount === rCount;
+    tableRows += `<tr><td class="el-sym">${el}</td><td>${lCount}</td><td>${rCount}</td><td class="${ok ? 'ok' : 'ng'}">${ok ? '✓' : '✗'}</td></tr>`;
+  }
+
+  el.innerHTML = `
+    <div class="res-eq">${lhs} → ${rhs}</div>
+    <button class="cb-btn sm" onclick="navigator.clipboard.writeText('${lhs} → ${rhs}').then(()=>{this.textContent='コピー済！';setTimeout(()=>this.textContent='コピー',1500)})">コピー</button>
+    <div class="res-section">係数</div>
+    <div class="coeff-row">
+      ${[...reactants, ...products].map((m, i) => `<div class="coeff-card"><div class="coeff-num">${coeffs[i]}</div><div class="coeff-mol">${m}</div></div>`).join('')}
+    </div>
+    <div class="res-section">元素収支</div>
+    <div class="table-wrap">
+      <table class="bal-table">
+        <thead><tr><th>元素</th><th>左辺</th><th>右辺</th><th>整合</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+  el.style.display = 'block';
+}
+
+// Auto-balance on load
+balance();
+document.getElementById('eqInput').addEventListener('keydown', e => { if (e.key === 'Enter') balance(); });
+</script>
+
+<style>
+.cb-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.cb-header { text-align: center; margin-bottom: 2rem; }
+.cb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.cb-sub { color: var(--gray-400); margin-top: .3rem; }
+.cb-input-area { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.cb-input-row { display: flex; gap: .6rem; }
+.cb-input { flex: 1; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .6rem .9rem; font-size: 1rem; font-family: monospace; }
+.cb-input:focus { outline: none; border-color: #60a5fa; }
+.cb-btn { padding: .6rem 1.2rem; background: #2563eb; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.cb-btn.sm { font-size: .85rem; padding: .35rem .8rem; margin-top: .5rem; }
+.cb-examples { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; align-items: center; }
+.ex-label { font-size: .8rem; color: var(--gray-400); }
+.ex-btn { font-size: .75rem; padding: .25rem .55rem; background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 6px; color: var(--gray-300); cursor: pointer; }
+.ex-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+.cb-result { background: var(--gray-800); border: 1.5px solid #1d4ed8; border-radius: 14px; padding: 1.5rem; }
+.cb-error { background: #450a0a; border: 1.5px solid #dc2626; border-radius: 10px; padding: .9rem 1.2rem; color: #fca5a5; }
+.res-eq { font-size: 1.6rem; font-family: monospace; color: var(--gray-100); text-align: center; padding: .5rem; background: var(--gray-900); border-radius: 8px; margin-bottom: .5rem; }
+.res-section { font-weight: 700; color: var(--gray-300); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin: 1rem 0 .5rem; }
+.coeff-row { display: flex; flex-wrap: wrap; gap: .6rem; }
+.coeff-card { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .5rem .9rem; text-align: center; }
+.coeff-num { font-size: 1.6rem; font-weight: 800; color: #60a5fa; }
+.coeff-mol { font-size: .85rem; color: var(--gray-300); font-family: monospace; }
+.table-wrap { overflow-x: auto; }
+.bal-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.bal-table th { background: var(--gray-700); padding: .4rem .8rem; text-align: left; color: var(--gray-200); }
+.bal-table td { padding: .4rem .8rem; border-bottom: 1px solid var(--gray-700); }
+.el-sym { font-family: monospace; font-weight: 700; color: var(--gray-100); }
+.ok { color: #34d399; font-weight: 700; }
+.ng { color: #f87171; font-weight: 700; }
+</style>
+</BaseLayout>

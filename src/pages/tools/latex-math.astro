@@ -1,0 +1,200 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="数学記号入力支援（LaTeX出力）" description="GUIで∫・Σ・√を選ぶとLaTeX記法をコピー。数式入力を素早く。">
+<main class="lm-wrap">
+  <div class="lm-header">
+    <div class="lm-title">∑ 数学記号入力支援（LaTeX出力）</div>
+    <div class="lm-sub">記号をクリック → LaTeXコードをコピー</div>
+  </div>
+  <div class="lm-body">
+    <div class="lm-left">
+      <div class="lm-tabs" id="tabs"></div>
+      <div class="lm-grid" id="grid"></div>
+    </div>
+    <div class="lm-right">
+      <div class="lm-card">
+        <div class="card-label">LaTeXコード</div>
+        <div class="lm-code" id="code">（記号をクリック）</div>
+        <button class="lm-btn purple" onclick="copyLatex()" id="copyBtn" disabled>クリップボードにコピー</button>
+      </div>
+      <div class="lm-card">
+        <div class="card-label">最近使った記号</div>
+        <div class="lm-hist" id="hist"></div>
+      </div>
+      <div class="lm-card">
+        <div class="card-label">数式ビルダー</div>
+        <textarea class="lm-ta" id="builder" placeholder="LaTeXをここに組み立て...&#10;例: \frac{d}{dx} \int f(x)dx"></textarea>
+        <div class="lm-row">
+          <button class="lm-btn sm purple" onclick="insertToBuilder()">↑ 追加</button>
+          <button class="lm-btn sm gray" onclick="clearBuilder()">クリア</button>
+          <button class="lm-btn sm green" onclick="copyBuilder()">全体コピー</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const SYMS = {
+  '基本演算': [
+    {s:'±',l:'\\pm',n:'±'},{s:'∓',l:'\\mp',n:'∓'},{s:'×',l:'\\times',n:'×乗算'},{s:'÷',l:'\\div',n:'÷除算'},
+    {s:'=',l:'=',n:'等号'},{s:'≠',l:'\\neq',n:'≠不等'},{s:'≈',l:'\\approx',n:'≈近似'},{s:'≡',l:'\\equiv',n:'≡合同'},
+    {s:'≤',l:'\\leq',n:'≤以下'},{s:'≥',l:'\\geq',n:'≥以上'},{s:'≪',l:'\\ll',n:'≪'},{s:'≫',l:'\\gg',n:'≫'},
+    {s:'∞',l:'\\infty',n:'∞無限大'},{s:'∝',l:'\\propto',n:'∝比例'},{s:'∼',l:'\\sim',n:'∼'},{s:'≅',l:'\\cong',n:'≅合同'},
+  ],
+  '分数・根号': [
+    {s:'a/b',l:'\\frac{a}{b}',n:'分数'},{s:'√',l:'\\sqrt{x}',n:'平方根'},{s:'∛',l:'\\sqrt[3]{x}',n:'立方根'},{s:'ⁿ√',l:'\\sqrt[n]{x}',n:'n乗根'},
+    {s:'x²',l:'x^{2}',n:'2乗'},{s:'xⁿ',l:'x^{n}',n:'n乗'},{s:'xₙ',l:'x_{n}',n:'下付き'},{s:'x̄',l:'\\bar{x}',n:'平均'},
+    {s:'x̂',l:'\\hat{x}',n:'ハット'},{s:'ẋ',l:'\\dot{x}',n:'時間微分'},{s:'|x|',l:'|x|',n:'絶対値'},{s:'‖x‖',l:'\\|x\\|',n:'ノルム'},
+  ],
+  '微積分': [
+    {s:'∫',l:'\\int',n:'積分'},{s:'∬',l:'\\iint',n:'二重積分'},{s:'∭',l:'\\iiint',n:'三重積分'},{s:'∮',l:'\\oint',n:'周回積分'},
+    {s:'∑',l:'\\sum_{i=1}^{n}',n:'総和Σ'},{s:'∏',l:'\\prod_{i=1}^{n}',n:'総積Π'},{s:'lim',l:'\\lim_{x\\to\\infty}',n:'極限'},{s:'d/dx',l:'\\frac{d}{dx}',n:'微分'},
+    {s:'∂',l:'\\partial',n:'偏微分'},{s:'∇',l:'\\nabla',n:'ナブラ'},{s:'△',l:'\\Delta',n:'差分'},{s:'→0',l:'\\to 0',n:'→0'},
+  ],
+  'ギリシャ文字': [
+    {s:'α',l:'\\alpha',n:'α'},{s:'β',l:'\\beta',n:'β'},{s:'γ',l:'\\gamma',n:'γ'},{s:'Γ',l:'\\Gamma',n:'Γ'},
+    {s:'δ',l:'\\delta',n:'δ'},{s:'Δ',l:'\\Delta',n:'Δ'},{s:'ε',l:'\\epsilon',n:'ε'},{s:'ζ',l:'\\zeta',n:'ζ'},
+    {s:'η',l:'\\eta',n:'η'},{s:'θ',l:'\\theta',n:'θ'},{s:'Θ',l:'\\Theta',n:'Θ'},{s:'λ',l:'\\lambda',n:'λ'},
+    {s:'μ',l:'\\mu',n:'μ'},{s:'ν',l:'\\nu',n:'ν'},{s:'π',l:'\\pi',n:'π'},{s:'Π',l:'\\Pi',n:'Π'},
+    {s:'ρ',l:'\\rho',n:'ρ'},{s:'σ',l:'\\sigma',n:'σ'},{s:'Σ',l:'\\Sigma',n:'Σ'},{s:'τ',l:'\\tau',n:'τ'},
+    {s:'φ',l:'\\phi',n:'φ'},{s:'Φ',l:'\\Phi',n:'Φ'},{s:'χ',l:'\\chi',n:'χ'},{s:'ω',l:'\\omega',n:'ω'},{s:'Ω',l:'\\Omega',n:'Ω'},
+  ],
+  '集合・論理': [
+    {s:'∈',l:'\\in',n:'∈属する'},{s:'∉',l:'\\notin',n:'∉'},{s:'⊂',l:'\\subset',n:'⊂部分集合'},{s:'⊆',l:'\\subseteq',n:'⊆'},
+    {s:'∪',l:'\\cup',n:'∪和集合'},{s:'∩',l:'\\cap',n:'∩積集合'},{s:'∅',l:'\\emptyset',n:'∅空集合'},{s:'∀',l:'\\forall',n:'∀全称'},
+    {s:'∃',l:'\\exists',n:'∃存在'},{s:'¬',l:'\\neg',n:'¬否定'},{s:'∧',l:'\\land',n:'∧AND'},{s:'∨',l:'\\lor',n:'∨OR'},
+    {s:'⇒',l:'\\Rightarrow',n:'⇒含意'},{s:'⟺',l:'\\Leftrightarrow',n:'⟺同値'},
+    {s:'ℝ',l:'\\mathbb{R}',n:'ℝ実数'},{s:'ℂ',l:'\\mathbb{C}',n:'ℂ複素数'},{s:'ℕ',l:'\\mathbb{N}',n:'ℕ自然数'},{s:'ℤ',l:'\\mathbb{Z}',n:'ℤ整数'},{s:'ℚ',l:'\\mathbb{Q}',n:'ℚ有理数'},
+  ],
+  '行列・括弧': [
+    {s:'→v',l:'\\vec{v}',n:'ベクトル'},{s:'A⊤',l:'A^{\\top}',n:'転置'},{s:'A⁻¹',l:'A^{-1}',n:'逆行列'},{s:'det',l:'\\det(A)',n:'行列式'},
+    {s:'()',l:'\\begin{pmatrix} a & b \\\\\\\\ c & d \\end{pmatrix}',n:'行列(丸)'},{s:'[]',l:'\\begin{bmatrix} a & b \\\\\\\\ c & d \\end{bmatrix}',n:'行列(角)'},
+    {s:'⌊⌋',l:'\\lfloor x \\rfloor',n:'床関数'},{s:'⌈⌉',l:'\\lceil x \\rceil',n:'天井関数'},
+    {s:'·',l:'\\cdot',n:'内積'},{s:'⊗',l:'\\otimes',n:'テンソル積'},{s:'〈,〉',l:'\\langle x,y \\rangle',n:'内積角'},
+    {s:'…',l:'\\cdots',n:'中点省略'},{s:'⋮',l:'\\vdots',n:'縦省略'},{s:'⋱',l:'\\ddots',n:'斜め省略'},
+    {s:'box',l:'\\boxed{x}',n:'囲み'},{s:'cases',l:'f(x)=\\begin{cases}1 & x>0\\\\\\\\0 & x\\le0\\end{cases}',n:'場合分け'},
+  ],
+};
+
+let hist = [];
+try { hist = JSON.parse(localStorage.getItem('lm_hist') || '[]'); } catch(e) {}
+let cur = '';
+
+function init() {
+  const tabsEl = document.getElementById('tabs');
+  const cats = Object.keys(SYMS);
+  cats.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'lm-tab' + (i === 0 ? ' active' : '');
+    b.textContent = c;
+    b.onclick = () => {
+      document.querySelectorAll('.lm-tab').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderGrid(c);
+    };
+    tabsEl.appendChild(b);
+  });
+  renderGrid(cats[0]);
+  renderHist();
+}
+
+function renderGrid(cat) {
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+  SYMS[cat].forEach(item => {
+    const c = document.createElement('button');
+    c.className = 'sym-card';
+    c.innerHTML = '<span class="sd">' + item.s + '</span><span class="sn">' + item.n + '</span>';
+    c.onclick = () => pick(item);
+    g.appendChild(c);
+  });
+}
+
+function pick(item) {
+  cur = item.l;
+  document.getElementById('code').textContent = item.l;
+  document.getElementById('copyBtn').disabled = false;
+  hist = [item, ...hist.filter(h => h.l !== item.l)].slice(0, 12);
+  try { localStorage.setItem('lm_hist', JSON.stringify(hist)); } catch(e) {}
+  renderHist();
+}
+
+function renderHist() {
+  const el = document.getElementById('hist');
+  if (!hist.length) { el.innerHTML = '<span style="color:#888;font-size:.8rem">まだ履歴なし</span>'; return; }
+  el.innerHTML = '';
+  hist.forEach(item => {
+    const b = document.createElement('button');
+    b.className = 'hist-btn';
+    b.textContent = item.s;
+    b.title = item.l;
+    b.onclick = () => pick(item);
+    el.appendChild(b);
+  });
+}
+
+function copyLatex() {
+  if (!cur) return;
+  navigator.clipboard.writeText(cur).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'コピー済！';
+    setTimeout(() => b.textContent = 'クリップボードにコピー', 1500);
+  });
+}
+
+function insertToBuilder() {
+  if (!cur) return;
+  const ta = document.getElementById('builder');
+  ta.value += cur + ' ';
+  ta.focus();
+}
+
+function clearBuilder() { document.getElementById('builder').value = ''; }
+
+function copyBuilder() {
+  const v = document.getElementById('builder').value;
+  if (!v) return;
+  navigator.clipboard.writeText(v).then(() => {
+    const b = document.querySelector('.lm-btn.green');
+    b.textContent = 'コピー済！';
+    setTimeout(() => b.textContent = '全体コピー', 1500);
+  });
+}
+
+init();
+</script>
+
+<style>
+.lm-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.lm-header { text-align: center; margin-bottom: 2rem; }
+.lm-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.lm-sub { color: var(--gray-400); margin-top: .3rem; }
+.lm-body { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+@media (max-width: 800px) { .lm-body { grid-template-columns: 1fr; } }
+.lm-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.lm-tab { padding: .3rem .7rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-200); font-size: .8rem; cursor: pointer; transition: all .15s; }
+.lm-tab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.lm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: .4rem; }
+.sym-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .5rem .2rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .15rem; transition: border-color .15s; }
+.sym-card:hover { border-color: #a78bfa; background: #2d1b69; }
+.sd { font-size: 1.3rem; color: var(--gray-100); }
+.sn { font-size: .6rem; color: var(--gray-400); text-align: center; line-height: 1.2; }
+.lm-right { display: flex; flex-direction: column; gap: .8rem; }
+.lm-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .9rem; }
+.card-label { font-size: .7rem; color: var(--gray-400); margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .05em; }
+.lm-code { font-family: monospace; font-size: .9rem; color: #a78bfa; min-height: 2rem; background: var(--gray-900); border-radius: 6px; padding: .4rem .6rem; word-break: break-all; }
+.lm-btn { display: block; width: 100%; padding: .45rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: .5rem; }
+.lm-btn:disabled { background: var(--gray-700); color: var(--gray-500); cursor: not-allowed; }
+.lm-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.lm-btn.green { background: #059669; color: #fff; }
+.lm-btn.sm { font-size: .8rem; padding: .35rem; margin-top: 0; }
+.lm-row { display: flex; gap: .4rem; margin-top: .5rem; }
+.lm-row .lm-btn { width: auto; flex: 1; display: block; }
+.lm-hist { display: flex; flex-wrap: wrap; gap: .3rem; }
+.hist-btn { background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 6px; padding: .2rem .45rem; font-size: 1rem; cursor: pointer; }
+.hist-btn:hover { border-color: #a78bfa; }
+.lm-ta { width: 100%; height: 90px; background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 6px; color: var(--gray-100); font-family: monospace; font-size: .8rem; padding: .4rem; resize: vertical; box-sizing: border-box; }
+</style>
+</BaseLayout>

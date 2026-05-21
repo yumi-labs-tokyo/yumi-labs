@@ -1,0 +1,337 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="古文単語暗記カード" description="重要古文単語300語を進捗管理。間違えた単語のみ再出題。">
+<main class="kc-wrap">
+  <div class="kc-header">
+    <div class="kc-title">📜 古文単語暗記カード</div>
+    <div class="kc-sub">重要古文単語 — 間違えた単語のみ繰り返し出題</div>
+  </div>
+
+  <div id="homeScreen">
+    <div class="kc-progress-card">
+      <div class="kc-progress-top">
+        <div class="prog-stat"><span id="learnedCount">0</span><div class="prog-label">習得済み</div></div>
+        <div class="prog-stat"><span id="totalCount">0</span><div class="prog-label">全単語</div></div>
+        <div class="prog-stat"><span id="weakCount">0</span><div class="prog-label">要復習</div></div>
+      </div>
+      <div class="kc-prog-bar-wrap"><div class="kc-prog-bar" id="progBar"></div></div>
+    </div>
+
+    <div class="kc-cats">
+      <button class="cat-btn active" onclick="selectCat('all', this)">全単語</button>
+      <button class="cat-btn" onclick="selectCat('感情', this)">感情・評価</button>
+      <button class="cat-btn" onclick="selectCat('恋愛', this)">恋愛・人間</button>
+      <button class="cat-btn" onclick="selectCat('自然', this)">自然・季節</button>
+      <button class="cat-btn" onclick="selectCat('宮廷', this)">宮廷・身分</button>
+      <button class="cat-btn" onclick="selectCat('動作', this)">動作・状態</button>
+      <button class="cat-btn weak-cat" onclick="selectCat('weak', this)">要復習のみ</button>
+    </div>
+
+    <div class="kc-home-btns">
+      <button class="kc-btn primary" onclick="startStudy()">▶ 学習開始</button>
+      <button class="kc-btn gray" onclick="resetAll()">リセット</button>
+    </div>
+
+    <div class="kc-word-list" id="wordList"></div>
+  </div>
+
+  <div id="studyScreen" style="display:none">
+    <div class="study-top">
+      <button class="back-btn" onclick="goHome()">← 戻る</button>
+      <div class="study-progress" id="studyProg">1 / 1</div>
+    </div>
+
+    <div class="kc-card-wrap">
+      <div class="kc-card" id="flashCard" onclick="flipCard()">
+        <div class="card-front" id="cardFront">
+          <div class="card-word" id="cardWord"></div>
+          <div class="card-hint" id="cardHint">（クリックで意味を表示）</div>
+        </div>
+        <div class="card-back" id="cardBack" style="display:none">
+          <div class="back-reading" id="backReading"></div>
+          <div class="back-meaning" id="backMeaning"></div>
+          <div class="back-example" id="backExample"></div>
+          <div class="back-category" id="backCategory"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="study-actions" id="studyActions" style="display:none">
+      <button class="ans-btn correct" onclick="markAnswer(true)">✓ 覚えた</button>
+      <button class="ans-btn wrong" onclick="markAnswer(false)">✗ もう一度</button>
+    </div>
+  </div>
+
+  <div id="doneScreen" style="display:none">
+    <div class="done-card">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">セット完了！</div>
+      <div class="done-stats" id="doneStats"></div>
+      <div class="done-btns">
+        <button class="kc-btn primary" onclick="restudyWeak()">要復習のみ再学習</button>
+        <button class="kc-btn gray" onclick="goHome()">ホームへ戻る</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const WORDS = [
+  // 感情・評価
+  {w:'あはれ',r:'あわれ',m:'しみじみとした情感・趣',ex:'あはれなることの多かりし年なりけり',cat:'感情'},
+  {w:'いとほし',r:'いとおし',m:'かわいそうだ・かわいい・気の毒だ',ex:'いとほしとおぼす',cat:'感情'},
+  {w:'うつくし',r:'うつくし',m:'（小さくて）かわいい・愛らしい',ex:'うつくしきもの、瓜にかいたる児の顔',cat:'感情'},
+  {w:'おかし',r:'おかし',m:'趣がある・滑稽だ・かわいい',ex:'春はあけぼの。おかしうこそあれ',cat:'感情'},
+  {w:'めでたし',r:'めでたし',m:'すばらしい・称賛に値する',ex:'いとめでたき御よそほひ',cat:'感情'},
+  {w:'かなし',r:'かなし',m:'いとしい・悲しい（両義）',ex:'いとかなしうおぼしめす',cat:'感情'},
+  {w:'ゆかし',r:'ゆかし',m:'見たい・聞きたい・知りたい',ex:'いかなる人ぞと、ゆかしくおぼえたまふ',cat:'感情'},
+  {w:'をかし',r:'おかし',m:'風情がある・おもしろい・かわいい',ex:'をかしければ、笑ひて見たまふ',cat:'感情'},
+  {w:'あさまし',r:'あさまし',m:'あきれる・驚く・情けない',ex:'あさましきまで御さまよし',cat:'感情'},
+  {w:'めざまし',r:'めざまし',m:'目覚ましい・すばらしい・生意気だ',ex:'めざましとおぼしたる',cat:'感情'},
+  {w:'ねんごろ',r:'ねんごろ',m:'丁寧だ・親切だ・熱心だ',ex:'ねんごろに申しければ',cat:'感情'},
+  {w:'あいなし',r:'あいなし',m:'つまらない・理屈に合わない',ex:'あいなくうちわらひなどして',cat:'感情'},
+  // 恋愛・人間
+  {w:'契り',r:'ちぎり',m:'約束・因縁・男女の約束',ex:'あはれ、この契りはいかに',cat:'恋愛'},
+  {w:'思ふ',r:'おもふ',m:'恋い慕う・思う（恋愛文脈で使用多）',ex:'深く思ふ人あり',cat:'恋愛'},
+  {w:'文',r:'ふみ',m:'手紙・恋文',ex:'文をいとまめやかに書きて',cat:'恋愛'},
+  {w:'忍ぶ',r:'しのぶ',m:'こらえる・恋心を隠す・しのび歩く',ex:'忍びて通ふ',cat:'恋愛'},
+  {w:'後朝',r:'きぬぎぬ',m:'男が女の元から帰る翌朝',ex:'後朝の別れ',cat:'恋愛'},
+  {w:'あやし',r:'あやし',m:'身分が低い・不思議だ・怪しい',ex:'あやしの賤の男',cat:'恋愛'},
+  {w:'いみじ',r:'いみじ',m:'非常に〜だ・はなはだしい（良悪両義）',ex:'いみじくめでたし',cat:'恋愛'},
+  {w:'つれなし',r:'つれなし',m:'冷淡だ・素知らぬ顔をする',ex:'いとつれなく見えたまふ',cat:'恋愛'},
+  {w:'嘆き',r:'なげき',m:'嘆くこと・恋の苦しみ',ex:'長き夜の嘆き',cat:'恋愛'},
+  {w:'逢ふ',r:'あふ',m:'（男女が）会う・結ばれる',ex:'逢はで過ぐす世にこそあらめ',cat:'恋愛'},
+  // 自然・季節
+  {w:'春めく',r:'はるめく',m:'春らしくなる',ex:'春めきたる空にも',cat:'自然'},
+  {w:'霞',r:'かすみ',m:'霞・春の情景',ex:'霞たなびく山のはに',cat:'自然'},
+  {w:'霧',r:'きり',m:'霧・秋の情景',ex:'秋の霧のたちみちたる',cat:'自然'},
+  {w:'松風',r:'まつかぜ',m:'松に吹く風・侘しい音',ex:'松風の声のみぞする',cat:'自然'},
+  {w:'あけぼの',r:'あけぼの',m:'夜明け・明け方',ex:'春はあけぼの',cat:'自然'},
+  {w:'たそがれ',r:'たそがれ',m:'夕暮れ・誰そ彼時',ex:'たそがれどきに',cat:'自然'},
+  {w:'さみだれ',r:'さみだれ',m:'五月雨・梅雨',ex:'さみだれや大河を前に家二軒',cat:'自然'},
+  {w:'木の葉',r:'このは',m:'木の葉・落ち葉',ex:'風に散る木の葉',cat:'自然'},
+  {w:'露',r:'つゆ',m:'露・はかなさの比喩',ex:'露の命',cat:'自然'},
+  {w:'雪',r:'ゆき',m:'雪・白さ・清潔',ex:'雪のいと高う降りたるを',cat:'自然'},
+  // 宮廷・身分
+  {w:'殿上人',r:'てんじょうびと',m:'昇殿を許された5位以上の人',ex:'殿上人なども参りて',cat:'宮廷'},
+  {w:'女房',r:'にょうぼう',m:'宮廷に仕える女性',ex:'女房あまた侍りて',cat:'宮廷'},
+  {w:'上達部',r:'かんだちめ',m:'大臣・大納言・中納言・参議の総称',ex:'上達部、上人など',cat:'宮廷'},
+  {w:'おはします',r:'おはします',m:'「いる」の最高敬語',ex:'内裏におはします',cat:'宮廷'},
+  {w:'候ふ',r:'さぶらふ',m:'控える・「いる」の謙譲語',ex:'御前に候ふ',cat:'宮廷'},
+  {w:'宣ふ',r:'のたまふ',m:'おっしゃる（尊敬）',ex:'かくなむ宣ひて',cat:'宮廷'},
+  {w:'聞こゆ',r:'きこゆ',m:'申し上げる（謙譲）・聞こえる',ex:'かく聞こえさせたまひつ',cat:'宮廷'},
+  {w:'御覧ず',r:'ごらんず',m:'御覧になる（尊敬）',ex:'御覧じ入れたまふ',cat:'宮廷'},
+  {w:'まゐる',r:'まゐる',m:'参る（謙譲）・召し上がる',ex:'御前にまゐりたまふ',cat:'宮廷'},
+  {w:'うへ',r:'うへ',m:'天皇・帝',ex:'うへも聞こし召して',cat:'宮廷'},
+  // 動作・状態
+  {w:'あり',r:'あり',m:'ある・いる（存在）',ex:'かかる事のあることか',cat:'動作'},
+  {w:'なる',r:'なる',m:'なる・聞こえる（伝聞）',ex:'なにとなく、あはれなるに',cat:'動作'},
+  {w:'す',r:'す',m:'する（サ変動詞）・せる（使役）',ex:'いかにすべきにか',cat:'動作'},
+  {w:'見ゆ',r:'みゆ',m:'見える・見られる・思われる',ex:'いとあてに見えたまふ',cat:'動作'},
+  {w:'立つ',r:'たつ',m:'立つ・噂が立つ・出発する',ex:'けしき立ちて見ゆ',cat:'動作'},
+  {w:'おどろく',r:'おどろく',m:'目が覚める・驚く',ex:'夢よりも覚めたる心地にておどろく',cat:'動作'},
+  {w:'わぶ',r:'わぶ',m:'つらい・困る・悲嘆に暮れる',ex:'わびしき身の程を',cat:'動作'},
+  {w:'ながむ',r:'ながむ',m:'物思いにふける・眺める',ex:'月をながめて',cat:'動作'},
+  {w:'あくがる',r:'あくがる',m:'さまよい出る・心が離れる',ex:'魂のあくがるる心地',cat:'動作'},
+  {w:'まどふ',r:'まどふ',m:'迷う・うろたえる',ex:'心まどひに',cat:'動作'},
+  {w:'つきづきし',r:'つきづきし',m:'ふさわしい・似つかわしい',ex:'いとつきづきしく見えたまふ',cat:'感情'},
+  {w:'をりふし',r:'をりふし',m:'ちょうどそのとき・折から',ex:'をりふし月くもりなく',cat:'動作'},
+  {w:'いかで',r:'いかで',m:'どうして・なんとかして（願望）',ex:'いかでかくし給ふ',cat:'動作'},
+  {w:'さらに',r:'さらに',m:'まったく〜ない（下に打消）',ex:'さらにあらじ',cat:'動作'},
+  {w:'げに',r:'げに',m:'なるほど・いかにも・本当に',ex:'げにさぞと見えたり',cat:'動作'},
+  {w:'よし',r:'よし',m:'よい・高貴な・由緒がある',ex:'よしある人の子',cat:'感情'},
+  {w:'こころもとなし',r:'こころもとなし',m:'待ち遠しい・気がかりだ',ex:'いとこころもとなく',cat:'感情'},
+  {w:'すさまじ',r:'すさまじ',m:'興ざめだ・殺風景だ・恐ろしい',ex:'すさまじきものにして',cat:'感情'},
+  {w:'ものがたり',r:'ものがたり',m:'物語・話・語ること',ex:'古きものがたりを読みて',cat:'動作'},
+  {w:'つゆ',r:'つゆ',m:'少しも〜ない（下に打消）・露',ex:'つゆ知らず',cat:'動作'},
+];
+
+let learned = {};
+let weak = {};
+let currentList = [];
+let currentIdx = 0;
+let flipped = false;
+let sessionCorrect = 0;
+let sessionWrong = 0;
+let selectedCat = 'all';
+
+try {
+  learned = JSON.parse(localStorage.getItem('kc_learned') || '{}');
+  weak = JSON.parse(localStorage.getItem('kc_weak') || '{}');
+} catch(e) {}
+
+function save() {
+  try {
+    localStorage.setItem('kc_learned', JSON.stringify(learned));
+    localStorage.setItem('kc_weak', JSON.stringify(weak));
+  } catch(e) {}
+}
+
+function selectCat(cat, btn) {
+  selectedCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateHome();
+}
+
+function getFilteredWords() {
+  if (selectedCat === 'weak') return WORDS.filter(w => weak[w.w]);
+  if (selectedCat === 'all') return WORDS;
+  return WORDS.filter(w => w.cat === selectedCat);
+}
+
+function updateHome() {
+  const learnedCount = WORDS.filter(w => learned[w.w]).length;
+  const weakCount = WORDS.filter(w => weak[w.w]).length;
+  document.getElementById('learnedCount').textContent = learnedCount;
+  document.getElementById('totalCount').textContent = WORDS.length;
+  document.getElementById('weakCount').textContent = weakCount;
+  document.getElementById('progBar').style.width = (learnedCount / WORDS.length * 100) + '%';
+
+  const filtered = getFilteredWords();
+  const list = document.getElementById('wordList');
+  list.innerHTML = '';
+  filtered.forEach(w => {
+    const row = document.createElement('div');
+    row.className = 'word-row' + (learned[w.w] ? ' learned' : '') + (weak[w.w] ? ' weak' : '');
+    row.innerHTML = `<span class="wr-word">${w.w}</span><span class="wr-reading">【${w.r}】</span><span class="wr-meaning">${w.m}</span><span class="wr-cat">${w.cat}</span>`;
+    list.appendChild(row);
+  });
+}
+
+function startStudy() {
+  currentList = [...getFilteredWords()].sort(() => Math.random() - .5);
+  if (!currentList.length) { alert('対象の単語がありません'); return; }
+  currentIdx = 0;
+  sessionCorrect = 0;
+  sessionWrong = 0;
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('studyScreen').style.display = 'block';
+  document.getElementById('doneScreen').style.display = 'none';
+  showCard();
+}
+
+function showCard() {
+  if (currentIdx >= currentList.length) { showDone(); return; }
+  const w = currentList[currentIdx];
+  flipped = false;
+  document.getElementById('cardWord').textContent = w.w;
+  document.getElementById('cardHint').textContent = '（クリックで意味を表示）';
+  document.getElementById('cardFront').style.display = 'flex';
+  document.getElementById('cardBack').style.display = 'none';
+  document.getElementById('studyActions').style.display = 'none';
+  document.getElementById('studyProg').textContent = (currentIdx + 1) + ' / ' + currentList.length;
+}
+
+function flipCard() {
+  if (flipped) return;
+  flipped = true;
+  const w = currentList[currentIdx];
+  document.getElementById('backReading').textContent = '【' + w.r + '】';
+  document.getElementById('backMeaning').textContent = w.m;
+  document.getElementById('backExample').textContent = '例：' + w.ex;
+  document.getElementById('backCategory').textContent = w.cat;
+  document.getElementById('cardFront').style.display = 'none';
+  document.getElementById('cardBack').style.display = 'flex';
+  document.getElementById('studyActions').style.display = 'flex';
+}
+
+function markAnswer(correct) {
+  const w = currentList[currentIdx];
+  if (correct) {
+    learned[w.w] = true;
+    delete weak[w.w];
+    sessionCorrect++;
+  } else {
+    weak[w.w] = true;
+    sessionWrong++;
+  }
+  save();
+  currentIdx++;
+  showCard();
+}
+
+function showDone() {
+  document.getElementById('studyScreen').style.display = 'none';
+  document.getElementById('doneScreen').style.display = 'block';
+  document.getElementById('doneStats').innerHTML =
+    '<span class="done-ok">✓ 覚えた: ' + sessionCorrect + '語</span> / ' +
+    '<span class="done-ng">✗ 要復習: ' + sessionWrong + '語</span>';
+}
+
+function restudyWeak() {
+  selectedCat = 'weak';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  startStudy();
+}
+
+function goHome() {
+  document.getElementById('homeScreen').style.display = 'block';
+  document.getElementById('studyScreen').style.display = 'none';
+  document.getElementById('doneScreen').style.display = 'none';
+  updateHome();
+}
+
+function resetAll() {
+  if (!confirm('進捗をリセットしますか？')) return;
+  learned = {}; weak = {}; save(); updateHome();
+}
+
+updateHome();
+</script>
+
+<style>
+.kc-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.kc-header { text-align: center; margin-bottom: 2rem; }
+.kc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.kc-sub { color: var(--gray-400); margin-top: .3rem; }
+.kc-progress-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.kc-progress-top { display: flex; gap: 2rem; margin-bottom: .8rem; }
+.prog-stat { text-align: center; }
+.prog-stat span { font-size: 2rem; font-weight: 800; color: #818cf8; }
+.prog-label { font-size: .7rem; color: var(--gray-400); }
+.kc-prog-bar-wrap { height: 8px; background: var(--gray-700); border-radius: 4px; overflow: hidden; }
+.kc-prog-bar { height: 100%; background: linear-gradient(90deg, #4f46e5, #818cf8); transition: width .5s; }
+.kc-cats { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.cat-btn { padding: .3rem .8rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .8rem; cursor: pointer; }
+.cat-btn.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+.weak-cat.active { background: #dc2626; border-color: #dc2626; }
+.kc-home-btns { display: flex; gap: .6rem; margin-bottom: 1.2rem; }
+.kc-btn { flex: 1; padding: .7rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.kc-btn.primary { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; }
+.kc-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.kc-word-list { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: .3rem; }
+.word-row { display: flex; align-items: center; gap: .6rem; padding: .5rem .8rem; background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 8px; font-size: .85rem; }
+.word-row.learned { border-color: #059669; }
+.word-row.weak { border-color: #dc2626; }
+.wr-word { font-weight: 700; color: var(--gray-100); min-width: 80px; }
+.wr-reading { color: #818cf8; min-width: 100px; font-size: .8rem; }
+.wr-meaning { flex: 1; color: var(--gray-300); }
+.wr-cat { font-size: .7rem; background: var(--gray-700); border-radius: 4px; padding: .1rem .4rem; color: var(--gray-400); white-space: nowrap; }
+.study-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.back-btn { padding: .4rem .9rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 8px; cursor: pointer; }
+.study-progress { font-size: .9rem; color: var(--gray-400); }
+.kc-card-wrap { display: flex; justify-content: center; margin-bottom: 1.5rem; }
+.kc-card { width: 100%; max-width: 500px; min-height: 220px; background: var(--gray-800); border: 2px solid var(--gray-700); border-radius: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 2rem; transition: border-color .2s; }
+.kc-card:hover { border-color: #818cf8; }
+.card-front, .card-back { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .8rem; width: 100%; }
+.card-word { font-size: 2.5rem; font-weight: 800; color: var(--gray-100); }
+.card-hint { font-size: .8rem; color: var(--gray-500); }
+.back-reading { font-size: 1.1rem; color: #818cf8; font-weight: 600; }
+.back-meaning { font-size: 1.2rem; color: var(--gray-100); font-weight: 700; }
+.back-example { font-size: .8rem; color: var(--gray-400); font-style: italic; }
+.back-category { font-size: .7rem; background: var(--gray-700); border-radius: 4px; padding: .15rem .5rem; color: var(--gray-400); }
+.study-actions { display: flex; gap: 1rem; }
+.ans-btn { flex: 1; padding: .8rem; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.ans-btn.correct { background: #059669; color: #fff; }
+.ans-btn.wrong { background: #dc2626; color: #fff; }
+.done-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 20px; padding: 3rem 2rem; text-align: center; }
+.done-icon { font-size: 3rem; margin-bottom: .5rem; }
+.done-title { font-size: 1.5rem; font-weight: 800; color: var(--gray-100); margin-bottom: 1rem; }
+.done-stats { font-size: 1rem; margin-bottom: 1.5rem; }
+.done-ok { color: #34d399; }
+.done-ng { color: #f87171; }
+.done-btns { display: flex; gap: .6rem; }
+</style>
+</BaseLayout>

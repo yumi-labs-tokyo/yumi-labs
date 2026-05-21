@@ -1,0 +1,250 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="楽典「音程・コード」可視化" description="鍵盤クリックで音程名・コード名を即表示。楽典学習に。">
+<main class="mt-wrap">
+  <div class="mt-header">
+    <div class="mt-title">🎹 楽典「音程・コード」可視化</div>
+    <div class="mt-sub">鍵盤をクリックして音程・コード名を確認</div>
+  </div>
+
+  <div class="mt-piano-container">
+    <div id="piano" class="mt-piano"></div>
+  </div>
+
+  <div class="mt-info-row">
+    <div class="mt-info-card" id="noteInfo">
+      <div class="info-label">選択中の音</div>
+      <div class="info-val" id="selectedNotes">なし</div>
+    </div>
+    <div class="mt-info-card" id="intervalInfo">
+      <div class="info-label">音程</div>
+      <div class="info-val" id="intervalName">—</div>
+    </div>
+    <div class="mt-info-card chord-card" id="chordInfo">
+      <div class="info-label">コード名</div>
+      <div class="info-val" id="chordName">—</div>
+    </div>
+  </div>
+
+  <div class="mt-detail" id="detail"></div>
+
+  <div class="mt-actions">
+    <button class="mt-btn" onclick="clearAll()">リセット</button>
+    <button class="mt-btn green" onclick="randomChord()">ランダムコード</button>
+  </div>
+
+  <div class="mt-ref">
+    <div class="ref-title">📖 コード早見表</div>
+    <div class="ref-grid" id="refGrid"></div>
+  </div>
+</main>
+
+<script is:inline>
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NOTE_JP = ['ド','ド#','レ','レ#','ミ','ファ','ファ#','ソ','ソ#','ラ','ラ#','シ'];
+const IS_BLACK = [false,true,false,true,false,false,true,false,true,false,true,false];
+
+const INTERVALS = {
+  0: '同音 (ユニゾン)',
+  1: '短2度 (半音)',
+  2: '長2度 (全音)',
+  3: '短3度',
+  4: '長3度',
+  5: '完全4度',
+  6: 'トライトーン (減5度/増4度)',
+  7: '完全5度',
+  8: '短6度',
+  9: '長6度',
+  10: '短7度',
+  11: '長7度',
+  12: 'オクターブ',
+};
+
+const CHORDS = [
+  { name: 'メジャー',    suffix: '',     intervals: [0,4,7] },
+  { name: 'マイナー',    suffix: 'm',    intervals: [0,3,7] },
+  { name: 'sus2',       suffix: 'sus2', intervals: [0,2,7] },
+  { name: 'sus4',       suffix: 'sus4', intervals: [0,5,7] },
+  { name: 'オーグメント', suffix: 'aug',  intervals: [0,4,8] },
+  { name: 'ディミニッシュ',suffix: 'dim',  intervals: [0,3,6] },
+  { name: '属7th',      suffix: '7',    intervals: [0,4,7,10] },
+  { name: 'メジャー7th', suffix: 'M7',   intervals: [0,4,7,11] },
+  { name: 'マイナー7th', suffix: 'm7',   intervals: [0,3,7,10] },
+  { name: 'マイナーM7th',suffix: 'mM7',  intervals: [0,3,7,11] },
+  { name: 'ハーフディミニッシュ', suffix: 'm7b5', intervals: [0,3,6,10] },
+  { name: 'ディミニッシュ7th', suffix: 'dim7', intervals: [0,3,6,9] },
+  { name: '6th',        suffix: '6',    intervals: [0,4,7,9] },
+  { name: 'マイナー6th', suffix: 'm6',   intervals: [0,3,7,9] },
+  { name: 'add9',       suffix: 'add9', intervals: [0,2,4,7] },
+  { name: '9th',        suffix: '9',    intervals: [0,2,4,7,10] },
+];
+
+// 2 octaves: C3-B4
+const OCTAVES = 2;
+const START_OCTAVE = 3;
+let selected = new Set();
+
+function buildPiano() {
+  const piano = document.getElementById('piano');
+  piano.innerHTML = '';
+
+  for (let oct = 0; oct < OCTAVES; oct++) {
+    const octDiv = document.createElement('div');
+    octDiv.className = 'oct-group';
+
+    for (let n = 0; n < 12; n++) {
+      const noteNum = oct * 12 + n;
+      const key = document.createElement('button');
+      key.className = 'pkey ' + (IS_BLACK[n] ? 'black' : 'white');
+      key.dataset.note = noteNum;
+      const octLabel = START_OCTAVE + oct;
+      key.title = NOTE_NAMES[n] + octLabel;
+      key.innerHTML = `<span class="key-label">${NOTE_NAMES[n]}${octLabel}</span>`;
+      key.onclick = () => toggleNote(noteNum);
+      octDiv.appendChild(key);
+    }
+    piano.appendChild(octDiv);
+  }
+}
+
+function toggleNote(n) {
+  if (selected.has(n)) selected.delete(n);
+  else selected.add(n);
+  updateDisplay();
+}
+
+function clearAll() {
+  selected.clear();
+  updateDisplay();
+}
+
+function updateDisplay() {
+  // Update key visuals
+  document.querySelectorAll('.pkey').forEach(k => {
+    const n = parseInt(k.dataset.note);
+    k.classList.toggle('active', selected.has(n));
+  });
+
+  const notes = [...selected].sort((a, b) => a - b);
+
+  // Note names
+  const noteNames = notes.map(n => NOTE_NAMES[n % 12] + (START_OCTAVE + Math.floor(n / 12)));
+  document.getElementById('selectedNotes').textContent = notes.length ? noteNames.join('  ') : 'なし';
+
+  // Interval (2 notes)
+  if (notes.length === 2) {
+    const diff = notes[1] - notes[0];
+    const int = INTERVALS[diff] || (diff > 12 ? diff + '半音' : '不明');
+    document.getElementById('intervalName').textContent = int;
+  } else {
+    document.getElementById('intervalName').textContent = notes.length < 2 ? '(2音選択)' : '—';
+  }
+
+  // Chord detection
+  detectChord(notes);
+}
+
+function detectChord(notes) {
+  const chordEl = document.getElementById('chordName');
+  const detailEl = document.getElementById('detail');
+
+  if (notes.length < 2) {
+    chordEl.textContent = '—';
+    detailEl.innerHTML = '';
+    return;
+  }
+
+  // Try all roots (inversions)
+  for (let root = 0; root < notes.length; root++) {
+    const rootNote = notes[root] % 12;
+    const intervals = notes.map(n => ((n % 12) - rootNote + 12) % 12).sort((a, b) => a - b);
+
+    for (const chord of CHORDS) {
+      if (JSON.stringify(intervals) === JSON.stringify(chord.intervals)) {
+        const rootName = NOTE_NAMES[rootNote];
+        chordEl.textContent = rootName + chord.suffix;
+        detailEl.innerHTML = `
+          <div class="detail-box">
+            <div class="detail-name">${rootName}${chord.suffix} (${rootName}${chord.name})</div>
+            <div class="detail-intervals">${chord.intervals.map((iv, i) => `<span class="iv-chip">${INTERVALS[iv] || iv + 'st'}</span>`).join('')}</div>
+            <div class="detail-notes">構成音: ${chord.intervals.map(iv => NOTE_NAMES[(rootNote + iv) % 12]).join(' - ')}</div>
+          </div>`;
+        return;
+      }
+    }
+  }
+
+  chordEl.textContent = '不明なコード';
+  detailEl.innerHTML = `<div class="detail-box">構成音数: ${notes.length}音 / 音程: ${notes.map(n => NOTE_NAMES[n%12]).join('-')}</div>`;
+}
+
+function randomChord() {
+  clearAll();
+  const chord = CHORDS[Math.floor(Math.random() * CHORDS.length)];
+  const root = Math.floor(Math.random() * 12);
+  chord.intervals.forEach(iv => selected.add(root + iv));
+  updateDisplay();
+}
+
+function buildRefGrid() {
+  const grid = document.getElementById('refGrid');
+  CHORDS.slice(0, 12).forEach(chord => {
+    const card = document.createElement('div');
+    card.className = 'ref-card';
+    card.innerHTML = `<div class="ref-suffix">C${chord.suffix || ''}</div><div class="ref-name">${chord.name}</div><div class="ref-iv">${chord.intervals.join('-')}</div>`;
+    card.onclick = () => {
+      clearAll();
+      chord.intervals.forEach(iv => selected.add(iv));
+      updateDisplay();
+    };
+    grid.appendChild(card);
+  });
+}
+
+buildPiano();
+buildRefGrid();
+updateDisplay();
+</script>
+
+<style>
+.mt-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.mt-header { text-align: center; margin-bottom: 2rem; }
+.mt-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.mt-sub { color: var(--gray-400); margin-top: .3rem; }
+.mt-piano-container { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 16px; padding: 1.5rem 1rem; overflow-x: auto; margin-bottom: 1.5rem; }
+.mt-piano { display: flex; gap: .5rem; justify-content: center; }
+.oct-group { display: flex; position: relative; }
+.pkey { position: relative; border: none; cursor: pointer; border-radius: 0 0 6px 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; transition: all .1s; }
+.pkey.white { width: 36px; height: 120px; background: #f5f5f0; border: 1px solid #ccc; margin: 0 1px; color: #333; }
+.pkey.black { width: 24px; height: 76px; background: #222; margin: 0 -12px; z-index: 2; color: #aaa; }
+.pkey.white:hover { background: #e0e8ff; }
+.pkey.black:hover { background: #334; }
+.pkey.active.white { background: #818cf8; color: #fff; }
+.pkey.active.black { background: #4f46e5; color: #fff; }
+.key-label { font-size: .55rem; writing-mode: vertical-lr; text-orientation: mixed; }
+.mt-info-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 600px) { .mt-info-row { grid-template-columns: 1fr; } }
+.mt-info-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .9rem; text-align: center; }
+.chord-card { border-color: #4f46e5; }
+.info-label { font-size: .7rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.info-val { font-size: 1.1rem; font-weight: 700; color: var(--gray-100); }
+.mt-detail { margin-bottom: 1rem; }
+.detail-box { background: var(--gray-800); border: 1.5px solid #4f46e5; border-radius: 12px; padding: 1rem 1.2rem; }
+.detail-name { font-size: 1.3rem; font-weight: 800; color: #818cf8; margin-bottom: .5rem; }
+.detail-intervals { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.iv-chip { background: var(--gray-900); border: 1px solid #4f46e5; border-radius: 20px; padding: .2rem .6rem; font-size: .8rem; color: #a5b4fc; }
+.detail-notes { font-size: .9rem; color: var(--gray-300); }
+.mt-actions { display: flex; gap: .6rem; margin-bottom: 2rem; }
+.mt-btn { padding: .5rem 1.2rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.mt-btn.green { background: #059669; color: #fff; }
+.mt-ref { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.ref-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .5rem; }
+.ref-card { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .5rem; text-align: center; cursor: pointer; transition: border-color .15s; }
+.ref-card:hover { border-color: #818cf8; }
+.ref-suffix { font-size: 1.1rem; font-weight: 700; color: #818cf8; }
+.ref-name { font-size: .7rem; color: var(--gray-400); margin: .1rem 0; }
+.ref-iv { font-size: .65rem; color: var(--gray-500); font-family: monospace; }
+</style>
+</BaseLayout>

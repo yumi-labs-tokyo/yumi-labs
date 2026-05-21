@@ -367,31 +367,31 @@ export const tools: Tool[] = [
 		id: 56, slug: 'latex-math',
 		name: '数学記号入力支援（LaTeX出力）',
 		description: 'GUIで∫・Σ・√を選ぶとLaTeX記法をコピー。',
-		emoji: '∑', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '∑', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 57, slug: 'chemistry-balance',
 		name: '化学反応式バランス調整',
 		description: '入力した式の係数を自動計算＋元素別収支を表で表示。',
-		emoji: '⚗️', category: 'learning', status: 'coming-soon',
+		emoji: '⚗️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 58, slug: 'music-theory',
 		name: '楽典「音程・コード」可視化',
 		description: '鍵盤クリックで音程名・コード名を即表示。',
-		emoji: '🎹', category: 'learning', badge: 'New', status: 'coming-soon',
+		emoji: '🎹', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 59, slug: 'peripheral-vision',
 		name: '速読「視野角拡大」トレーニング',
 		description: '中央固定でテキストが両端に流れ、眼球運動を最小化する練習。',
-		emoji: '👁️', category: 'learning', status: 'coming-soon',
+		emoji: '👁️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 60, slug: 'kobun-cards',
 		name: '古文単語暗記カード',
 		description: '重要古文単語300語を進捗管理。間違えた単語のみ再出題。',
-		emoji: '📜', category: 'learning', status: 'coming-soon',
+		emoji: '📜', category: 'learning', badge: 'New', status: 'available',
 	},
 
 	// 🍳 暮らし・生活密着 (61-80)

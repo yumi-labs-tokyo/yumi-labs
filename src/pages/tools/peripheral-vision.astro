@@ -1,0 +1,237 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="速読「視野角拡大」トレーニング" description="中央固定でテキストが両端に流れ、眼球運動を最小化する練習。">
+<main class="pv-wrap">
+  <div class="pv-header">
+    <div class="pv-title">👁️ 速読「視野角拡大」トレーニング</div>
+    <div class="pv-sub">目線を中央に固定したまま、両端へ広がる文字を読む練習</div>
+  </div>
+
+  <div id="setupScreen" class="pv-setup">
+    <div class="setup-section">
+      <div class="setup-label">練習テキスト</div>
+      <textarea id="textInput" class="pv-textarea" placeholder="ここに練習テキストを入力してください..."></textarea>
+      <div class="preset-row">
+        <span class="preset-label">プリセット：</span>
+        <button class="preset-btn" onclick="setPreset(0)">吾輩は猫</button>
+        <button class="preset-btn" onclick="setPreset(1)">竹取物語</button>
+        <button class="preset-btn" onclick="setPreset(2)">英文ニュース</button>
+      </div>
+    </div>
+
+    <div class="setup-grid">
+      <div class="setup-item">
+        <div class="setup-label">表示幅（文字数）</div>
+        <input type="range" id="widthSlider" min="4" max="20" value="10" oninput="updateWidthLabel()">
+        <div class="setup-val">± <span id="widthLabel">10</span> 文字</div>
+      </div>
+      <div class="setup-item">
+        <div class="setup-label">表示速度（ms）</div>
+        <input type="range" id="speedSlider" min="200" max="3000" value="800" step="100" oninput="updateSpeedLabel()">
+        <div class="setup-val"><span id="speedLabel">800</span> ms / フレーム</div>
+      </div>
+      <div class="setup-item">
+        <div class="setup-label">1フレームの文字数</div>
+        <input type="range" id="chunkSlider" min="5" max="30" value="14" oninput="updateChunkLabel()">
+        <div class="setup-val"><span id="chunkLabel">14</span> 文字</div>
+      </div>
+      <div class="setup-item">
+        <div class="setup-label">セッション時間</div>
+        <select id="durationSel" class="pv-select">
+          <option value="60">1分</option>
+          <option value="120" selected>2分</option>
+          <option value="180">3分</option>
+          <option value="300">5分</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="pv-start-btn" onclick="startSession()">▶ トレーニング開始</button>
+  </div>
+
+  <div id="trainScreen" class="pv-train" style="display:none">
+    <div class="pv-timer-row">
+      <div class="pv-timer" id="timerDisp">2:00</div>
+      <div class="pv-progress-wrap"><div class="pv-progress-bar" id="progressBar"></div></div>
+      <button class="pv-stop-btn" onclick="stopSession()">■ 終了</button>
+    </div>
+
+    <div class="pv-display-area">
+      <div class="pv-fixation">+</div>
+      <div class="pv-text-frame" id="textFrame">
+        <span class="pv-left" id="leftText"></span>
+        <span class="pv-center-dot"></span>
+        <span class="pv-right" id="rightText"></span>
+      </div>
+    </div>
+
+    <div class="pv-stats-row">
+      <div class="stat-item"><div class="stat-val" id="frameCount">0</div><div class="stat-label">フレーム</div></div>
+      <div class="stat-item"><div class="stat-val" id="charCount">0</div><div class="stat-label">総文字数</div></div>
+      <div class="stat-item"><div class="stat-val" id="cpmDisp">—</div><div class="stat-label">CPM</div></div>
+    </div>
+  </div>
+
+  <div id="resultScreen" class="pv-result" style="display:none">
+    <div class="res-title">トレーニング完了！</div>
+    <div class="res-stats">
+      <div class="res-stat"><div class="res-val" id="resFrames">—</div><div class="res-label">フレーム数</div></div>
+      <div class="res-stat"><div class="res-val" id="resChars">—</div><div class="res-label">総文字数</div></div>
+      <div class="res-stat"><div class="res-val" id="resCpm">—</div><div class="res-label">CPM</div></div>
+    </div>
+    <button class="pv-start-btn" onclick="resetToSetup()">もう一度</button>
+  </div>
+</main>
+
+<script is:inline>
+const PRESETS = [
+  `吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。この書生というのは時々我々を捕えて煮て食うという話である。しかしその当時は何という考もなかったから別段恐しいとも思わなかった。`,
+  `今は昔、竹取の翁といふものありけり。野山にまじりて竹を取りつつ、よろづのことに使ひけり。名をば、さぬきの造となむいひける。その竹の中に、もと光る竹なむ一筋ありける。あやしがりて、寄りて見るに、筒の中光りたり。それを見れば、三寸ばかりなる人、いとうつくしうてゐたり。`,
+  `The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump! The five boxing wizards jump quickly. Sphinx of black quartz, judge my vow. Bright vixens jump; dozy fowl quack. Waltz, bad nymph, for quick jigs vex.`,
+];
+
+let timer = null;
+let remaining = 120;
+let totalDuration = 120;
+let frames = 0;
+let chars = 0;
+let startTime = null;
+let words = [];
+let wordPos = 0;
+
+function setPreset(i) { document.getElementById('textInput').value = PRESETS[i]; }
+function updateWidthLabel() { document.getElementById('widthLabel').textContent = document.getElementById('widthSlider').value; }
+function updateSpeedLabel() { document.getElementById('speedLabel').textContent = document.getElementById('speedSlider').value; }
+function updateChunkLabel() { document.getElementById('chunkLabel').textContent = document.getElementById('chunkSlider').value; }
+
+setPreset(0);
+
+function startSession() {
+  const text = document.getElementById('textInput').value.trim();
+  if (!text) { alert('テキストを入力してください'); return; }
+
+  // Split into characters (for Japanese) or words (for English)
+  const isJapanese = /[぀-ヿ一-鿿]/.test(text);
+  words = isJapanese ? text.split('') : text.split(/\s+/);
+
+  totalDuration = parseInt(document.getElementById('durationSel').value);
+  remaining = totalDuration;
+  frames = 0;
+  chars = 0;
+  wordPos = 0;
+  startTime = Date.now();
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('trainScreen').style.display = 'block';
+
+  updateTimerDisplay();
+  showNextFrame();
+
+  timer = setInterval(() => {
+    remaining--;
+    updateTimerDisplay();
+    if (remaining <= 0) stopSession();
+  }, 1000);
+}
+
+function showNextFrame() {
+  if (!document.getElementById('trainScreen').style.display || document.getElementById('trainScreen').style.display === 'none') return;
+
+  const chunkSize = parseInt(document.getElementById('chunkSlider').value);
+  const halfWidth = parseInt(document.getElementById('widthSlider').value);
+
+  // Get chunk of text
+  const chunk = words.slice(wordPos, wordPos + chunkSize).join('');
+  wordPos = (wordPos + chunkSize) % words.length;
+
+  const mid = Math.floor(chunk.length / 2);
+  const left = chunk.slice(0, mid);
+  const right = chunk.slice(mid);
+
+  document.getElementById('leftText').textContent = left;
+  document.getElementById('rightText').textContent = right;
+
+  frames++;
+  chars += chunk.length;
+  document.getElementById('frameCount').textContent = frames;
+  document.getElementById('charCount').textContent = chars;
+
+  const elapsedMin = (Date.now() - startTime) / 60000;
+  if (elapsedMin > 0) document.getElementById('cpmDisp').textContent = Math.round(chars / elapsedMin);
+
+  const speed = parseInt(document.getElementById('speedSlider').value);
+  if (remaining > 0) setTimeout(showNextFrame, speed);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  document.getElementById('timerDisp').textContent = m + ':' + String(s).padStart(2, '0');
+  const pct = ((totalDuration - remaining) / totalDuration * 100).toFixed(1);
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function stopSession() {
+  clearInterval(timer);
+  const elapsed = (Date.now() - startTime) / 60000;
+  const cpm = elapsed > 0 ? Math.round(chars / elapsed) : 0;
+
+  document.getElementById('trainScreen').style.display = 'none';
+  document.getElementById('resFrames').textContent = frames;
+  document.getElementById('resChars').textContent = chars;
+  document.getElementById('resCpm').textContent = cpm;
+  document.getElementById('resultScreen').style.display = 'block';
+}
+
+function resetToSetup() {
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'block';
+}
+</script>
+
+<style>
+.pv-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.pv-header { text-align: center; margin-bottom: 2rem; }
+.pv-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.pv-sub { color: var(--gray-400); margin-top: .3rem; }
+.pv-setup { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 16px; padding: 1.5rem; }
+.setup-section { margin-bottom: 1.2rem; }
+.setup-label { font-size: .8rem; font-weight: 600; color: var(--gray-300); margin-bottom: .4rem; }
+.pv-textarea { width: 100%; height: 120px; background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .6rem; font-size: .9rem; resize: vertical; box-sizing: border-box; }
+.preset-row { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; }
+.preset-label { font-size: .75rem; color: var(--gray-400); }
+.preset-btn { font-size: .75rem; padding: .25rem .6rem; background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 6px; color: var(--gray-300); cursor: pointer; }
+.preset-btn:hover { border-color: #818cf8; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+@media (max-width: 600px) { .setup-grid { grid-template-columns: 1fr; } }
+.setup-item { background: var(--gray-900); border-radius: 10px; padding: .8rem; }
+.setup-val { font-size: .85rem; color: var(--gray-400); margin-top: .3rem; }
+.pv-select { width: 100%; background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 6px; color: var(--gray-100); padding: .4rem; }
+input[type=range] { width: 100%; margin-top: .3rem; accent-color: #818cf8; }
+.pv-start-btn { display: block; width: 100%; padding: .8rem; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+.pv-train { }
+.pv-timer-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.pv-timer { font-size: 1.5rem; font-weight: 800; color: var(--gray-100); font-family: monospace; white-space: nowrap; }
+.pv-progress-wrap { flex: 1; height: 8px; background: var(--gray-700); border-radius: 4px; overflow: hidden; }
+.pv-progress-bar { height: 100%; background: linear-gradient(90deg, #4f46e5, #7c3aed); width: 0%; transition: width .5s; }
+.pv-stop-btn { padding: .4rem .9rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.pv-display-area { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 16px; padding: 3rem 1rem; text-align: center; margin-bottom: 1.5rem; position: relative; min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+.pv-fixation { font-size: 2rem; color: #f87171; font-weight: 900; line-height: 1; }
+.pv-text-frame { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: var(--gray-100); font-weight: 600; letter-spacing: .1em; gap: 0; }
+.pv-left { text-align: right; min-width: 200px; }
+.pv-center-dot { width: 2px; height: 1.5em; background: #f87171; margin: 0 4px; flex-shrink: 0; }
+.pv-right { text-align: left; min-width: 200px; }
+.pv-stats-row { display: flex; gap: 1rem; }
+.stat-item { flex: 1; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .7rem; text-align: center; }
+.stat-val { font-size: 1.4rem; font-weight: 800; color: #818cf8; }
+.stat-label { font-size: .7rem; color: var(--gray-400); }
+.pv-result { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 16px; padding: 2rem; text-align: center; }
+.res-title { font-size: 1.5rem; font-weight: 800; color: var(--gray-100); margin-bottom: 1.5rem; }
+.res-stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.res-stat { flex: 1; background: var(--gray-900); border-radius: 10px; padding: 1rem; }
+.res-val { font-size: 2rem; font-weight: 800; color: #818cf8; }
+.res-label { font-size: .75rem; color: var(--gray-400); }
+</style>
+</BaseLayout>
