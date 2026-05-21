@@ -263,7 +263,7 @@ export const tools: Tool[] = [
 		id: 39, slug: 'cosplay-spots',
 		name: 'コスプレ撮影スポット記録',
 		description: '位置情報なしでタグ管理。写真の地理情報を削除して保存。',
-		emoji: '🎭', category: 'creator', status: 'coming-soon',
+		emoji: '🎭', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 40, slug: 'stream-roulette',

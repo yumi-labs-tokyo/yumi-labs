@@ -1,0 +1,554 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="コスプレ撮影スポット記録ツール | yumi Labs">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🎭</div>
+      <div class="text-3xl font-bold text-white mb-2">コスプレ撮影スポット記録</div>
+      <div class="text-gray-400 text-sm">位置情報なしでタグ管理。写真のGPS情報を自動削除してから保存できます</div>
+    </div>
+
+    <!-- Privacy notice -->
+    <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-3 mb-6 text-xs text-green-300/90 leading-relaxed">
+      🔒 <strong>プライバシー保護：</strong>写真はすべてブラウザ内で処理されます。サーバーへの送信はありません。「EXIF削除ダウンロード」で地理情報を除去した画像を保存できます。
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+      <!-- Left: Add spot form -->
+      <div class="lg:col-span-1 space-y-4">
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-4">スポットを追加</div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="text-xs text-gray-400 mb-1">スポット名 <span class="text-red-400">*</span></div>
+              <input id="inName" type="text" placeholder="例：廃工場スタジオA" maxlength="60"
+                class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+            </div>
+
+            <div>
+              <div class="text-xs text-gray-400 mb-1">メモ・特徴</div>
+              <textarea id="inMemo" placeholder="例：光が差し込む窓あり。午後2時頃が順光。" maxlength="200" rows="3"
+                class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm resize-none"></textarea>
+            </div>
+
+            <!-- タグ -->
+            <div>
+              <div class="text-xs text-gray-400 mb-1">タグ（複数選択可）</div>
+              <div class="flex flex-wrap gap-1.5 mb-2" id="presetTags">
+                <!-- rendered by JS -->
+              </div>
+              <div class="flex gap-2">
+                <input id="inCustomTag" type="text" placeholder="カスタムタグ" maxlength="20"
+                  class="flex-1 bg-white/10 rounded-lg px-3 py-1.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-xs" />
+                <button onclick="addCustomTag()"
+                  class="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/30 text-purple-300 border border-purple-400/30 hover:bg-purple-600/50 transition-all">
+                  追加
+                </button>
+              </div>
+              <div class="flex flex-wrap gap-1.5 mt-2" id="selectedTags"></div>
+            </div>
+
+            <!-- 評価 -->
+            <div>
+              <div class="text-xs text-gray-400 mb-1">おすすめ度</div>
+              <div class="flex gap-1" id="ratingStars">
+                <button onclick="setRating(1)" data-r="1" class="star-btn text-2xl text-gray-600 hover:text-yellow-400 transition-all">★</button>
+                <button onclick="setRating(2)" data-r="2" class="star-btn text-2xl text-gray-600 hover:text-yellow-400 transition-all">★</button>
+                <button onclick="setRating(3)" data-r="3" class="star-btn text-2xl text-gray-600 hover:text-yellow-400 transition-all">★</button>
+                <button onclick="setRating(4)" data-r="4" class="star-btn text-2xl text-gray-600 hover:text-yellow-400 transition-all">★</button>
+                <button onclick="setRating(5)" data-r="5" class="star-btn text-2xl text-gray-600 hover:text-yellow-400 transition-all">★</button>
+              </div>
+            </div>
+
+            <!-- 写真 -->
+            <div>
+              <div class="text-xs text-gray-400 mb-1">写真（任意・GPS自動削除）</div>
+              <div id="photoDropzone"
+                onclick="document.getElementById('photoInput').click()"
+                class="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-purple-400/40 transition-all">
+                <div class="text-2xl mb-1">📷</div>
+                <div class="text-xs text-gray-500">クリックして追加</div>
+                <div class="text-xs text-gray-600 mt-0.5">GPS・位置情報は自動削除</div>
+              </div>
+              <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="addPhotos(this)" />
+              <div id="photoThumbs" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
+
+            <button onclick="saveSpot()"
+              class="w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all"
+              style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+              スポットを保存
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Spot list -->
+      <div class="lg:col-span-2 space-y-4">
+
+        <!-- Search & Filter -->
+        <div class="bg-white/5 rounded-2xl p-4">
+          <div class="flex gap-2 mb-3">
+            <div class="relative flex-1">
+              <input id="searchInput" type="text" placeholder="スポット名・メモで検索..."
+                oninput="renderList()"
+                class="w-full bg-white/10 rounded-xl pl-8 pr-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">🔍</span>
+            </div>
+            <button onclick="exportData()" title="JSONでエクスポート"
+              class="px-3 py-2 rounded-xl text-xs bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">
+              📤 出力
+            </button>
+            <label title="JSONをインポート"
+              class="px-3 py-2 rounded-xl text-xs bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all cursor-pointer">
+              📥 読込
+              <input type="file" accept=".json" class="hidden" onchange="importData(this)" />
+            </label>
+          </div>
+
+          <!-- Tag filter -->
+          <div class="flex flex-wrap gap-1.5" id="filterTags">
+            <button onclick="setFilter('')" data-filter=""
+              class="filter-tag-btn px-2.5 py-1 rounded-lg text-xs border border-purple-400/60 bg-purple-500/20 text-white transition-all">
+              すべて
+            </button>
+          </div>
+        </div>
+
+        <!-- Spot count -->
+        <div class="flex items-center justify-between px-1">
+          <div class="text-xs text-gray-500"><span id="spotCount">0</span> 件のスポット</div>
+          <div class="flex gap-2 text-xs text-gray-500">
+            <button onclick="setSortMode('date')" id="sortDate" class="hover:text-gray-300 transition-all text-purple-300">日付順</button>
+            <span>|</span>
+            <button onclick="setSortMode('rating')" id="sortRating" class="hover:text-gray-300 transition-all">評価順</button>
+            <span>|</span>
+            <button onclick="setSortMode('name')" id="sortName" class="hover:text-gray-300 transition-all">名前順</button>
+          </div>
+        </div>
+
+        <!-- List -->
+        <div id="spotList" class="space-y-3">
+          <div id="emptyState" class="bg-white/5 rounded-2xl p-10 text-center">
+            <div class="text-4xl mb-3">📍</div>
+            <div class="text-gray-400 text-sm">スポットを追加してください</div>
+            <div class="text-gray-600 text-xs mt-1">データはブラウザ内に保存されます</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EXIF strip tool (standalone) -->
+    <div class="mt-6 bg-white/5 rounded-2xl p-5">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">📷 写真のGPS情報だけ削除してダウンロード</div>
+      <div class="text-xs text-gray-500 mb-3">スポット保存なしで、写真のEXIF（GPS）情報を除去してダウンロードできます。</div>
+      <div class="flex gap-3 items-center flex-wrap">
+        <label class="px-4 py-2 rounded-xl text-sm font-medium bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all cursor-pointer">
+          📂 写真を選択
+          <input type="file" id="stripInput" accept="image/*" multiple class="hidden" onchange="stripAndDownload(this)" />
+        </label>
+        <div id="stripStatus" class="text-xs text-gray-500"></div>
+      </div>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // ---- Preset tags ----
+  const PRESET_TAGS = [
+    { id: 'tokyo',    label: '東京',       color: '#3b82f6' },
+    { id: 'osaka',    label: '大阪',       color: '#10b981' },
+    { id: 'nagoya',   label: '名古屋',     color: '#f59e0b' },
+    { id: 'studio',   label: 'ハウススタジオ',color: '#8b5cf6' },
+    { id: 'washitsu', label: '和室',       color: '#ec4899' },
+    { id: 'outdoor',  label: '屋外',       color: '#22d3ee' },
+    { id: 'ruins',    label: '廃墟',       color: '#6b7280' },
+    { id: 'forest',   label: '森・自然',   color: '#16a34a' },
+    { id: 'urban',    label: '都市・ビル', color: '#64748b' },
+    { id: 'night',    label: '夜景',       color: '#4f46e5' },
+    { id: 'beach',    label: '海・川',     color: '#0ea5e9' },
+    { id: 'shrine',   label: '神社・寺',   color: '#dc2626' },
+    { id: 'cafe',     label: 'カフェ',     color: '#d97706' },
+    { id: 'free',     label: '無料',       color: '#15803d' },
+    { id: 'paid',     label: '有料',       color: '#b45309' },
+    { id: 'indoor',   label: '屋内',       color: '#7c3aed' },
+    { id: 'rooftop',  label: '屋上',       color: '#0891b2' },
+    { id: 'rain-ok',  label: '雨天OK',     color: '#2563eb' },
+  ];
+
+  // ---- State ----
+  let spots = [];
+  let selectedTags = new Set();
+  let currentRating = 0;
+  let pendingPhotos = []; // { dataUrl, name }
+  let filterTag = '';
+  let sortMode = 'date';
+  let editingId = null;
+
+  // ---- Storage ----
+  const STORAGE_KEY = 'cosplay_spots_v1';
+  function loadSpots() {
+    try { spots = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { spots = []; }
+  }
+  function saveSpots() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(spots));
+  }
+
+  // ---- Init ----
+  loadSpots();
+  renderPresetTags();
+  renderFilterTags();
+  renderList();
+
+  function renderPresetTags() {
+    const container = document.getElementById('presetTags');
+    container.innerHTML = PRESET_TAGS.map(t => `
+      <button onclick="toggleTag('${t.id}')" data-tag="${t.id}"
+        class="preset-tag-btn px-2.5 py-1 rounded-lg text-xs border border-white/10 bg-white/5 text-gray-400 transition-all"
+        style="--tag-color:${t.color}">
+        ${t.label}
+      </button>
+    `).join('');
+  }
+
+  function toggleTag(id) {
+    const tag = PRESET_TAGS.find(t => t.id === id) || { id, label: id };
+    if (selectedTags.has(id)) {
+      selectedTags.delete(id);
+    } else {
+      selectedTags.add(id);
+    }
+    updateSelectedTagDisplay();
+    document.querySelectorAll('.preset-tag-btn').forEach(b => {
+      const active = selectedTags.has(b.dataset.tag);
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color       = active ? 'white' : 'rgb(156,163,175)';
+    });
+  }
+
+  function addCustomTag() {
+    const val = document.getElementById('inCustomTag').value.trim();
+    if (!val) return;
+    selectedTags.add(val);
+    updateSelectedTagDisplay();
+    document.getElementById('inCustomTag').value = '';
+  }
+
+  function updateSelectedTagDisplay() {
+    const container = document.getElementById('selectedTags');
+    container.innerHTML = [...selectedTags].map(id => {
+      const preset = PRESET_TAGS.find(t => t.id === id);
+      const label = preset ? preset.label : id;
+      const color = preset ? preset.color : '#9333ea';
+      return `<span class="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs border text-white"
+        style="border-color:${color}44;background:${color}22;">
+        ${label}
+        <button onclick="removeTag('${id}')" class="text-gray-400 hover:text-white ml-0.5">✕</button>
+      </span>`;
+    }).join('');
+  }
+
+  function removeTag(id) { selectedTags.delete(id); updateSelectedTagDisplay(); }
+
+  function setRating(n) {
+    currentRating = n;
+    document.querySelectorAll('.star-btn').forEach(b => {
+      b.style.color = parseInt(b.dataset.r) <= n ? '#facc15' : '#4b5563';
+    });
+  }
+
+  // ---- Photo handling (strip EXIF via Canvas) ----
+  function stripExif(dataUrl) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
+      };
+      img.src = dataUrl;
+    });
+  }
+
+  async function addPhotos(input) {
+    const files = [...input.files];
+    for (const file of files.slice(0, 5)) {
+      const dataUrl = await readFile(file);
+      const stripped = await stripExif(dataUrl);
+      pendingPhotos.push({ dataUrl: stripped, name: file.name });
+    }
+    renderPhotoThumbs();
+    input.value = '';
+  }
+
+  function readFile(file) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderPhotoThumbs() {
+    const container = document.getElementById('photoThumbs');
+    container.innerHTML = pendingPhotos.map((p, i) => `
+      <div class="relative">
+        <img src="${p.dataUrl}" class="w-16 h-16 object-cover rounded-lg border border-white/10" />
+        <button onclick="removePendingPhoto(${i})"
+          class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center leading-none">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removePendingPhoto(i) { pendingPhotos.splice(i, 1); renderPhotoThumbs(); }
+
+  // ---- Save spot ----
+  function saveSpot() {
+    const name = document.getElementById('inName').value.trim();
+    if (!name) { alert('スポット名を入力してください'); return; }
+    const memo = document.getElementById('inMemo').value.trim();
+    const tags = [...selectedTags];
+    const id = editingId || Date.now().toString();
+    const spot = {
+      id, name, memo, tags,
+      rating: currentRating,
+      photos: pendingPhotos.map(p => p.dataUrl),
+      createdAt: editingId ? (spots.find(s => s.id === editingId)?.createdAt || Date.now()) : Date.now(),
+      updatedAt: Date.now(),
+    };
+    if (editingId) {
+      spots = spots.map(s => s.id === editingId ? spot : s);
+      editingId = null;
+    } else {
+      spots.unshift(spot);
+    }
+    saveSpots();
+    clearForm();
+    renderFilterTags();
+    renderList();
+  }
+
+  function clearForm() {
+    document.getElementById('inName').value = '';
+    document.getElementById('inMemo').value = '';
+    selectedTags.clear();
+    currentRating = 0;
+    pendingPhotos = [];
+    editingId = null;
+    renderPresetTags();
+    updateSelectedTagDisplay();
+    renderPhotoThumbs();
+    setRating(0);
+  }
+
+  // ---- Filter / Sort / Render ----
+  function setSortMode(mode) {
+    sortMode = mode;
+    ['date','rating','name'].forEach(m => {
+      document.getElementById('sort' + m.charAt(0).toUpperCase() + m.slice(1)).className =
+        'hover:text-gray-300 transition-all ' + (m === mode ? 'text-purple-300' : '');
+    });
+    renderList();
+  }
+
+  function setFilter(tag) {
+    filterTag = tag;
+    document.querySelectorAll('.filter-tag-btn').forEach(b => {
+      const active = b.dataset.filter === tag;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(156,163,175)';
+    });
+    renderList();
+  }
+
+  function renderFilterTags() {
+    const allTags = [...new Set(spots.flatMap(s => s.tags || []))];
+    const container = document.getElementById('filterTags');
+    container.innerHTML = `<button onclick="setFilter('')" data-filter=""
+      class="filter-tag-btn px-2.5 py-1 rounded-lg text-xs border border-purple-400/60 bg-purple-500/20 text-white transition-all">
+      すべて</button>` +
+      allTags.map(t => {
+        const preset = PRESET_TAGS.find(p => p.id === t);
+        const label = preset ? preset.label : t;
+        return `<button onclick="setFilter('${t}')" data-filter="${t}"
+          class="filter-tag-btn px-2.5 py-1 rounded-lg text-xs border border-white/10 bg-white/5 text-gray-400 transition-all">
+          ${label}</button>`;
+      }).join('');
+  }
+
+  function renderList() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    let list = spots.filter(s => {
+      const matchesFilter = !filterTag || (s.tags || []).includes(filterTag);
+      const matchesSearch = !query ||
+        s.name.toLowerCase().includes(query) ||
+        (s.memo || '').toLowerCase().includes(query) ||
+        (s.tags || []).some(t => t.toLowerCase().includes(query));
+      return matchesFilter && matchesSearch;
+    });
+
+    if (sortMode === 'rating') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    else if (sortMode === 'name') list.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    else list.sort((a, b) => b.createdAt - a.createdAt);
+
+    document.getElementById('spotCount').textContent = list.length;
+    const container = document.getElementById('spotList');
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="bg-white/5 rounded-2xl p-10 text-center">
+        <div class="text-4xl mb-3">${spots.length === 0 ? '📍' : '🔍'}</div>
+        <div class="text-gray-400 text-sm">${spots.length === 0 ? 'スポットを追加してください' : '該当するスポットが見つかりません'}</div>
+        <div class="text-gray-600 text-xs mt-1">${spots.length === 0 ? 'データはブラウザ内に保存されます' : ''}</div>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(s => {
+      const date = new Date(s.createdAt);
+      const dateStr = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`;
+      const stars = '★'.repeat(s.rating || 0) + '☆'.repeat(5 - (s.rating || 0));
+      const tagHtml = (s.tags || []).map(t => {
+        const preset = PRESET_TAGS.find(p => p.id === t);
+        const label = preset ? preset.label : t;
+        const color = preset ? preset.color : '#9333ea';
+        return `<span class="px-2 py-0.5 rounded text-xs" style="background:${color}22;border:1px solid ${color}44;color:${color};">${label}</span>`;
+      }).join('');
+      const firstPhoto = s.photos && s.photos[0];
+
+      return `<div class="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-purple-400/20 transition-all">
+        <div class="flex gap-3">
+          ${firstPhoto ? `<img src="${firstPhoto}" class="w-20 h-20 object-cover rounded-xl flex-shrink-0 border border-white/10" />` : ''}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-white text-sm truncate">${escHtml(s.name)}</div>
+              <div class="flex gap-1 flex-shrink-0">
+                <button onclick="editSpot('${s.id}')" title="編集"
+                  class="text-xs px-2 py-1 rounded-lg bg-white/10 text-gray-400 hover:text-white hover:bg-white/20 transition-all">編集</button>
+                <button onclick="deleteSpot('${s.id}')" title="削除"
+                  class="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">削除</button>
+              </div>
+            </div>
+            <div class="text-yellow-400 text-xs mt-0.5">${stars}</div>
+            ${s.memo ? `<div class="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">${escHtml(s.memo)}</div>` : ''}
+            <div class="flex flex-wrap gap-1 mt-2">${tagHtml}</div>
+            ${s.photos && s.photos.length > 1 ? `<div class="flex gap-1 mt-2">${s.photos.slice(1,4).map(p => `<img src="${p}" class="w-10 h-10 object-cover rounded-lg border border-white/10" />`).join('')}${s.photos.length > 4 ? `<span class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-xs text-gray-400">+${s.photos.length - 4}</span>` : ''}</div>` : ''}
+            <div class="text-xs text-gray-600 mt-1.5">${dateStr}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function editSpot(id) {
+    const spot = spots.find(s => s.id === id);
+    if (!spot) return;
+    editingId = id;
+    document.getElementById('inName').value = spot.name;
+    document.getElementById('inMemo').value = spot.memo || '';
+    selectedTags = new Set(spot.tags || []);
+    currentRating = spot.rating || 0;
+    pendingPhotos = (spot.photos || []).map((p, i) => ({ dataUrl: p, name: `photo_${i}` }));
+    renderPresetTags();
+    // re-apply toggle state
+    (spot.tags || []).forEach(t => {
+      if (PRESET_TAGS.find(p => p.id === t)) toggleTag(t);
+    });
+    updateSelectedTagDisplay();
+    renderPhotoThumbs();
+    setRating(currentRating);
+    document.getElementById('inName').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function deleteSpot(id) {
+    if (!confirm('このスポットを削除しますか？')) return;
+    spots = spots.filter(s => s.id !== id);
+    saveSpots();
+    renderFilterTags();
+    renderList();
+  }
+
+  // ---- Export / Import ----
+  function exportData() {
+    const exportObj = { version: 1, exportedAt: new Date().toISOString(), spots: spots.map(s => ({ ...s, photos: [] })) };
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `cosplay_spots_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  }
+
+  function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const imported = data.spots || data;
+        if (!Array.isArray(imported)) throw new Error('invalid');
+        const merged = [...spots];
+        imported.forEach(s => { if (!merged.find(x => x.id === s.id)) merged.push(s); });
+        spots = merged;
+        saveSpots();
+        renderFilterTags();
+        renderList();
+        alert(`${imported.length} 件のスポットをインポートしました`);
+      } catch { alert('読み込みに失敗しました'); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  // ---- Standalone EXIF strip ----
+  async function stripAndDownload(input) {
+    const files = [...input.files];
+    const status = document.getElementById('stripStatus');
+    status.textContent = `処理中... 0/${files.length}`;
+    for (let i = 0; i < files.length; i++) {
+      const dataUrl = await readFile(files[i]);
+      const stripped = await stripExif(dataUrl);
+      const a = document.createElement('a');
+      const ext = files[i].name.split('.').pop();
+      a.href = stripped;
+      a.download = files[i].name.replace(/\.[^.]+$/, '') + '_nogps.jpg';
+      a.click();
+      status.textContent = `処理中... ${i+1}/${files.length}`;
+      await new Promise(r => setTimeout(r, 300));
+    }
+    status.textContent = `✅ ${files.length} 枚のGPS情報を削除しました`;
+    input.value = '';
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Dragover for photo dropzone
+  const dropzone = document.getElementById('photoDropzone');
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.borderColor = 'rgba(147,51,234,0.6)'; });
+  dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'rgba(255,255,255,0.2)'; });
+  dropzone.addEventListener('drop', async e => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'rgba(255,255,255,0.2)';
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+    for (const file of files.slice(0, 5)) {
+      const dataUrl = await readFile(file);
+      const stripped = await stripExif(dataUrl);
+      pendingPhotos.push({ dataUrl: stripped, name: file.name });
+    }
+    renderPhotoThumbs();
+  });
+</script>
