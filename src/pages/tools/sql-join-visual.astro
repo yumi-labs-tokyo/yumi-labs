@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="SQL JOIN種類ビジュアル学習" description="INNER/LEFT/RIGHT/FULLをベン図でアニメ表示。サンプルデータで結果をリアルタイムプレビュー。">
 <style>
-  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; overflow-x: hidden; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; overflow-x: hidden; position: relative; }
   .hero { text-align: center; margin-bottom: 28px; }
   .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 6px; }
   .hero-sub { color: #94a3b8; font-size: 0.92rem; }
@@ -47,7 +47,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   /* data tables */
   .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   @media(max-width:580px){ .tables-row { grid-template-columns: 1fr; } }
-  .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+  .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .table-name { font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 10px; font-family: 'Courier New', monospace; }
   table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   th { background: #0f172a; color: #64748b; padding: 6px 10px; text-align: left; font-weight: 600; }

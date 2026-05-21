@@ -221,9 +221,9 @@ renderQuiz();
 </script>
 
 <style>
-.ri-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; }
+.ri-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; position: relative; }
 .ri-header { text-align: center; margin-bottom: 2rem; }
-.ri-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.ri-title { font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: 800; color: var(--gray-0); word-break: break-word; }
 .ri-sub { color: var(--gray-400); margin-top: .3rem; }
 .ri-body { margin-bottom: 2rem; }
 .quiz-progress-bar { height: 6px; background: var(--gray-700); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }

@@ -235,9 +235,9 @@ renderSaved(); renderProgress(); renderLog(); renderPatterns();
 </script>
 
 <style>
-.kc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; }
+.kc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; position: relative; }
 .kc-header { text-align: center; margin-bottom: 2rem; }
-.kc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.kc-title { font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: 800; color: var(--gray-0); word-break: break-word; }
 .kc-sub { color: var(--gray-400); margin-top: .3rem; }
 .kc-body { display: grid; grid-template-columns: 220px 1fr 240px; gap: 1rem; }
 @media (max-width: 800px) { .kc-body { grid-template-columns: 1fr; } }
@@ -261,7 +261,7 @@ renderSaved(); renderProgress(); renderLog(); renderPatterns();
 .sp-del:hover { color: #ef4444; }
 .kc-counter-main { display: flex; flex-direction: column; align-items: center; padding: 1rem 0; }
 .kc-counter-label { font-size: .8rem; color: var(--gray-400); margin-bottom: .3rem; }
-.kc-counter-val { font-size: 4rem; font-weight: 800; color: var(--gray-100); line-height: 1; margin-bottom: .6rem; }
+.kc-counter-val { font-size: clamp(2.5rem, 12vw, 4rem); font-weight: 800; color: var(--gray-100); line-height: 1; margin-bottom: .6rem; }
 .kc-counter-btns { display: flex; gap: .8rem; }
 .kc-cbtn { width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.6rem; font-weight: 700; }
 .kc-cbtn.plus { background: #7c3aed; color: #fff; }
