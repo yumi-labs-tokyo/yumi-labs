@@ -343,7 +343,7 @@ export const tools: Tool[] = [
 		id: 52, slug: 'kanji-handwriting',
 		name: '漢字検定「書き取り」練習',
 		description: 'Canvas手書きで認識、級別問題でテスト。',
-		emoji: '✏️', category: 'learning', status: 'coming-soon',
+		emoji: '✏️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 53, slug: 'design-patterns',

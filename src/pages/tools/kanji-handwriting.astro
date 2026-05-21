@@ -1,0 +1,553 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="漢字検定「書き取り」練習" description="Canvas手書き入力で漢字を書き、級別問題でテスト。漢字検定対策練習ツール。">
+<style>
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 24px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* level selector */
+  .level-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+  .level-btn {
+    padding: 8px 16px; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+    transition: all .2s;
+  }
+  .level-btn.active { border-color: #f59e0b; background: #1c1407; color: #fcd34d; }
+
+  /* main quiz area */
+  .quiz-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media(max-width:600px){ .quiz-layout { grid-template-columns: 1fr; } }
+
+  /* question card */
+  .question-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; }
+  .q-label { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; font-weight: 700; }
+  .q-level-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #1c1407; border: 1px solid #f59e0b; color: #fbbf24; font-size: 0.72rem; margin-bottom: 12px; }
+  .q-sentence {
+    font-size: 1.4rem; line-height: 2.2; color: #e2e8f0; margin-bottom: 12px;
+    letter-spacing: .08em;
+  }
+  .q-blank { display: inline-block; min-width: 48px; border-bottom: 2px solid #f59e0b; color: #f59e0b; font-weight: 800; text-align: center; vertical-align: bottom; padding: 0 4px; }
+  .q-reading { font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px; }
+  .q-hint { font-size: 0.8rem; color: #64748b; margin-top: 8px; display: none; }
+  .q-hint.show { display: block; color: #fb923c; }
+
+  /* stats */
+  .stats-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat-chip { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 0.78rem; color: #94a3b8; }
+  .stat-chip span { font-weight: 800; color: #fcd34d; }
+
+  /* canvas card */
+  .canvas-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+  .canvas-label { font-size: 0.75rem; color: #64748b; margin-bottom: 8px; font-weight: 700; }
+  .canvas-wrap {
+    position: relative; width: 100%; aspect-ratio: 1;
+    background: #0f172a; border-radius: 10px; overflow: hidden; cursor: crosshair;
+    border: 2px solid #334155; touch-action: none;
+  }
+  #draw-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .guide-lines { position: absolute; inset: 0; pointer-events: none; }
+  .canvas-btn-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .canvas-btn {
+    padding: 7px 14px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 0.8rem;
+    transition: all .15s; font-weight: 600;
+  }
+  .canvas-btn:hover { border-color: #f59e0b; color: #fbbf24; }
+  .canvas-btn.primary { background: #f59e0b; border-color: #f59e0b; color: #0f172a; font-weight: 800; }
+  .canvas-btn.primary:hover { background: #d97706; }
+  .canvas-btn.danger { border-color: #f87171; color: #f87171; }
+
+  /* answer check */
+  .answer-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .answer-input {
+    flex: 1; min-width: 100px; background: #0f172a; border: 2px solid #334155; border-radius: 8px;
+    color: #e2e8f0; font-size: 1.4rem; padding: 8px 12px; outline: none;
+    text-align: center; font-family: inherit; transition: border-color .2s; max-width: 160px;
+  }
+  .answer-input:focus { border-color: #f59e0b; }
+  .answer-input.correct { border-color: #4ade80; background: #052e16; color: #4ade80; }
+  .answer-input.wrong { border-color: #f87171; background: #450a0a; color: #f87171; }
+
+  /* feedback */
+  .feedback { padding: 10px 14px; border-radius: 10px; font-size: 0.9rem; margin-top: 10px; display: none; line-height: 1.6; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #052e16; border: 1px solid #4ade80; color: #86efac; }
+  .feedback.ng { background: #450a0a; border: 1px solid #f87171; color: #fca5a5; }
+  .answer-kanji { font-size: 1.4rem; font-weight: 800; }
+
+  /* nav buttons */
+  .nav-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  .nav-btn {
+    padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 700; transition: all .2s;
+  }
+  .nav-btn-submit { background: linear-gradient(135deg,#f59e0b,#f97316); color: #fff; }
+  .nav-btn-next { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .nav-btn-next:hover { border-color: #f59e0b; color: #fbbf24; }
+  .nav-btn-hint { background: #1e293b; border: 1px solid #334155; color: #64748b; }
+
+  /* reference sheet - 50音 stroke order (visual only) */
+  .result-card { background: #1e293b; border: 2px solid #f59e0b; border-radius: 16px; padding: 24px; text-align: center; display: none; margin-bottom: 16px; }
+  .result-card.show { display: block; }
+  .result-score { font-size: 3rem; font-weight: 800; color: #fcd34d; }
+  .result-grade { font-size: 1.2rem; color: #94a3b8; margin-bottom: 16px; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 8px; margin-bottom: 16px; }
+  .result-item { background: #0f172a; border-radius: 8px; padding: 8px; }
+  .result-item .val { font-size: 1.3rem; font-weight: 800; color: #f59e0b; }
+  .result-item .lbl { font-size: 0.7rem; color: #64748b; }
+
+  /* wrong list */
+  .wrong-list { margin-top: 12px; text-align: left; }
+  .wrong-title { font-size: 0.82rem; color: #94a3b8; margin-bottom: 8px; font-weight: 700; }
+  .wrong-items { display: flex; gap: 6px; flex-wrap: wrap; }
+  .wrong-item { background: #450a0a; border: 1px solid #f87171; border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; color: #fca5a5; }
+  .wrong-item .correct { color: #4ade80; font-weight: 800; margin-left: 4px; }
+
+  /* history */
+  .history-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; margin-top: 16px; }
+  .history-title { font-size: 0.82rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { color: #64748b; text-align: left; padding: 5px 8px; border-bottom: 1px solid #334155; }
+  td { color: #e2e8f0; padding: 5px 8px; border-bottom: 1px solid #0f172a; }
+
+  /* OCR note */
+  .ocr-note { font-size: 0.72rem; color: #475569; text-align: center; margin-top: 4px; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">✏️ 漢字検定「書き取り」練習</div>
+    <div class="hero-sub">級別問題を手書き or テキスト入力で回答。漢検対策に。</div>
+  </div>
+
+  <!-- level -->
+  <div class="level-row" id="level-row"></div>
+
+  <!-- stats -->
+  <div class="stats-row">
+    <div class="stat-chip">問題 <span id="st-q">1</span> / <span id="st-total">10</span></div>
+    <div class="stat-chip">正解 <span id="st-correct">0</span></div>
+    <div class="stat-chip">不正解 <span id="st-wrong">0</span></div>
+    <div class="stat-chip">正答率 <span id="st-pct">--</span>%</div>
+  </div>
+
+  <!-- result card -->
+  <div class="result-card" id="result-card">
+    <div class="result-score" id="r-score"></div>
+    <div class="result-grade" id="r-grade"></div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val" id="r-correct">--</div><div class="lbl">正解</div></div>
+      <div class="result-item"><div class="val" id="r-total">--</div><div class="lbl">問題数</div></div>
+      <div class="result-item"><div class="val" id="r-pct">--</div><div class="lbl">正答率%</div></div>
+    </div>
+    <div class="wrong-list" id="wrong-list"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button class="nav-btn nav-btn-submit" onclick="restartQuiz()">もう一度</button>
+      <button class="nav-btn nav-btn-next" onclick="nextLevel()">次の級へ</button>
+    </div>
+  </div>
+
+  <!-- quiz layout -->
+  <div class="quiz-layout" id="quiz-layout">
+    <!-- question -->
+    <div class="question-card">
+      <div class="q-label">📖 問題</div>
+      <div class="q-level-badge" id="q-level-badge">準2級</div>
+      <div class="q-sentence" id="q-sentence"></div>
+      <div class="q-reading" id="q-reading"></div>
+      <div class="q-hint" id="q-hint"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="nav-row">
+        <button class="nav-btn nav-btn-hint" onclick="showHint()">ヒント</button>
+        <button class="nav-btn nav-btn-next" id="btn-next" onclick="nextQuestion()" style="display:none">次の問題 →</button>
+      </div>
+    </div>
+
+    <!-- canvas -->
+    <div class="canvas-card">
+      <div class="canvas-label">✍️ 手書き入力（または下のテキストボックスに入力）</div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="draw-canvas"></canvas>
+        <!-- guide lines -->
+        <svg class="guide-lines" id="guide-svg" viewBox="0 0 200 200" preserveAspectRatio="none">
+          <line x1="100" y1="0" x2="100" y2="200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4"/>
+          <line x1="0" y1="100" x2="200" y2="100" stroke="#1e293b" stroke-width="1" stroke-dasharray="4"/>
+          <line x1="0" y1="0" x2="200" y2="200" stroke="#1e293b" stroke-width="0.5" stroke-dasharray="3" opacity=".4"/>
+          <line x1="200" y1="0" x2="0" y2="200" stroke="#1e293b" stroke-width="0.5" stroke-dasharray="3" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="ocr-note">※ Canvas は練習用スペースです。答えは下のテキストボックスに入力してください。</div>
+      <div class="canvas-btn-row">
+        <button class="canvas-btn danger" onclick="clearCanvas()">消去</button>
+        <button class="canvas-btn" onclick="setPen(4,'#e2e8f0')">細</button>
+        <button class="canvas-btn" onclick="setPen(8,'#e2e8f0')">中</button>
+        <button class="canvas-btn" onclick="setPen(14,'#e2e8f0')">太</button>
+      </div>
+      <div class="answer-row">
+        <input type="text" class="answer-input" id="answer-input"
+          placeholder="漢字" maxlength="4"
+          autocomplete="off" autocorrect="off" spellcheck="false" />
+        <button class="canvas-btn primary" onclick="submitAnswer()">確認</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- history -->
+  <div class="history-card" id="history-card" style="display:none">
+    <div class="history-title">📊 練習履歴</div>
+    <table>
+      <thead><tr><th>日時</th><th>級</th><th>正解</th><th>問題数</th><th>正答率</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script is:inline>
+// ======= QUESTION DATA =======
+const LEVELS = {
+  '2': {
+    label: '2級',
+    questions: [
+      { sentence: '地球の____(たいき)は酸素と窒素からなる。', reading: 'たいき', answer: '大気', hint: '大きな気体の層' },
+      { sentence: '彼の発言は____(じゅんすい)な善意からだった。', reading: 'じゅんすい', answer: '純粋', hint: '混じり気がない' },
+      { sentence: '新しい薬が____(かいはつ)された。', reading: 'かいはつ', answer: '開発', hint: '新たに作り出す' },
+      { sentence: '会議で彼の案が____(さいたく)された。', reading: 'さいたく', answer: '採択', hint: '選んで決める' },
+      { sentence: '彼女は____(けんきょ)な態度で話した。', reading: 'けんきょ', answer: '謙虚', hint: '自分を低くへりくだる' },
+      { sentence: '____(ふしょく)した施設を修繕する。', reading: 'ふしょく', answer: '腐食', hint: 'さびたり腐る現象' },
+      { sentence: '犯人は____(きょうはく)の罪で逮捕された。', reading: 'きょうはく', answer: '脅迫', hint: 'おどしつける行為' },
+      { sentence: '経済の____(こうよう)が続いている。', reading: 'こうよう', answer: '好況', hint: '景気がよい状態' },
+      { sentence: '彼は____(ぼくそう)地帯を旅した。', reading: 'ぼくそう', answer: '牧草', hint: '家畜が食べる草' },
+      { sentence: '彼女の才能は____(てんかい)を呈している。', reading: 'てんかい', answer: '展開', hint: '広がり発展すること' },
+    ],
+  },
+  'pre2': {
+    label: '準2級',
+    questions: [
+      { sentence: '友人に____(しょうたい)状を送った。', reading: 'しょうたい', answer: '招待', hint: '来るように誘う' },
+      { sentence: '彼は____(けいかく)通りに進めた。', reading: 'けいかく', answer: '計画', hint: '前もって考えた策' },
+      { sentence: '彼女は料理が____(とくい)だ。', reading: 'とくい', answer: '得意', hint: '上手でよく知っている' },
+      { sentence: '問題を____(かいけつ)する方法を探す。', reading: 'かいけつ', answer: '解決', hint: 'こじれた問題をとく' },
+      { sentence: '新しい____(せいど)が始まる。', reading: 'せいど', answer: '制度', hint: '決まった仕組みやルール' },
+      { sentence: '彼は____(せきにん)感が強い人だ。', reading: 'せきにん', answer: '責任', hint: '引き受けた義務' },
+      { sentence: '今日の____(てんき)は晴れだ。', reading: 'てんき', answer: '天気', hint: '空のようす' },
+      { sentence: '彼女は看護師を____(しぼう)している。', reading: 'しぼう', answer: '志望', hint: 'なりたいと望む' },
+      { sentence: '大会で____(ゆうしょう)した選手。', reading: 'ゆうしょう', answer: '優勝', hint: '一番になること' },
+      { sentence: '試験の____(けっか)が発表された。', reading: 'けっか', answer: '結果', hint: '物事のなりゆき' },
+    ],
+  },
+  '3': {
+    label: '3級',
+    questions: [
+      { sentence: '夏休みに____(りょこう)する。', reading: 'りょこう', answer: '旅行', hint: '遠くに出かける' },
+      { sentence: '彼は____(しんけん)に話を聞いた。', reading: 'しんけん', answer: '真剣', hint: 'まじめで一生懸命' },
+      { sentence: '____(さくひん)を美術館に展示する。', reading: 'さくひん', answer: '作品', hint: '作り上げたもの' },
+      { sentence: '彼女は____(えんそう)が上手だ。', reading: 'えんそう', answer: '演奏', hint: '楽器を弾いて音を出す' },
+      { sentence: '駅まで____(ほどう)を歩く。', reading: 'ほどう', answer: '歩道', hint: '人が歩くための道' },
+      { sentence: '問題の____(かいとう)を書く。', reading: 'かいとう', answer: '解答', hint: '問いに対する答え' },
+      { sentence: '彼は____(いしょく)を作った。', reading: 'いしょく', answer: '衣食', hint: '着ることと食べること' },
+      { sentence: '春になると花が____(かいか)する。', reading: 'かいか', answer: '開花', hint: '花が開くこと' },
+      { sentence: '図書館で本を____(へんきゃく)する。', reading: 'へんきゃく', answer: '返却', hint: '借りたものを返す' },
+      { sentence: '彼女は____(かつやく)している選手だ。', reading: 'かつやく', answer: '活躍', hint: '元気に働き成果を上げる' },
+    ],
+  },
+  '4': {
+    label: '4級',
+    questions: [
+      { sentence: '毎日____(うんどう)をする。', reading: 'うんどう', answer: '運動', hint: '体を動かすこと' },
+      { sentence: '彼は____(べんきょう)が好きだ。', reading: 'べんきょう', answer: '勉強', hint: '学ぶこと' },
+      { sentence: '花が____(きれい)に咲いた。', reading: 'きれい', answer: '綺麗', hint: '美しいようす' },
+      { sentence: '____(しゅくだい)を忘れずにやる。', reading: 'しゅくだい', answer: '宿題', hint: '家でやる課題' },
+      { sentence: '友達と____(ゆうしょう)を目指す。', reading: 'ゆうしょう', answer: '優勝', hint: '一位になること' },
+      { sentence: '地図で____(いち)を確認する。', reading: 'いち', answer: '位置', hint: '場所・ところ' },
+      { sentence: '彼女は____(やさしい)心の持ち主だ。', reading: 'やさしい', answer: '優しい', hint: '思いやりがある' },
+      { sentence: '公園を____(さんぽ)する。', reading: 'さんぽ', answer: '散歩', hint: 'ぶらぶら歩くこと' },
+      { sentence: '本を____(よ)んだ。', reading: 'よ', answer: '読', hint: '文字を目でたどる' },
+      { sentence: '空が____(あか)くなった。', reading: 'あか', answer: '赤', hint: '夕焼けの色' },
+    ],
+  },
+  '5': {
+    label: '5級',
+    questions: [
+      { sentence: '____(あさ)ごはんを食べる。', reading: 'あさ', answer: '朝', hint: '一日のはじめ' },
+      { sentence: '犬が____(は)している。', reading: 'は', answer: '走', hint: '速く動く' },
+      { sentence: '山の上に____(しろ)がある。', reading: 'しろ', answer: '城', hint: '昔のお殿様の建物' },
+      { sentence: '海で魚を____(つ)る。', reading: 'つ', answer: '釣', hint: '糸で魚を取る' },
+      { sentence: '空に____(くも)が出た。', reading: 'くも', answer: '雲', hint: '空に浮かぶ白いもの' },
+      { sentence: '手紙を____(か)く。', reading: 'か', answer: '書', hint: '文字をしるす' },
+      { sentence: '花に____(みず)をやる。', reading: 'みず', answer: '水', hint: '川や海にある透明な液体' },
+      { sentence: '電車が____(えき)に着いた。', reading: 'えき', answer: '駅', hint: '電車の止まるところ' },
+      { sentence: 'ご飯を____(た)べる。', reading: 'た', answer: '食', hint: '口に入れる動作' },
+      { sentence: '夜に____(ほし)が光る。', reading: 'ほし', answer: '星', hint: '夜空に輝くもの' },
+    ],
+  },
+};
+
+// ======= STATE =======
+let currentLevel = 'pre2';
+let questions = [];
+let qIdx = 0;
+let correctCount = 0;
+let wrongItems = [];
+let answered = false;
+let penSize = 6;
+let penColor = '#e2e8f0';
+let drawing = false;
+let lastX = 0, lastY = 0;
+let history = JSON.parse(localStorage.getItem('kanji_hw_v1') || '[]');
+
+// ======= CANVAS =======
+let canvas, ctx;
+
+function initCanvas() {
+  canvas = document.getElementById('draw-canvas');
+  ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('canvas-wrap');
+  function resize() {
+    const r = wrap.getBoundingClientRect();
+    canvas.width  = r.width;
+    canvas.height = r.height;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  resize();
+  new ResizeObserver(resize).observe(wrap);
+
+  // pointer events
+  canvas.addEventListener('pointerdown', e => {
+    drawing = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, penSize/2, 0, Math.PI*2);
+    ctx.fillStyle = penColor;
+    ctx.fill();
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penSize;
+    ctx.stroke();
+    lastX = p.x; lastY = p.y;
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointerup', () => { drawing = false; });
+  canvas.addEventListener('pointerleave', () => { drawing = false; });
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: (t.clientX - r.left) * (canvas.width / r.width),
+           y: (t.clientY - r.top) * (canvas.height / r.height) };
+}
+
+function clearCanvas() {
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function setPen(size, color) {
+  penSize = size;
+  penColor = color;
+}
+
+// ======= LEVELS =======
+function buildLevelRow() {
+  document.getElementById('level-row').innerHTML = Object.entries(LEVELS).map(([key, lv]) =>
+    `<button class="level-btn${key===currentLevel?' active':''}" onclick="selectLevel('${key}')">${lv.label}</button>`
+  ).join('');
+}
+
+function selectLevel(key) {
+  currentLevel = key;
+  buildLevelRow();
+  restartQuiz();
+}
+
+// ======= QUIZ =======
+function restartQuiz() {
+  const pool = [...LEVELS[currentLevel].questions];
+  // shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  questions = pool.slice(0, 10);
+  qIdx = 0;
+  correctCount = 0;
+  wrongItems = [];
+  answered = false;
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('quiz-layout').style.display = '';
+  renderQuestion();
+  updateStats();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[qIdx];
+  const lv = LEVELS[currentLevel];
+  document.getElementById('q-level-badge').textContent = lv.label;
+
+  // Render sentence with blank
+  const html = q.sentence.replace(/____\((.*?)\)/, (_, rd) =>
+    `<span class="q-blank">　　</span>`
+  );
+  document.getElementById('q-sentence').innerHTML = html;
+  document.getElementById('q-reading').textContent = `よみ：${q.reading}`;
+
+  const hint = document.getElementById('q-hint');
+  hint.textContent = `ヒント：${q.hint}`;
+  hint.classList.remove('show');
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.innerHTML = '';
+
+  const inp = document.getElementById('answer-input');
+  inp.value = '';
+  inp.className = 'answer-input';
+  inp.disabled = false;
+
+  document.getElementById('btn-next').style.display = 'none';
+  clearCanvas();
+  setTimeout(() => inp.focus(), 50);
+}
+
+function showHint() {
+  document.getElementById('q-hint').classList.add('show');
+}
+
+function submitAnswer() {
+  if (answered) return;
+  const q = questions[qIdx];
+  const val = document.getElementById('answer-input').value.trim();
+  if (!val) return;
+  answered = true;
+
+  const correct = val === q.answer;
+  const inp = document.getElementById('answer-input');
+  inp.disabled = true;
+  inp.className = 'answer-input ' + (correct ? 'correct' : 'wrong');
+
+  const fb = document.getElementById('feedback');
+  if (correct) {
+    fb.className = 'feedback ok show';
+    fb.innerHTML = `✅ 正解！ <span class="answer-kanji">${q.answer}</span>`;
+    correctCount++;
+  } else {
+    fb.className = 'feedback ng show';
+    fb.innerHTML = `❌ 不正解。正解は <span class="answer-kanji">${q.answer}</span>`;
+    wrongItems.push({ reading: q.reading, correct: q.answer, yours: val });
+  }
+
+  document.getElementById('btn-next').style.display = '';
+  updateStats();
+}
+
+function nextQuestion() {
+  qIdx++;
+  if (qIdx >= questions.length) {
+    showResult();
+  } else {
+    renderQuestion();
+    updateStats();
+  }
+}
+
+function nextLevel() {
+  const keys = Object.keys(LEVELS);
+  const idx = keys.indexOf(currentLevel);
+  if (idx < keys.length - 1) selectLevel(keys[idx + 1]);
+  else restartQuiz();
+}
+
+function updateStats() {
+  const total = questions.length;
+  const done = qIdx + (answered ? 1 : 0);
+  document.getElementById('st-q').textContent = Math.min(qIdx + 1, total);
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-correct').textContent = correctCount;
+  document.getElementById('st-wrong').textContent = wrongItems.length;
+  const pct = done > 0 ? Math.round(correctCount / done * 100) : '--';
+  document.getElementById('st-pct').textContent = pct;
+}
+
+function showResult() {
+  const total = questions.length;
+  const pct = Math.round(correctCount / total * 100);
+  let grade = '📗 合格圏';
+  if (pct >= 90) grade = '🏆 優秀！';
+  else if (pct >= 80) grade = '⭐ 合格圏！';
+  else if (pct >= 60) grade = '📗 もう少し！';
+  else grade = '📕 要復習';
+
+  document.getElementById('r-score').textContent = `${pct}点`;
+  document.getElementById('r-grade').textContent = grade;
+  document.getElementById('r-correct').textContent = correctCount;
+  document.getElementById('r-total').textContent = total;
+  document.getElementById('r-pct').textContent = pct;
+
+  // wrong list
+  const wl = document.getElementById('wrong-list');
+  if (wrongItems.length > 0) {
+    wl.innerHTML = `<div class="wrong-title">間違えた問題：</div>
+      <div class="wrong-items">${wrongItems.map(w =>
+        `<div class="wrong-item">よみ: ${w.reading} → <span class="correct">${w.correct}</span>（あなた: ${w.yours || '未入力'}）</div>`
+      ).join('')}</div>`;
+  } else {
+    wl.innerHTML = '<div style="color:#4ade80;font-weight:700">🎉 全問正解！</div>';
+  }
+
+  document.getElementById('result-card').classList.add('show');
+  document.getElementById('quiz-layout').style.display = 'none';
+
+  // save history
+  const rec = {
+    date: new Date().toLocaleString('ja-JP'),
+    level: LEVELS[currentLevel].label,
+    correct: correctCount,
+    total,
+    pct,
+  };
+  history.unshift(rec);
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('kanji_hw_v1', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  if (history.length === 0) { document.getElementById('history-card').style.display = 'none'; return; }
+  document.getElementById('history-card').style.display = '';
+  document.getElementById('history-body').innerHTML = history.slice(0, 10).map(r =>
+    `<tr><td>${r.date}</td><td>${r.level}</td><td>${r.correct}</td><td>${r.total}</td><td>${r.pct}%</td></tr>`
+  ).join('');
+}
+
+// Enter to submit
+document.getElementById('answer-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (answered) nextQuestion();
+    else submitAnswer();
+  }
+});
+
+// init
+initCanvas();
+buildLevelRow();
+restartQuiz();
+renderHistory();
+</script>
+</BaseLayout>
