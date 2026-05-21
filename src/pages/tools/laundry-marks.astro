@@ -1,0 +1,124 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="洗濯表示マーク逆引き" description="服のタグ記号をクリックすると洗い方を日本語で解説。">
+<main class="lw-wrap">
+  <div class="lw-header">
+    <div class="lw-title">👕 洗濯表示マーク逆引き</div>
+    <div class="lw-sub">衣類のタグにある記号をクリックして意味を確認</div>
+  </div>
+
+  <div class="lw-cats">
+    <button class="lw-cat active" onclick="selectCat('全て', this)">全て</button>
+    <button class="lw-cat" onclick="selectCat('洗濯', this)">洗濯</button>
+    <button class="lw-cat" onclick="selectCat('漂白', this)">漂白</button>
+    <button class="lw-cat" onclick="selectCat('乾燥', this)">乾燥機</button>
+    <button class="lw-cat" onclick="selectCat('アイロン', this)">アイロン</button>
+    <button class="lw-cat" onclick="selectCat('クリーニング', this)">クリーニング</button>
+  </div>
+
+  <div class="lw-grid" id="markGrid"></div>
+
+  <div class="lw-detail" id="detail" style="display:none"></div>
+</main>
+
+<script is:inline>
+const MARKS = [
+  // 洗濯
+  { sym:'🪣', label:'桶（数字なし）', cat:'洗濯', title:'洗濯機洗い可', detail:'家庭の洗濯機で洗えます。桶の中の数字は上限温度。', tip:'通常コースでOK。' },
+  { sym:'🪣40', label:'桶・40℃', cat:'洗濯', title:'洗濯機洗い（40℃以下）', detail:'40℃以下の水温で洗濯機洗いできます。', tip:'洗濯機の「ソフト・おしゃれ着」コースを使用。' },
+  { sym:'🪣30', label:'桶・30℃', cat:'洗濯', title:'洗濯機洗い（30℃以下）', detail:'30℃以下の水温で洗濯機洗いできます。デリケートな素材に多い。', tip:'おしゃれ着コースまたは手洗いコース推奨。' },
+  { sym:'〜🪣', label:'桶に波線', cat:'洗濯', title:'手洗い可', detail:'手洗いのみ可。デリケートな素材。洗濯機は使用不可。', tip:'30℃以下のぬるま湯で優しく押し洗い。' },
+  { sym:'🚫🪣', label:'桶に×', cat:'洗濯', title:'家庭洗濯不可', detail:'家庭での水洗いは不可。クリーニング店に持参してください。', tip:'ドライクリーニング推奨。' },
+  // 漂白
+  { sym:'△', label:'三角形', cat:'漂白', title:'塩素・酸素系漂白剤使用可', detail:'塩素系・酸素系どちらの漂白剤も使えます。', tip:'通常の漂白剤で白くなります。' },
+  { sym:'△斜線', label:'三角・斜線', cat:'漂白', title:'酸素系漂白剤のみ可', detail:'酸素系漂白剤は使えますが、塩素系漂白剤は使用不可。', tip:'色柄物に多い。「酸素系」と書かれた漂白剤を使用。' },
+  { sym:'🚫△', label:'三角に×', cat:'漂白', title:'漂白不可', detail:'漂白剤（塩素系・酸素系ともに）使用不可。', tip:'漂白剤は使わない。汚れは他の方法で対処。' },
+  // 乾燥
+  { sym:'⬜', label:'四角', cat:'乾燥', title:'タンブル乾燥可', detail:'乾燥機で乾燥できます。', tip:'通常コースでOK。' },
+  { sym:'⬜●', label:'四角・点1つ', cat:'乾燥', title:'低温乾燥機可', detail:'乾燥機使用可ですが低温設定で。', tip:'乾燥機の「低温・デリケート」コースを使用。' },
+  { sym:'⬜●●', label:'四角・点2つ', cat:'乾燥', title:'高温乾燥機可', detail:'高温設定の乾燥機が使えます。', tip:'通常・高温コースでOK。' },
+  { sym:'🚫⬜', label:'四角に×', cat:'乾燥', title:'乾燥機不可', detail:'乾燥機の使用は不可。', tip:'自然乾燥（陰干し・平干し）を使用。' },
+  { sym:'▭↓', label:'四角に縦線', cat:'乾燥', title:'つり干し', detail:'ハンガーなどに吊るして干すこと。', tip:'型崩れを防ぐために吊るして干す。' },
+  { sym:'▭─', label:'四角に横線', cat:'乾燥', title:'平干し', detail:'平らな場所に広げて干すこと。ニットなどに多い。', tip:'セーターなどは形を整えて平らに干す。' },
+  { sym:'▭陰', label:'四角に陰', cat:'乾燥', title:'陰干し', detail:'直射日光を避けて干すこと。', tip:'日光で色あせしやすい素材に多い。' },
+  // アイロン
+  { sym:'熨斗1点', label:'アイロン・点1つ', cat:'アイロン', title:'低温アイロン可（〜110℃）', detail:'110℃以下のアイロンが使えます。', tip:'「低」設定（ポリエステル、ナイロン等）。スチームは使わない。' },
+  { sym:'熨斗2点', label:'アイロン・点2つ', cat:'アイロン', title:'中温アイロン可（〜150℃）', detail:'150℃以下のアイロンが使えます。', tip:'「中」設定（ウール、シルク等）。当て布を使用。' },
+  { sym:'熨斗3点', label:'アイロン・点3つ', cat:'アイロン', title:'高温アイロン可（〜200℃）', detail:'200℃以下のアイロンが使えます。', tip:'「高」設定（綿、麻等）。スチームも使用可。' },
+  { sym:'🚫熨斗', label:'アイロンに×', cat:'アイロン', title:'アイロン不可', detail:'アイロンがけは不可。素材が傷む可能性があります。', tip:'シワが気になる場合は霧吹き後に形を整えて干す。' },
+  // クリーニング
+  { sym:'○P', label:'丸にP', cat:'クリーニング', title:'ドライクリーニング可（石油系）', detail:'石油系溶剤でのドライクリーニングが可能。', tip:'クリーニング店に「石油系で」と伝える。' },
+  { sym:'○F', label:'丸にF', cat:'クリーニング', title:'ドライクリーニング可（フッ素系）', detail:'フッ素系溶剤でのドライクリーニングのみ可能。', tip:'「フッ素系のみ」と伝える。取扱い店が限られる場合あり。' },
+  { sym:'🚫○', label:'丸に×', cat:'クリーニング', title:'ドライクリーニング不可', detail:'ドライクリーニングは不可。', tip:'素材に合った家庭洗濯またはウェットクリーニングを検討。' },
+  { sym:'○W', label:'丸にW', cat:'クリーニング', title:'ウェットクリーニング可', detail:'専門店によるウェットクリーニングが可能。', tip:'水洗いできる専門クリーニング。デリケートな素材に対応。' },
+];
+
+let currentCat = '全て';
+let selectedMark = null;
+
+function selectCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.lw-cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('markGrid');
+  const filtered = currentCat === '全て' ? MARKS : MARKS.filter(m => m.cat === currentCat);
+  grid.innerHTML = '';
+  filtered.forEach(mark => {
+    const card = document.createElement('button');
+    card.className = 'mark-card' + (selectedMark === mark ? ' active' : '');
+    card.innerHTML = '<div class="mc-sym">' + mark.sym + '</div><div class="mc-label">' + mark.label + '</div>';
+    card.onclick = () => showDetail(mark, card);
+    grid.appendChild(card);
+  });
+}
+
+function showDetail(mark, card) {
+  selectedMark = mark;
+  document.querySelectorAll('.mark-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+
+  const catColors = { '洗濯':'#2563eb','漂白':'#7c3aed','乾燥':'#059669','アイロン':'#d97706','クリーニング':'#dc2626' };
+  const color = catColors[mark.cat] || '#6b7280';
+
+  const detail = document.getElementById('detail');
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div class="det-sym">${mark.sym}</div>
+    <div class="det-title">${mark.title}</div>
+    <div class="det-cat" style="background:${color}">${mark.cat}</div>
+    <div class="det-body">${mark.detail}</div>
+    <div class="det-tip">💡 ${mark.tip}</div>
+  `;
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+renderGrid();
+</script>
+
+<style>
+.lw-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.lw-header { text-align: center; margin-bottom: 2rem; }
+.lw-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.lw-sub { color: var(--gray-400); margin-top: .3rem; }
+.lw-cats { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.5rem; }
+.lw-cat { padding: .35rem .9rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .85rem; cursor: pointer; }
+.lw-cat.active { background: #0369a1; border-color: #0284c7; color: #fff; }
+.lw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .6rem; margin-bottom: 1.5rem; }
+.mark-card { background: var(--gray-800); border: 2px solid var(--gray-700); border-radius: 12px; padding: 1rem .5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .4rem; transition: all .15s; }
+.mark-card:hover { border-color: #0284c7; }
+.mark-card.active { border-color: #0284c7; background: #0c2d4a; }
+.mc-sym { font-size: 1.6rem; text-align: center; line-height: 1.3; }
+.mc-label { font-size: .65rem; color: var(--gray-400); text-align: center; line-height: 1.3; }
+.lw-detail { background: var(--gray-800); border: 2px solid #0284c7; border-radius: 14px; padding: 1.5rem; text-align: center; }
+.det-sym { font-size: 3rem; margin-bottom: .5rem; }
+.det-title { font-size: 1.3rem; font-weight: 800; color: var(--gray-100); margin-bottom: .5rem; }
+.det-cat { display: inline-block; border-radius: 20px; padding: .2rem .7rem; font-size: .75rem; color: #fff; margin-bottom: 1rem; }
+.det-body { font-size: 1rem; color: var(--gray-200); line-height: 1.7; margin-bottom: .8rem; }
+.det-tip { background: var(--gray-900); border-radius: 8px; padding: .7rem 1rem; font-size: .85rem; color: #fbbf24; text-align: left; }
+</style>
+</BaseLayout>

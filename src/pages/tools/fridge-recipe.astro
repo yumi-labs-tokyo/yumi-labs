@@ -1,0 +1,247 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="冷蔵庫の余り物レシピ提案" description="食材3つ入れると作れる料理を提案＋不足食材リスト。">
+<main class="fr-wrap">
+  <div class="fr-header">
+    <div class="fr-title">🍳 冷蔵庫の余り物レシピ提案</div>
+    <div class="fr-sub">手持ちの食材を入力すると作れる料理を提案</div>
+  </div>
+
+  <div class="fr-input-area">
+    <div class="fr-label">手持ちの食材（スペース or 「、」区切り）</div>
+    <div class="fr-input-row">
+      <input id="ingredInput" class="fr-input" type="text" placeholder="例：卵 玉ねぎ にんじん じゃがいも" />
+      <button class="fr-btn" onclick="searchRecipes()">レシピを探す</button>
+    </div>
+    <div class="fr-chips" id="chips"></div>
+    <div class="fr-quick">
+      <span class="fr-quick-label">よく使う食材：</span>
+      <button class="qb" onclick="addIng('卵')">卵</button>
+      <button class="qb" onclick="addIng('玉ねぎ')">玉ねぎ</button>
+      <button class="qb" onclick="addIng('にんじん')">にんじん</button>
+      <button class="qb" onclick="addIng('じゃがいも')">じゃがいも</button>
+      <button class="qb" onclick="addIng('豚肉')">豚肉</button>
+      <button class="qb" onclick="addIng('鶏肉')">鶏肉</button>
+      <button class="qb" onclick="addIng('キャベツ')">キャベツ</button>
+      <button class="qb" onclick="addIng('豆腐')">豆腐</button>
+      <button class="qb" onclick="addIng('もやし')">もやし</button>
+      <button class="qb" onclick="addIng('トマト')">トマト</button>
+      <button class="qb" onclick="addIng('白菜')">白菜</button>
+      <button class="qb" onclick="addIng('きのこ')">きのこ</button>
+    </div>
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<script is:inline>
+const RECIPES = [
+  { name:'カレーライス', emoji:'🍛', time:'30分', diff:'★★☆',
+    required:['じゃがいも','にんじん','玉ねぎ'],
+    optional:['豚肉','鶏肉','牛肉'],
+    extra:['カレールー','米'],
+    method:'野菜と肉を炒め、水を加えて煮込み、カレールーを溶かす。ご飯と一緒に盛り付ける。'},
+  { name:'肉じゃが', emoji:'🥘', time:'25分', diff:'★★☆',
+    required:['じゃがいも','玉ねぎ'],
+    optional:['牛肉','豚肉','にんじん'],
+    extra:['醤油','みりん','砂糖'],
+    method:'油で肉を炒め、野菜を加えて炒め、だし・醤油・みりん・砂糖で味付けして煮る。'},
+  { name:'野菜炒め', emoji:'🥦', time:'10分', diff:'★☆☆',
+    required:['キャベツ'],
+    optional:['豚肉','もやし','にんじん','ピーマン','玉ねぎ'],
+    extra:['塩','胡椒','醤油'],
+    method:'強火で油を熱し、肉を炒めてから野菜を加え、塩・胡椒・醤油で味付け。'},
+  { name:'卵炒飯', emoji:'🍳', time:'10分', diff:'★☆☆',
+    required:['卵'],
+    optional:['玉ねぎ','にんじん','長ねぎ'],
+    extra:['ご飯','醤油','塩'],
+    method:'強火で卵を炒り、ご飯を加えてほぐしながら炒め、醤油と塩で味付け。'},
+  { name:'豚汁', emoji:'🍲', time:'20分', diff:'★★☆',
+    required:['豚肉','大根'],
+    optional:['にんじん','じゃがいも','玉ねぎ','こんにゃく'],
+    extra:['味噌','だし'],
+    method:'豚肉と野菜を炒めて水を加え、やわらかくなったら味噌を溶かす。'},
+  { name:'オムレツ', emoji:'🍳', time:'10分', diff:'★☆☆',
+    required:['卵'],
+    optional:['玉ねぎ','チーズ','ハム','ほうれん草'],
+    extra:['バター','塩','胡椒'],
+    method:'卵を溶き、具を炒めてから卵液を加えて包む。バターを使うとリッチな風味。'},
+  { name:'味噌汁', emoji:'🍵', time:'10分', diff:'★☆☆',
+    required:['豆腐'],
+    optional:['わかめ','じゃがいも','なす','キャベツ','玉ねぎ'],
+    extra:['味噌','だし'],
+    method:'だし汁を沸かし、具を入れて煮、最後に味噌を溶き入れる。'},
+  { name:'麻婆豆腐', emoji:'🌶️', time:'15分', diff:'★★☆',
+    required:['豆腐'],
+    optional:['豚肉','長ねぎ'],
+    extra:['豆板醤','豆鼓','醤油','片栗粉'],
+    method:'肉を炒め豆板醤を加え香りを出し、スープと豆腐を加えて煮て、片栗粉でとろみをつける。'},
+  { name:'お好み焼き', emoji:'🥞', time:'20分', diff:'★★☆',
+    required:['キャベツ','卵'],
+    optional:['豚肉','えび','ねぎ','天かす'],
+    extra:['小麦粉','お好みソース','青のり','かつお節'],
+    method:'キャベツと卵・小麦粉を混ぜ、具を加えてフライパンで両面焼く。'},
+  { name:'ポトフ', emoji:'🫕', time:'40分', diff:'★★☆',
+    required:['にんじん','じゃがいも'],
+    optional:['キャベツ','玉ねぎ','ウインナー','セロリ'],
+    extra:['塩','胡椒','コンソメ'],
+    method:'大きめに切った野菜とウインナーを水から煮て、コンソメと塩胡椒で味付け。'},
+  { name:'ナポリタン', emoji:'🍝', time:'20分', diff:'★★☆',
+    required:['玉ねぎ','トマト'],
+    optional:['ピーマン','ウインナー','マッシュルーム'],
+    extra:['スパゲッティ','ケチャップ','バター'],
+    method:'具を炒め、ゆでたスパゲッティとケチャップを加えてよく絡める。'},
+  { name:'回鍋肉', emoji:'🥩', time:'15分', diff:'★★☆',
+    required:['キャベツ','豚肉'],
+    optional:['ピーマン','長ねぎ'],
+    extra:['テンメンジャン','豆板醤','醤油'],
+    method:'豚肉を炒め、野菜を加え、テンメンジャン・豆板醤・醤油で味付け。'},
+  { name:'親子丼', emoji:'🍚', time:'15分', diff:'★★☆',
+    required:['卵','鶏肉','玉ねぎ'],
+    optional:['三つ葉'],
+    extra:['だし','醤油','みりん','米'],
+    method:'鶏肉と玉ねぎをだし・醤油・みりんで煮て、溶き卵を流し入れてご飯にかける。'},
+  { name:'白菜の漬物', emoji:'🥬', time:'5分(浸漬2h)', diff:'★☆☆',
+    required:['白菜'],
+    optional:['昆布','鷹の爪'],
+    extra:['塩'],
+    method:'白菜を塩もみして重石を乗せ2時間以上おく。昆布を加えると旨みUP。'},
+  { name:'炊き合わせ', emoji:'🍱', time:'30分', diff:'★★★',
+    required:['にんじん','大根'],
+    optional:['じゃがいも','里芋','こんにゃく','きのこ'],
+    extra:['だし','醤油','みりん','砂糖'],
+    method:'野菜を切り、だし・醤油・みりん・砂糖で各食材を別々に煮る。盛り合わせる。'},
+  { name:'もやし炒め', emoji:'🌱', time:'5分', diff:'★☆☆',
+    required:['もやし'],
+    optional:['ニラ','豚肉','ネギ'],
+    extra:['塩','胡椒','醤油','ごま油'],
+    method:'強火でもやしを炒め、塩胡椒・ごま油で味付け。仕上げに醤油を回しかける。'},
+  { name:'ポテトサラダ', emoji:'🥗', time:'20分', diff:'★★☆',
+    required:['じゃがいも'],
+    optional:['にんじん','玉ねぎ','きゅうり','卵'],
+    extra:['マヨネーズ','塩','胡椒'],
+    method:'じゃがいもを茹でてつぶし、具と合わせてマヨネーズで和える。'},
+  { name:'きんぴらごぼう', emoji:'🥕', time:'15分', diff:'★☆☆',
+    required:['にんじん'],
+    optional:['ごぼう','こんにゃく','れんこん'],
+    extra:['醤油','みりん','砂糖','ごま'],
+    method:'細切りにした野菜を炒め、醤油・みりん・砂糖で甘辛に味付けし、ごまをかける。'},
+  { name:'トマトサラダ', emoji:'🍅', time:'5分', diff:'★☆☆',
+    required:['トマト'],
+    optional:['玉ねぎ','バジル','モッツァレラ'],
+    extra:['オリーブオイル','塩','酢'],
+    method:'トマトを切り、玉ねぎをスライスして一緒に盛り、ドレッシングをかける。'},
+  { name:'豚の生姜焼き', emoji:'🥩', time:'10分', diff:'★☆☆',
+    required:['豚肉'],
+    optional:['玉ねぎ','キャベツ'],
+    extra:['生姜','醤油','みりん','砂糖'],
+    method:'豚肉を焼き、生姜・醤油・みりん・砂糖のタレを絡める。キャベツの千切りを添える。'},
+];
+
+let ingredients = [];
+
+function addIng(item) {
+  if (!ingredients.includes(item)) {
+    ingredients.push(item);
+    renderChips();
+  }
+}
+
+function renderChips() {
+  const el = document.getElementById('chips');
+  el.innerHTML = '';
+  ingredients.forEach(i => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = i + ' <button onclick="removeIng(\'' + i + '\')">×</button>';
+    el.appendChild(chip);
+  });
+}
+
+function removeIng(item) {
+  ingredients = ingredients.filter(i => i !== item);
+  renderChips();
+}
+
+function searchRecipes() {
+  const raw = document.getElementById('ingredInput').value.trim();
+  if (raw) {
+    raw.split(/[\s、，,]+/).filter(Boolean).forEach(i => {
+      if (!ingredients.includes(i)) ingredients.push(i);
+    });
+    document.getElementById('ingredInput').value = '';
+    renderChips();
+  }
+
+  if (!ingredients.length) { alert('食材を入力してください'); return; }
+
+  const scored = RECIPES.map(r => {
+    const matchReq = r.required.filter(i => ingredients.some(u => u.includes(i) || i.includes(u)));
+    const matchOpt = r.optional.filter(i => ingredients.some(u => u.includes(i) || i.includes(u)));
+    const score = matchReq.length * 3 + matchOpt.length;
+    const missing = [...r.required.filter(i => !ingredients.some(u => u.includes(i) || i.includes(u))),
+                     ...r.extra];
+    return { ...r, matchReq, matchOpt, score, missing };
+  }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+
+  const el = document.getElementById('results');
+  if (!scored.length) {
+    el.innerHTML = '<div class="no-result">マッチするレシピが見つかりませんでした。食材を増やしてみてください。</div>';
+    return;
+  }
+
+  el.innerHTML = '<div class="res-title">おすすめレシピ</div>' + scored.slice(0, 8).map(r => `
+    <div class="recipe-card">
+      <div class="rc-top">
+        <span class="rc-emoji">${r.emoji}</span>
+        <div class="rc-info">
+          <div class="rc-name">${r.name}</div>
+          <div class="rc-meta"><span class="rc-time">⏱ ${r.time}</span><span class="rc-diff">${r.diff}</span></div>
+        </div>
+        <div class="rc-match">${r.matchReq.length + r.matchOpt.length}/${r.required.length + r.optional.length}<div style="font-size:.65rem;color:#888">一致</div></div>
+      </div>
+      <div class="rc-match-row">
+        <span class="rc-have">✓ ${[...r.matchReq,...r.matchOpt].join('・') || '—'}</span>
+      </div>
+      ${r.missing.length ? '<div class="rc-missing">不足: ' + r.missing.join('・') + '</div>' : ''}
+      <div class="rc-method">${r.method}</div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('ingredInput').addEventListener('keydown', e => { if (e.key === 'Enter') searchRecipes(); });
+</script>
+
+<style>
+.fr-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.fr-header { text-align: center; margin-bottom: 2rem; }
+.fr-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.fr-sub { color: var(--gray-400); margin-top: .3rem; }
+.fr-input-area { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.fr-label { font-size: .8rem; font-weight: 600; color: var(--gray-300); margin-bottom: .5rem; }
+.fr-input-row { display: flex; gap: .5rem; margin-bottom: .7rem; }
+.fr-input { flex: 1; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .6rem .9rem; font-size: .95rem; }
+.fr-btn { padding: .6rem 1.2rem; background: #f97316; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.fr-chips { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 1.5rem; margin-bottom: .7rem; }
+.chip { background: #7c2d12; border: 1px solid #ea580c; border-radius: 20px; padding: .2rem .6rem; font-size: .85rem; color: #fed7aa; display: flex; align-items: center; gap: .3rem; }
+.chip button { background: none; border: none; color: #fed7aa; cursor: pointer; padding: 0; font-size: .9rem; line-height: 1; }
+.fr-quick { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.fr-quick-label { font-size: .75rem; color: var(--gray-400); }
+.qb { font-size: .75rem; padding: .2rem .55rem; background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 6px; color: var(--gray-300); cursor: pointer; }
+.qb:hover { border-color: #f97316; }
+.no-result { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border-radius: 12px; }
+.res-title { font-size: 1rem; font-weight: 700; color: var(--gray-300); margin-bottom: .8rem; }
+.recipe-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; margin-bottom: .8rem; }
+.rc-top { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; }
+.rc-emoji { font-size: 2rem; }
+.rc-info { flex: 1; }
+.rc-name { font-size: 1.1rem; font-weight: 700; color: var(--gray-100); }
+.rc-meta { display: flex; gap: .6rem; font-size: .75rem; color: var(--gray-400); margin-top: .2rem; }
+.rc-match { text-align: center; font-size: 1.2rem; font-weight: 800; color: #fb923c; }
+.rc-match-row { margin-bottom: .4rem; }
+.rc-have { font-size: .8rem; color: #34d399; }
+.rc-missing { font-size: .8rem; color: #fbbf24; margin-bottom: .4rem; }
+.rc-method { font-size: .85rem; color: var(--gray-300); line-height: 1.6; background: var(--gray-900); border-radius: 8px; padding: .6rem .8rem; }
+</style>
+</BaseLayout>

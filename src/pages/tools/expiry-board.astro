@@ -1,0 +1,195 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="賞味期限管理ボード" description="冷蔵庫内をボードで可視化、近い順にソート。LocalStorage保存。">
+<main class="eb-wrap">
+  <div class="eb-header">
+    <div class="eb-title">🥛 賞味期限管理ボード</div>
+    <div class="eb-sub">食材の賞味期限を管理して食品ロスを防止</div>
+  </div>
+
+  <div class="eb-add-form">
+    <div class="form-row">
+      <input id="nameInput" class="eb-input" type="text" placeholder="食品名（例：牛乳）" />
+      <input id="dateInput" class="eb-input" type="date" />
+      <select id="catInput" class="eb-select">
+        <option value="冷蔵">🧊 冷蔵</option>
+        <option value="冷凍">❄️ 冷凍</option>
+        <option value="常温">📦 常温</option>
+        <option value="野菜">🥬 野菜</option>
+        <option value="肉魚">🍖 肉・魚</option>
+        <option value="乳製品">🥛 乳製品</option>
+        <option value="飲料">🍶 飲料</option>
+      </select>
+      <button class="eb-btn add-btn" onclick="addItem()">＋ 追加</button>
+    </div>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="tb-left">
+      <input id="searchInput" class="eb-search" type="text" placeholder="🔍 検索..." oninput="renderList()" />
+      <select id="sortSel" class="eb-mini-sel" onchange="renderList()">
+        <option value="date">期限順</option>
+        <option value="name">名前順</option>
+        <option value="cat">カテゴリ順</option>
+      </select>
+    </div>
+    <div class="tb-right">
+      <button class="eb-btn sm gray" onclick="clearExpired()">期限切れを削除</button>
+    </div>
+  </div>
+
+  <div class="eb-summary" id="summary"></div>
+  <div class="eb-list" id="itemList"></div>
+</main>
+
+<script is:inline>
+let items = [];
+try { items = JSON.parse(localStorage.getItem('expiry_board') || '[]'); } catch(e) {}
+
+// Set default date to today+7
+document.getElementById('dateInput').value = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+function save() {
+  try { localStorage.setItem('expiry_board', JSON.stringify(items)); } catch(e) {}
+}
+
+function addItem() {
+  const name = document.getElementById('nameInput').value.trim();
+  const date = document.getElementById('dateInput').value;
+  const cat = document.getElementById('catInput').value;
+  if (!name || !date) { alert('食品名と日付を入力してください'); return; }
+  items.push({ id: Date.now(), name, date, cat });
+  save();
+  document.getElementById('nameInput').value = '';
+  document.getElementById('dateInput').value = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  renderList();
+}
+
+function deleteItem(id) {
+  items = items.filter(i => i.id !== id);
+  save();
+  renderList();
+}
+
+function clearExpired() {
+  const today = new Date().toISOString().split('T')[0];
+  const before = items.length;
+  items = items.filter(i => i.date >= today);
+  save();
+  renderList();
+  if (items.length < before) alert((before - items.length) + '件の期限切れアイテムを削除しました');
+}
+
+function getDaysLeft(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(dateStr); exp.setHours(0,0,0,0);
+  return Math.round((exp - today) / 86400000);
+}
+
+function getStatus(days) {
+  if (days < 0) return { label:'期限切れ', cls:'expired', emoji:'💀' };
+  if (days === 0) return { label:'今日まで', cls:'today', emoji:'🔴' };
+  if (days <= 2) return { label: days + '日', cls:'urgent', emoji:'🟠' };
+  if (days <= 7) return { label: days + '日', cls:'warning', emoji:'🟡' };
+  return { label: days + '日', cls:'safe', emoji:'🟢' };
+}
+
+function renderList() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSel').value;
+
+  let filtered = items.filter(i => i.name.toLowerCase().includes(query) || i.cat.toLowerCase().includes(query));
+
+  if (sort === 'date') filtered.sort((a, b) => a.date.localeCompare(b.date));
+  else if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+  else filtered.sort((a, b) => a.cat.localeCompare(b.cat));
+
+  // Summary
+  const total = items.length;
+  const expired = items.filter(i => getDaysLeft(i.date) < 0).length;
+  const urgent = items.filter(i => { const d = getDaysLeft(i.date); return d >= 0 && d <= 2; }).length;
+  const warning = items.filter(i => { const d = getDaysLeft(i.date); return d >= 3 && d <= 7; }).length;
+
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-item"><span class="sum-num">${total}</span><span class="sum-label">合計</span></div>
+    <div class="sum-item expired-sum"><span class="sum-num">${expired}</span><span class="sum-label">期限切れ</span></div>
+    <div class="sum-item urgent-sum"><span class="sum-num">${urgent}</span><span class="sum-label">2日以内</span></div>
+    <div class="sum-item warn-sum"><span class="sum-num">${warning}</span><span class="sum-label">7日以内</span></div>
+  `;
+
+  const list = document.getElementById('itemList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-msg">登録された食品がありません。上のフォームから追加してください。</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(item => {
+    const days = getDaysLeft(item.date);
+    const st = getStatus(days);
+    return `<div class="eb-item ${st.cls}">
+      <div class="ei-left">
+        <span class="ei-status">${st.emoji}</span>
+        <div class="ei-info">
+          <div class="ei-name">${item.name}</div>
+          <div class="ei-meta">${item.cat} · ${item.date}</div>
+        </div>
+      </div>
+      <div class="ei-right">
+        <div class="ei-days ${st.cls}">${st.label}</div>
+        <button class="del-btn" onclick="deleteItem(${item.id})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+renderList();
+</script>
+
+<style>
+.eb-wrap { max-width: 700px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.eb-header { text-align: center; margin-bottom: 2rem; }
+.eb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.eb-sub { color: var(--gray-400); margin-top: .3rem; }
+.eb-add-form { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.form-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.eb-input { flex: 1; min-width: 120px; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .55rem .8rem; font-size: .9rem; }
+.eb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .55rem .6rem; font-size: .85rem; }
+.eb-btn { padding: .55rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.add-btn { background: #16a34a; color: #fff; }
+.eb-btn.sm { font-size: .8rem; padding: .35rem .7rem; }
+.eb-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.eb-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: .5rem; flex-wrap: wrap; }
+.tb-left { display: flex; gap: .4rem; flex: 1; }
+.eb-search { flex: 1; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .7rem; font-size: .85rem; }
+.eb-mini-sel { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-200); padding: .4rem; font-size: .8rem; }
+.eb-summary { display: flex; gap: .6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.sum-item { flex: 1; min-width: 70px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .6rem; text-align: center; }
+.sum-num { display: block; font-size: 1.5rem; font-weight: 800; color: var(--gray-100); }
+.sum-label { font-size: .7rem; color: var(--gray-400); }
+.expired-sum .sum-num { color: #f87171; }
+.urgent-sum .sum-num { color: #fb923c; }
+.warn-sum .sum-num { color: #fbbf24; }
+.eb-list { display: flex; flex-direction: column; gap: .5rem; }
+.empty-msg { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border-radius: 12px; }
+.eb-item { display: flex; justify-content: space-between; align-items: center; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .7rem 1rem; }
+.eb-item.expired { border-color: #dc2626; background: #450a0a; }
+.eb-item.today { border-color: #dc2626; }
+.eb-item.urgent { border-color: #ea580c; }
+.eb-item.warning { border-color: #ca8a04; }
+.eb-item.safe { border-color: var(--gray-700); }
+.ei-left { display: flex; align-items: center; gap: .7rem; }
+.ei-status { font-size: 1.3rem; }
+.ei-name { font-weight: 600; color: var(--gray-100); }
+.ei-meta { font-size: .75rem; color: var(--gray-400); margin-top: .1rem; }
+.ei-right { display: flex; align-items: center; gap: .6rem; }
+.ei-days { font-size: 1rem; font-weight: 700; }
+.ei-days.expired { color: #f87171; }
+.ei-days.today, .ei-days.urgent { color: #fb923c; }
+.ei-days.warning { color: #fbbf24; }
+.ei-days.safe { color: #34d399; }
+.del-btn { font-size: .75rem; padding: .25rem .55rem; background: var(--gray-700); border: none; border-radius: 6px; color: var(--gray-300); cursor: pointer; }
+.del-btn:hover { background: #dc2626; color: #fff; }
+</style>
+</BaseLayout>

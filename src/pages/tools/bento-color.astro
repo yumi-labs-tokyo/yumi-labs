@@ -1,0 +1,242 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="お弁当「彩り3色」チェック" description="詰めた食材を入れると赤・黄・緑・茶のバランスを評価。">
+<main class="bc-wrap">
+  <div class="bc-header">
+    <div class="bc-title">🍱 お弁当「彩り」チェック</div>
+    <div class="bc-sub">食材を選んで彩りバランスをチェック</div>
+  </div>
+
+  <div class="bc-body">
+    <div class="bc-left">
+      <div class="bc-section">食材を選ぶ</div>
+      <div class="bc-cats">
+        <button class="cat-tab active" onclick="selectFoodCat('全て', this)">全て</button>
+        <button class="cat-tab" onclick="selectFoodCat('主食', this)">主食</button>
+        <button class="cat-tab" onclick="selectFoodCat('たんぱく', this)">たんぱく</button>
+        <button class="cat-tab" onclick="selectFoodCat('野菜', this)">野菜</button>
+        <button class="cat-tab" onclick="selectFoodCat('その他', this)">その他</button>
+      </div>
+      <div class="food-grid" id="foodGrid"></div>
+    </div>
+
+    <div class="bc-right">
+      <div class="bc-section">選んだ食材</div>
+      <div class="selected-area" id="selectedArea">
+        <div class="empty-msg">食材を選んでください</div>
+      </div>
+
+      <div class="bc-section" style="margin-top:1rem">彩りバランス</div>
+      <div class="color-bars" id="colorBars"></div>
+
+      <div class="score-card" id="scoreCard"></div>
+
+      <button class="bc-clear-btn" onclick="clearAll()">クリア</button>
+    </div>
+  </div>
+
+  <div class="bc-tips">
+    <div class="tip-title">彩り豆知識</div>
+    <div class="tips-grid">
+      <div class="tip-item red-tip"><div class="tc">赤・橙</div>食欲を刺激。トマト、にんじん、梅干し、鮭など。</div>
+      <div class="tip-item yellow-tip"><div class="tc">黄・卵色</div>明るく華やかな印象。卵焼き、とうもろこし、南瓜など。</div>
+      <div class="tip-item green-tip"><div class="tc">緑</div>新鮮さ・健康感。ブロッコリー、枝豆、ほうれん草など。</div>
+      <div class="tip-item brown-tip"><div class="tc">茶・白</div>ベース色。ご飯、肉、きのこ、魚など。</div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const FOODS = [
+  // 主食
+  {name:'ご飯',emoji:'🍚',color:'white',cat:'主食'},
+  {name:'おにぎり',emoji:'🍙',color:'white',cat:'主食'},
+  {name:'パン',emoji:'🍞',color:'brown',cat:'主食'},
+  {name:'焼きそば',emoji:'🍜',color:'brown',cat:'主食'},
+  // たんぱく
+  {name:'唐揚げ',emoji:'🍗',color:'brown',cat:'たんぱく'},
+  {name:'卵焼き',emoji:'🍳',color:'yellow',cat:'たんぱく'},
+  {name:'ハンバーグ',emoji:'🥩',color:'brown',cat:'たんぱく'},
+  {name:'鮭',emoji:'🐟',color:'red',cat:'たんぱく'},
+  {name:'ちくわ',emoji:'🟡',color:'yellow',cat:'たんぱく'},
+  {name:'ウインナー',emoji:'🌭',color:'red',cat:'たんぱく'},
+  {name:'豚の生姜焼き',emoji:'🥩',color:'brown',cat:'たんぱく'},
+  {name:'エビフライ',emoji:'🍤',color:'orange',cat:'たんぱく'},
+  {name:'コロッケ',emoji:'🟤',color:'brown',cat:'たんぱく'},
+  // 野菜
+  {name:'ブロッコリー',emoji:'🥦',color:'green',cat:'野菜'},
+  {name:'ほうれん草',emoji:'🌿',color:'green',cat:'野菜'},
+  {name:'枝豆',emoji:'🫛',color:'green',cat:'野菜'},
+  {name:'にんじん煮',emoji:'🥕',color:'orange',cat:'野菜'},
+  {name:'トマト',emoji:'🍅',color:'red',cat:'野菜'},
+  {name:'南瓜煮',emoji:'🎃',color:'yellow',cat:'野菜'},
+  {name:'きのこ炒め',emoji:'🍄',color:'brown',cat:'野菜'},
+  {name:'ナス炒め',emoji:'🍆',color:'purple',cat:'野菜'},
+  {name:'さつまいも',emoji:'🍠',color:'purple',cat:'野菜'},
+  {name:'ピーマン',emoji:'🫑',color:'green',cat:'野菜'},
+  {name:'レタス',emoji:'🥬',color:'green',cat:'野菜'},
+  {name:'とうもろこし',emoji:'🌽',color:'yellow',cat:'野菜'},
+  {name:'きんぴら',emoji:'🥕',color:'brown',cat:'野菜'},
+  // その他
+  {name:'梅干し',emoji:'🔴',color:'red',cat:'その他'},
+  {name:'黒豆',emoji:'⚫',color:'brown',cat:'その他'},
+  {name:'煮豆',emoji:'🫘',color:'brown',cat:'その他'},
+  {name:'漬物',emoji:'🥒',color:'green',cat:'その他'},
+  {name:'チーズ',emoji:'🧀',color:'yellow',cat:'その他'},
+  {name:'ごま',emoji:'⬛',color:'brown',cat:'その他'},
+];
+
+const COLOR_INFO = {
+  red: { label:'赤・橙', color:'#ef4444', emoji:'🔴', desc:'食欲UP、活力感', ideal: '1〜2品' },
+  orange: { label:'橙', color:'#f97316', emoji:'🟠', desc:'温かみ、食欲', ideal: '1品' },
+  yellow: { label:'黄・卵色', color:'#eab308', emoji:'🟡', desc:'明るさ、華やかさ', ideal: '1〜2品' },
+  green: { label:'緑', color:'#22c55e', emoji:'🟢', desc:'新鮮さ、健康感', ideal: '2品以上' },
+  brown: { label:'茶・白', color:'#92400e', emoji:'🟤', desc:'ベース色、満足感', ideal: '2〜4品' },
+  purple: { label:'紫', color:'#7c3aed', emoji:'🟣', desc:'上品さ、食欲抑制', ideal: '0〜1品' },
+  white: { label:'白', color:'#d1d5db', emoji:'⬜', desc:'シンプル、清潔感', ideal: '1〜2品' },
+};
+
+let selected = [];
+let currentFoodCat = '全て';
+
+function selectFoodCat(cat, btn) {
+  currentFoodCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFoodGrid();
+}
+
+function renderFoodGrid() {
+  const grid = document.getElementById('foodGrid');
+  const filtered = currentFoodCat === '全て' ? FOODS : FOODS.filter(f => f.cat === currentFoodCat);
+  grid.innerHTML = '';
+  filtered.forEach(food => {
+    const btn = document.createElement('button');
+    const isSelected = selected.some(s => s.name === food.name);
+    btn.className = 'food-btn' + (isSelected ? ' selected' : '');
+    btn.innerHTML = '<span class="fe">' + food.emoji + '</span><span class="fn">' + food.name + '</span>';
+    btn.onclick = () => toggleFood(food, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function toggleFood(food, btn) {
+  const idx = selected.findIndex(s => s.name === food.name);
+  if (idx >= 0) { selected.splice(idx, 1); btn.classList.remove('selected'); }
+  else { selected.push(food); btn.classList.add('selected'); }
+  updateDisplay();
+}
+
+function clearAll() {
+  selected = [];
+  renderFoodGrid();
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const sa = document.getElementById('selectedArea');
+  if (!selected.length) {
+    sa.innerHTML = '<div class="empty-msg">食材を選んでください</div>';
+    document.getElementById('colorBars').innerHTML = '';
+    document.getElementById('scoreCard').innerHTML = '';
+    return;
+  }
+
+  sa.innerHTML = selected.map(f =>
+    '<span class="sel-chip" style="border-color:' + COLOR_INFO[f.color].color + '">' + f.emoji + ' ' + f.name + '</span>'
+  ).join('');
+
+  // Count colors
+  const counts = {};
+  selected.forEach(f => { counts[f.color] = (counts[f.color] || 0) + 1; });
+  const total = selected.length;
+
+  // Color bars
+  const bars = document.getElementById('colorBars');
+  bars.innerHTML = Object.entries(COLOR_INFO).map(([key, info]) => {
+    const count = counts[key] || 0;
+    const pct = total > 0 ? (count / total * 100).toFixed(0) : 0;
+    return `<div class="color-bar-row">
+      <div class="cb-label">${info.emoji} ${info.label}</div>
+      <div class="cb-track"><div class="cb-fill" style="width:${pct}%;background:${info.color}"></div></div>
+      <div class="cb-count">${count}品</div>
+    </div>`;
+  }).join('');
+
+  // Score
+  const hasRed = (counts.red || 0) + (counts.orange || 0) >= 1;
+  const hasYellow = (counts.yellow || 0) >= 1;
+  const hasGreen = (counts.green || 0) >= 1;
+  const score = (hasRed ? 33 : 0) + (hasYellow ? 33 : 0) + (hasGreen ? 34 : 0);
+
+  let grade, gradeColor, comment;
+  if (score >= 100) { grade = '★ 完璧！'; gradeColor = '#f59e0b'; comment = '赤・黄・緑が揃った彩り豊かなお弁当です！'; }
+  else if (score >= 66) { grade = '◎ 良好'; gradeColor = '#22c55e'; comment = 'あと1色加えると満点です。'; }
+  else if (score >= 33) { grade = '△ もう少し'; gradeColor = '#f97316'; comment = '彩りを増やしてみましょう。'; }
+  else { grade = '✗ 要改善'; gradeColor = '#ef4444'; comment = '野菜や卵など色の鮮やかな食材を加えましょう。'; }
+
+  document.getElementById('scoreCard').innerHTML = `
+    <div class="score-grade" style="color:${gradeColor}">${grade}</div>
+    <div class="score-items">
+      <span class="${hasRed ? 'ok' : 'ng'}">赤・橙 ${hasRed ? '✓' : '✗'}</span>
+      <span class="${hasYellow ? 'ok' : 'ng'}">黄色 ${hasYellow ? '✓' : '✗'}</span>
+      <span class="${hasGreen ? 'ok' : 'ng'}">緑 ${hasGreen ? '✓' : '✗'}</span>
+    </div>
+    <div class="score-comment">${comment}</div>
+  `;
+}
+
+renderFoodGrid();
+updateDisplay();
+</script>
+
+<style>
+.bc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.bc-header { text-align: center; margin-bottom: 2rem; }
+.bc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.bc-sub { color: var(--gray-400); margin-top: .3rem; }
+.bc-body { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; margin-bottom: 2rem; }
+@media (max-width: 700px) { .bc-body { grid-template-columns: 1fr; } }
+.bc-section { font-weight: 700; color: var(--gray-200); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
+.bc-cats { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .8rem; }
+.cat-tab { padding: .25rem .65rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .8rem; cursor: pointer; }
+.cat-tab.active { background: #d97706; border-color: #d97706; color: #fff; }
+.food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: .4rem; max-height: 400px; overflow-y: auto; }
+.food-btn { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .4rem .3rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .1rem; transition: all .15s; }
+.food-btn:hover { border-color: #d97706; }
+.food-btn.selected { background: #78350f; border-color: #f59e0b; }
+.fe { font-size: 1.3rem; }
+.fn { font-size: .65rem; color: var(--gray-300); text-align: center; }
+.bc-right { }
+.selected-area { min-height: 80px; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; padding: .8rem; display: flex; flex-wrap: wrap; gap: .4rem; align-content: flex-start; margin-bottom: 1rem; }
+.empty-msg { color: var(--gray-500); font-size: .85rem; }
+.sel-chip { border: 1.5px solid; border-radius: 20px; padding: .2rem .55rem; font-size: .8rem; color: var(--gray-200); }
+.color-bar-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.cb-label { font-size: .75rem; color: var(--gray-300); width: 80px; flex-shrink: 0; }
+.cb-track { flex: 1; height: 10px; background: var(--gray-700); border-radius: 5px; overflow: hidden; }
+.cb-fill { height: 100%; border-radius: 5px; transition: width .4s; }
+.cb-count { font-size: .75rem; color: var(--gray-400); width: 24px; text-align: right; }
+.score-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; margin: .8rem 0; text-align: center; }
+.score-grade { font-size: 1.4rem; font-weight: 800; margin-bottom: .5rem; }
+.score-items { display: flex; justify-content: center; gap: 1rem; font-size: .85rem; margin-bottom: .5rem; }
+.ok { color: #34d399; }
+.ng { color: #f87171; }
+.score-comment { font-size: .8rem; color: var(--gray-400); }
+.bc-clear-btn { width: 100%; padding: .5rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 8px; cursor: pointer; }
+.bc-tips { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.tip-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.tips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .6rem; }
+.tip-item { border-radius: 10px; padding: .7rem; border: 1.5px solid; }
+.tc { font-weight: 700; margin-bottom: .3rem; font-size: .85rem; }
+.red-tip { border-color: #ef4444; background: #450a0a; color: #fca5a5; }
+.red-tip .tc { color: #ef4444; }
+.yellow-tip { border-color: #ca8a04; background: #422006; color: #fde68a; }
+.yellow-tip .tc { color: #fbbf24; }
+.green-tip { border-color: #16a34a; background: #052e16; color: #bbf7d0; }
+.green-tip .tc { color: #4ade80; }
+.brown-tip { border-color: #78350f; background: #1c0a00; color: #d6b896; }
+.brown-tip .tc { color: #d97706; }
+.tip-item { font-size: .8rem; line-height: 1.5; }
+</style>
+</BaseLayout>

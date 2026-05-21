@@ -1,0 +1,239 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ゴミ出しカレンダー" description="週ごとの曜日設定で「明日燃えるゴミ」をブラウザ通知。">
+<main class="tc-wrap">
+  <div class="tc-header">
+    <div class="tc-title">🗑️ ゴミ出しカレンダー</div>
+    <div class="tc-sub">ゴミの種類ごとに収集曜日を設定</div>
+  </div>
+
+  <div id="todayBanner" class="today-banner" style="display:none"></div>
+
+  <div class="tc-body">
+    <div class="tc-setup">
+      <div class="setup-title">収集日の設定</div>
+      <div id="trashTypes"></div>
+      <button class="tc-btn add-type-btn" onclick="addCustomType()">＋ カスタム追加</button>
+    </div>
+
+    <div class="tc-calendar-col">
+      <div class="cal-title">今週のゴミ出し</div>
+      <div class="week-grid" id="weekGrid"></div>
+
+      <div class="next-title">次のゴミ出し</div>
+      <div class="next-list" id="nextList"></div>
+
+      <button class="tc-btn notify-btn" onclick="requestNotification()" id="notifyBtn">🔔 通知を有効にする</button>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const DAYS = ['日','月','火','水','木','金','土'];
+const DEFAULT_TYPES = [
+  { name:'燃えるゴミ', color:'#dc2626', emoji:'🔥', days:[], freq:'weekly' },
+  { name:'資源ゴミ', color:'#16a34a', emoji:'♻️', days:[], freq:'weekly' },
+  { name:'プラ容器', color:'#0284c7', emoji:'🧴', days:[], freq:'weekly' },
+  { name:'不燃ゴミ', color:'#7c3aed', emoji:'🪨', days:[], freq:'biweekly', week:0 },
+];
+
+let types = [];
+try { types = JSON.parse(localStorage.getItem('trash_types') || 'null') || JSON.parse(JSON.stringify(DEFAULT_TYPES)); }
+catch(e) { types = JSON.parse(JSON.stringify(DEFAULT_TYPES)); }
+
+function save() {
+  try { localStorage.setItem('trash_types', JSON.stringify(types)); } catch(e) {}
+}
+
+function renderSetup() {
+  const el = document.getElementById('trashTypes');
+  el.innerHTML = '';
+  types.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'type-row';
+    const dayCheckboxes = DAYS.map((d, di) => `
+      <label class="day-check">
+        <input type="checkbox" ${t.days.includes(di) ? 'checked' : ''} onchange="toggleDay(${ti},${di})">
+        <span>${d}</span>
+      </label>
+    `).join('');
+    row.innerHTML = `
+      <div class="tr-top">
+        <span class="tr-emoji">${t.emoji}</span>
+        <span class="tr-name">${t.name}</span>
+        ${t.freq === 'biweekly' ? '<select class="wk-sel" onchange="setWeek('+ti+',this.value)"><option value="0" '+(t.week===0?'selected':'')+'>第1・3週</option><option value="1" '+(t.week===1?'selected':'')+'>第2・4週</option></select>' : ''}
+        <button class="del-type-btn" onclick="deleteType(${ti})">×</button>
+      </div>
+      <div class="tr-days">${dayCheckboxes}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function toggleDay(ti, di) {
+  const idx = types[ti].days.indexOf(di);
+  if (idx >= 0) types[ti].days.splice(idx, 1);
+  else types[ti].days.push(di);
+  save();
+  renderCalendar();
+}
+
+function setWeek(ti, val) {
+  types[ti].week = parseInt(val);
+  save();
+  renderCalendar();
+}
+
+function deleteType(ti) {
+  if (!confirm(types[ti].name + 'を削除しますか？')) return;
+  types.splice(ti, 1);
+  save();
+  renderSetup();
+  renderCalendar();
+}
+
+function addCustomType() {
+  const name = prompt('ゴミの種類名を入力してください');
+  if (!name) return;
+  const emojis = ['🗑️','📦','📰','💡','🔋','🪟'];
+  types.push({ name, color:'#6b7280', emoji: emojis[Math.floor(Math.random()*emojis.length)], days:[], freq:'weekly' });
+  save();
+  renderSetup();
+}
+
+function isCollectionDay(type, date) {
+  const dayOfWeek = date.getDay();
+  if (!type.days.includes(dayOfWeek)) return false;
+  if (type.freq === 'biweekly') {
+    const weekNum = Math.floor((date.getDate() - 1) / 7) % 2;
+    return weekNum === type.week;
+  }
+  return true;
+}
+
+function renderCalendar() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayDay = today.getDay();
+
+  // This week
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - todayDay);
+
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + d);
+    const isToday = date.getTime() === today.getTime();
+    const isTomorrow = date.getTime() === today.getTime() + 86400000;
+
+    const dayTypes = types.filter(t => isCollectionDay(t, date));
+
+    const cell = document.createElement('div');
+    cell.className = 'week-cell' + (isToday ? ' today' : '') + (isTomorrow ? ' tomorrow' : '');
+    cell.innerHTML = `
+      <div class="wc-day">${DAYS[d]}</div>
+      <div class="wc-date">${date.getDate()}</div>
+      <div class="wc-types">${dayTypes.map(t => `<span class="wc-type" style="background:${t.color}">${t.emoji}</span>`).join('') || ''}</div>
+    `;
+    grid.appendChild(cell);
+  }
+
+  // Today banner
+  const todayTypes = types.filter(t => isCollectionDay(t, today));
+  const tomorrowTypes = types.filter(t => isCollectionDay(t, new Date(today.getTime() + 86400000)));
+  const banner = document.getElementById('todayBanner');
+
+  if (todayTypes.length) {
+    banner.style.display = 'block';
+    banner.innerHTML = '🗑️ <strong>今日のゴミ出し：</strong>' + todayTypes.map(t => t.emoji + t.name).join('・');
+    banner.className = 'today-banner urgent';
+  } else if (tomorrowTypes.length) {
+    banner.style.display = 'block';
+    banner.innerHTML = '📅 <strong>明日のゴミ出し：</strong>' + tomorrowTypes.map(t => t.emoji + t.name).join('・');
+    banner.className = 'today-banner tomorrow';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Next collection
+  const nextList = document.getElementById('nextList');
+  const nextItems = [];
+  for (let ahead = 1; ahead <= 14; ahead++) {
+    const date = new Date(today.getTime() + ahead * 86400000);
+    const dayTypes = types.filter(t => isCollectionDay(t, date));
+    dayTypes.forEach(t => {
+      const existing = nextItems.find(n => n.name === t.name);
+      if (!existing) nextItems.push({ ...t, nextDate: date, daysAhead: ahead });
+    });
+    if (nextItems.length >= 5) break;
+  }
+
+  nextList.innerHTML = nextItems.length ? nextItems.map(t => `
+    <div class="next-item">
+      <span style="background:${t.color}" class="ni-dot">${t.emoji}</span>
+      <span class="ni-name">${t.name}</span>
+      <span class="ni-when">${t.daysAhead === 1 ? '明日' : t.daysAhead + '日後'} (${DAYS[t.nextDate.getDay()]})</span>
+    </div>
+  `).join('') : '<div style="color:var(--gray-400);font-size:.85rem">収集日が設定されていません</div>';
+}
+
+function requestNotification() {
+  if (!('Notification' in window)) { alert('このブラウザは通知に対応していません。'); return; }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      document.getElementById('notifyBtn').textContent = '✓ 通知が有効になりました';
+      document.getElementById('notifyBtn').style.background = '#059669';
+    } else {
+      alert('通知が拒否されました。ブラウザの設定から許可してください。');
+    }
+  });
+}
+
+renderSetup();
+renderCalendar();
+</script>
+
+<style>
+.tc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.tc-header { text-align: center; margin-bottom: 2rem; }
+.tc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.tc-sub { color: var(--gray-400); margin-top: .3rem; }
+.today-banner { border-radius: 10px; padding: .8rem 1.2rem; margin-bottom: 1rem; font-size: .95rem; }
+.today-banner.urgent { background: #450a0a; border: 1.5px solid #dc2626; color: #fca5a5; }
+.today-banner.tomorrow { background: #1e3a5f; border: 1.5px solid #2563eb; color: #bfdbfe; }
+.tc-body { display: grid; grid-template-columns: 360px 1fr; gap: 1.5rem; }
+@media (max-width: 700px) { .tc-body { grid-template-columns: 1fr; } }
+.tc-setup { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.setup-title { font-weight: 700; color: var(--gray-200); margin-bottom: 1rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; }
+.type-row { background: var(--gray-900); border-radius: 10px; padding: .7rem; margin-bottom: .6rem; }
+.tr-top { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.tr-emoji { font-size: 1.2rem; }
+.tr-name { font-weight: 600; color: var(--gray-100); flex: 1; font-size: .9rem; }
+.wk-sel { font-size: .75rem; background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 4px; color: var(--gray-300); padding: .2rem .4rem; }
+.del-type-btn { background: var(--gray-700); border: none; color: var(--gray-300); border-radius: 4px; padding: .1rem .4rem; cursor: pointer; font-size: .8rem; }
+.tr-days { display: flex; gap: .3rem; flex-wrap: wrap; }
+.day-check { display: flex; flex-direction: column; align-items: center; gap: .1rem; cursor: pointer; font-size: .7rem; color: var(--gray-400); }
+.day-check input { accent-color: #2563eb; }
+.tc-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.add-type-btn { width: 100%; background: var(--gray-700); color: var(--gray-200); margin-top: .3rem; }
+.tc-calendar-col { }
+.cal-title, .next-title { font-weight: 700; color: var(--gray-200); font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
+.next-title { margin-top: 1.2rem; }
+.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .3rem; margin-bottom: 1rem; }
+.week-cell { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .4rem .2rem; text-align: center; }
+.week-cell.today { border-color: #f59e0b; background: #78350f; }
+.week-cell.tomorrow { border-color: #2563eb; }
+.wc-day { font-size: .7rem; color: var(--gray-400); }
+.wc-date { font-size: 1.1rem; font-weight: 700; color: var(--gray-100); }
+.wc-types { display: flex; flex-wrap: wrap; justify-content: center; gap: .1rem; margin-top: .2rem; min-height: 1.5rem; }
+.wc-type { font-size: .7rem; border-radius: 4px; padding: .05rem .2rem; }
+.next-item { display: flex; align-items: center; gap: .7rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .6rem .9rem; margin-bottom: .4rem; }
+.ni-dot { font-size: 1.1rem; border-radius: 6px; padding: .1rem .3rem; }
+.ni-name { font-weight: 600; color: var(--gray-100); flex: 1; }
+.ni-when { font-size: .8rem; color: var(--gray-400); }
+.notify-btn { margin-top: 1rem; background: #2563eb; color: #fff; width: 100%; padding: .6rem; }
+</style>
+</BaseLayout>
