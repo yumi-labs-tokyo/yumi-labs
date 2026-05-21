@@ -1,0 +1,579 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="VTuber配信枠取り告知画像ジェネレーター | yumi Labs">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">📺</div>
+      <div class="text-3xl font-bold text-white mb-2">VTuber配信枠取り告知画像</div>
+      <div class="text-gray-400 text-sm">日時・タイトル・ゲーム名を入れるとTwitter投稿用告知画像（1200×675px）を自動生成</div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Left: Controls -->
+      <div class="space-y-5">
+
+        <!-- テーマ -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">テーマカラー</div>
+          <div class="grid grid-cols-4 gap-2" id="themeButtons">
+            <button onclick="setTheme('purple')" data-theme="purple" class="theme-btn h-9 rounded-xl border-2 border-purple-400 transition-all" style="background:linear-gradient(135deg,#7c3aed,#ec4899);"></button>
+            <button onclick="setTheme('blue')" data-theme="blue" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#1d4ed8,#0ea5e9);"></button>
+            <button onclick="setTheme('green')" data-theme="green" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#059669,#10b981);"></button>
+            <button onclick="setTheme('rose')" data-theme="rose" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#e11d48,#f97316);"></button>
+            <button onclick="setTheme('dark')" data-theme="dark" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#1e1b4b,#312e81);"></button>
+            <button onclick="setTheme('cyber')" data-theme="cyber" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#064e3b,#06b6d4);"></button>
+            <button onclick="setTheme('mono')" data-theme="mono" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#111,#444);"></button>
+            <button onclick="setTheme('gold')" data-theme="gold" class="theme-btn h-9 rounded-xl border-2 border-transparent transition-all" style="background:linear-gradient(135deg,#92400e,#fbbf24);"></button>
+          </div>
+        </div>
+
+        <!-- レイアウト -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">レイアウト</div>
+          <div class="flex gap-2">
+            <button onclick="setLayout('centered')" data-layout="centered"
+              class="layout-btn flex-1 py-2 rounded-xl text-xs font-medium border border-purple-400/60 bg-purple-500/20 text-white transition-all">中央寄せ</button>
+            <button onclick="setLayout('left')" data-layout="left"
+              class="layout-btn flex-1 py-2 rounded-xl text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">左寄せ</button>
+            <button onclick="setLayout('split')" data-layout="split"
+              class="layout-btn flex-1 py-2 rounded-xl text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">分割</button>
+          </div>
+        </div>
+
+        <!-- 基本情報 -->
+        <div class="bg-white/5 rounded-2xl p-5 space-y-3">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">配信情報</div>
+
+          <div>
+            <div class="text-xs text-gray-400 mb-1">配信者名（チャンネル名）</div>
+            <input id="inName" type="text" placeholder="例：星野ゆみ" maxlength="30"
+              oninput="render()"
+              class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+
+          <div>
+            <div class="text-xs text-gray-400 mb-1">配信タイトル</div>
+            <input id="inTitle" type="text" placeholder="例：【初見】エルデンリング part.1" maxlength="60"
+              oninput="render()"
+              class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+
+          <div>
+            <div class="text-xs text-gray-400 mb-1">ゲーム名 / 内容</div>
+            <input id="inGame" type="text" placeholder="例：ELDEN RING" maxlength="40"
+              oninput="render()"
+              class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <div class="text-xs text-gray-400 mb-1">配信日</div>
+              <input id="inDate" type="date"
+                oninput="render()"
+                class="w-full bg-white/10 rounded-xl px-3 py-2 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+            </div>
+            <div>
+              <div class="text-xs text-gray-400 mb-1">開始時刻</div>
+              <input id="inTime" type="time" value="21:00"
+                oninput="render()"
+                class="w-full bg-white/10 rounded-xl px-3 py-2 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+            </div>
+          </div>
+
+          <div>
+            <div class="text-xs text-gray-400 mb-1">サブテキスト（ハッシュタグや一言など）</div>
+            <input id="inSub" type="text" placeholder="例：#星野ゆみ生放送 #EldenRing" maxlength="80"
+              oninput="render()"
+              class="w-full bg-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+        </div>
+
+        <!-- アイコン -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">配信者アイコン（任意）</div>
+          <div class="flex items-center gap-3">
+            <div id="iconPreview" class="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-2xl flex-shrink-0">🎙</div>
+            <div class="flex-1">
+              <input type="file" id="iconUpload" accept="image/*" onchange="loadIcon(this)" class="hidden" />
+              <button onclick="document.getElementById('iconUpload').click()"
+                class="px-4 py-2 rounded-lg text-xs font-medium bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">
+                画像をアップロード
+              </button>
+              <div class="text-xs text-gray-600 mt-1">PNG / JPG 推奨（正方形が綺麗）</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 装飾オプション -->
+        <div class="bg-white/5 rounded-2xl p-5">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">装飾</div>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optParticles" checked onchange="render()" class="accent-purple-400" />
+              パーティクル背景
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optGlow" checked onchange="render()" class="accent-purple-400" />
+              グロウエフェクト
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optBadge" checked onchange="render()" class="accent-purple-400" />
+              「配信予告」バッジ
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" id="optGrid" onchange="render()" class="accent-purple-400" />
+              グリッド背景
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="space-y-4">
+        <div class="bg-white/5 rounded-2xl p-4">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">プレビュー（1200×675px）</div>
+          <canvas id="announceCanvas" width="1200" height="675"
+            class="w-full rounded-xl border border-white/10" style="aspect-ratio:16/9;"></canvas>
+        </div>
+
+        <button onclick="downloadImage()"
+          class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all"
+          style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+          ⬇ 画像をダウンロード（PNG）
+        </button>
+
+        <div class="bg-white/5 rounded-xl p-3 text-xs text-gray-500 leading-relaxed">
+          1200×675px（Twitter/X 推奨サイズ）で出力されます。ダウンロード後そのまま投稿できます。
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  const THEMES = {
+    purple: { bg1: '#1a0533', bg2: '#2d1b4e', accent: '#9333ea', accent2: '#ec4899', text: '#ffffff' },
+    blue:   { bg1: '#0c1a3a', bg2: '#1e3a6e', accent: '#3b82f6', accent2: '#0ea5e9', text: '#ffffff' },
+    green:  { bg1: '#052e1e', bg2: '#064e38', accent: '#10b981', accent2: '#34d399', text: '#ffffff' },
+    rose:   { bg1: '#2d0a1a', bg2: '#4a0e22', accent: '#e11d48', accent2: '#f97316', text: '#ffffff' },
+    dark:   { bg1: '#0f0e17', bg2: '#1e1b4b', accent: '#818cf8', accent2: '#a78bfa', text: '#ffffff' },
+    cyber:  { bg1: '#021a10', bg2: '#042f1e', accent: '#06b6d4', accent2: '#10b981', text: '#e0fdf4' },
+    mono:   { bg1: '#0a0a0a', bg2: '#1c1c1c', accent: '#ffffff', accent2: '#aaaaaa', text: '#ffffff' },
+    gold:   { bg1: '#1c0f00', bg2: '#3b1f00', accent: '#fbbf24', accent2: '#f59e0b', text: '#fff8e7' },
+  };
+
+  let currentTheme = 'purple';
+  let currentLayout = 'centered';
+  let iconImage = null;
+
+  function setTheme(t) {
+    currentTheme = t;
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.style.borderColor = b.dataset.theme === t ? 'white' : 'transparent';
+      b.style.transform   = b.dataset.theme === t ? 'scale(1.1)' : 'scale(1)';
+    });
+    render();
+  }
+
+  function setLayout(l) {
+    currentLayout = l;
+    document.querySelectorAll('.layout-btn').forEach(b => {
+      const active = b.dataset.layout === l;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(209,213,219)';
+    });
+    render();
+  }
+
+  function loadIcon(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        iconImage = img;
+        document.getElementById('iconPreview').innerHTML = '';
+        const prev = document.createElement('img');
+        prev.src = e.target.result;
+        prev.className = 'w-14 h-14 rounded-full object-cover';
+        document.getElementById('iconPreview').appendChild(prev);
+        render();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function formatDateJP(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const days = ['日','月','火','水','木','金','土'];
+    return `${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+  }
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const chars = [...text];
+    let line = '';
+    let lineY = y;
+    for (let i = 0; i < chars.length; i++) {
+      const testLine = line + chars[i];
+      if (ctx.measureText(testLine).width > maxWidth && line !== '') {
+        ctx.fillText(line, x, lineY);
+        line = chars[i];
+        lineY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) ctx.fillText(line, x, lineY);
+    return lineY;
+  }
+
+  function render() {
+    const canvas = document.getElementById('announceCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1200, H = 675;
+    const theme = THEMES[currentTheme];
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, theme.bg1);
+    grad.addColorStop(1, theme.bg2);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    if (document.getElementById('optGrid').checked) {
+      ctx.strokeStyle = `${theme.accent}18`;
+      ctx.lineWidth = 1;
+      const gSize = 60;
+      for (let x = 0; x <= W; x += gSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y <= H; y += gSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    }
+
+    // Particles
+    if (document.getElementById('optParticles').checked) {
+      const seed = 42;
+      const lcg = (s) => (s * 1664525 + 1013904223) & 0xffffffff;
+      let s = seed;
+      for (let i = 0; i < 60; i++) {
+        s = lcg(s); const px = (s >>> 0) % W;
+        s = lcg(s); const py = (s >>> 0) % H;
+        s = lcg(s); const r  = 1 + (s >>> 0) % 3;
+        s = lcg(s); const a  = 0.2 + ((s >>> 0) % 60) / 100;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fill();
+      }
+    }
+
+    // Decorative circles (glow)
+    if (document.getElementById('optGlow').checked) {
+      const glowGrad1 = ctx.createRadialGradient(W * 0.15, H * 0.3, 0, W * 0.15, H * 0.3, 300);
+      glowGrad1.addColorStop(0, `${theme.accent}40`);
+      glowGrad1.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad1;
+      ctx.fillRect(0, 0, W, H);
+
+      const glowGrad2 = ctx.createRadialGradient(W * 0.85, H * 0.7, 0, W * 0.85, H * 0.7, 250);
+      glowGrad2.addColorStop(0, `${theme.accent2}30`);
+      glowGrad2.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad2;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Accent line top
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+    lineGrad.addColorStop(0, theme.accent);
+    lineGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = lineGrad;
+    ctx.fillRect(0, 0, W, 6);
+
+    const inputs = {
+      name:  document.getElementById('inName').value  || '配信者名',
+      title: document.getElementById('inTitle').value || '配信タイトル',
+      game:  document.getElementById('inGame').value  || '',
+      date:  document.getElementById('inDate').value  || '',
+      time:  document.getElementById('inTime').value  || '',
+      sub:   document.getElementById('inSub').value   || '',
+    };
+
+    const dateStr = formatDateJP(inputs.date);
+    const timeStr = inputs.time ? inputs.time.replace(':', ':') + ' 〜' : '';
+    const dateTimeStr = [dateStr, timeStr].filter(Boolean).join('  ');
+
+    if (currentLayout === 'centered') renderCentered(ctx, W, H, theme, inputs, dateTimeStr);
+    else if (currentLayout === 'left')  renderLeft(ctx, W, H, theme, inputs, dateTimeStr);
+    else                                renderSplit(ctx, W, H, theme, inputs, dateTimeStr);
+  }
+
+  function drawIcon(ctx, x, y, size, theme) {
+    if (!iconImage) {
+      // placeholder circle
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, size/2);
+      grad.addColorStop(0, `${theme.accent}88`);
+      grad.addColorStop(1, `${theme.accent}22`);
+      ctx.beginPath(); ctx.arc(x, y, size/2, 0, Math.PI*2);
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.strokeStyle = theme.accent; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = `${size*0.45}px serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🎙', x, y);
+      return;
+    }
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, size/2, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(iconImage, x - size/2, y - size/2, size, size);
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(x, y, size/2, 0, Math.PI*2);
+    ctx.strokeStyle = theme.accent; ctx.lineWidth = 4; ctx.stroke();
+  }
+
+  function drawBadge(ctx, x, y, theme) {
+    if (!document.getElementById('optBadge').checked) return;
+    const label = '📡  配信予告';
+    ctx.font = 'bold 22px sans-serif';
+    const tw = ctx.measureText(label).width;
+    const px = 20, py2 = 10, r = 8;
+    const bw = tw + px * 2, bh = 44;
+    const rx = x, ry = y - bh/2;
+    ctx.beginPath();
+    ctx.moveTo(rx + r, ry); ctx.lineTo(rx + bw - r, ry);
+    ctx.quadraticCurveTo(rx + bw, ry, rx + bw, ry + r);
+    ctx.lineTo(rx + bw, ry + bh - r);
+    ctx.quadraticCurveTo(rx + bw, ry + bh, rx + bw - r, ry + bh);
+    ctx.lineTo(rx + r, ry + bh);
+    ctx.quadraticCurveTo(rx, ry + bh, rx, ry + bh - r);
+    ctx.lineTo(rx, ry + r);
+    ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+    ctx.closePath();
+    const badgeGrad = ctx.createLinearGradient(rx, ry, rx + bw, ry + bh);
+    badgeGrad.addColorStop(0, theme.accent);
+    badgeGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = badgeGrad; ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, rx + px, ry + bh/2);
+  }
+
+  function renderCentered(ctx, W, H, theme, inp, dateTimeStr) {
+    const CX = W / 2;
+    // Icon top center
+    const iconY = 140;
+    drawIcon(ctx, CX, iconY, 120, theme);
+
+    // Name
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = `${theme.accent}cc`;
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(inp.name, CX, iconY + 82);
+
+    // Badge
+    drawBadge(ctx, CX - 70, 36, theme);
+
+    // Date/time
+    if (dateTimeStr) {
+      ctx.fillStyle = theme.accent2;
+      ctx.font = 'bold 36px sans-serif';
+      ctx.fillText(dateTimeStr, CX, 308);
+    }
+
+    // Title
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 54px sans-serif';
+    const titleLines = splitToLines(ctx, inp.title, W - 120, 54);
+    titleLines.forEach((line, i) => {
+      ctx.fillText(line, CX, 376 + i * 68);
+    });
+
+    // Game
+    if (inp.game) {
+      const gameY = 376 + titleLines.length * 68 + 12;
+      ctx.fillStyle = `${theme.accent}cc`;
+      ctx.font = '28px sans-serif';
+      ctx.fillText(`🎮  ${inp.game}`, CX, gameY);
+    }
+
+    // Sub
+    if (inp.sub) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = '22px sans-serif';
+      ctx.fillText(inp.sub, CX, H - 40);
+    }
+
+    // Bottom accent line
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+    lineGrad.addColorStop(0, theme.accent);
+    lineGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = lineGrad;
+    ctx.fillRect(0, H - 6, W, 6);
+  }
+
+  function renderLeft(ctx, W, H, theme, inp, dateTimeStr) {
+    const PAD = 70;
+    const iconX = PAD + 60, iconY = 130;
+    drawIcon(ctx, iconX, iconY, 100, theme);
+
+    drawBadge(ctx, PAD, 36, theme);
+
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+
+    // Name
+    ctx.fillStyle = `${theme.accent}cc`;
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(inp.name, iconX + 70, iconY);
+
+    // Date/time
+    if (dateTimeStr) {
+      ctx.fillStyle = theme.accent2;
+      ctx.font = 'bold 38px sans-serif';
+      ctx.fillText(dateTimeStr, PAD, 270);
+    }
+
+    // Divider
+    const divGrad = ctx.createLinearGradient(PAD, 0, PAD + 400, 0);
+    divGrad.addColorStop(0, theme.accent);
+    divGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = divGrad;
+    ctx.fillRect(PAD, 300, 500, 3);
+
+    // Title
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 56px sans-serif';
+    const titleLines = splitToLines(ctx, inp.title, W - PAD * 2 - 80, 56);
+    titleLines.forEach((line, i) => ctx.fillText(line, PAD, 360 + i * 72));
+
+    // Game
+    if (inp.game) {
+      ctx.fillStyle = `${theme.accent}cc`;
+      ctx.font = '30px sans-serif';
+      ctx.fillText(`🎮  ${inp.game}`, PAD, 360 + titleLines.length * 72 + 20);
+    }
+
+    // Sub
+    if (inp.sub) {
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '22px sans-serif';
+      ctx.fillText(inp.sub, PAD, H - 40);
+    }
+
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+    lineGrad.addColorStop(0, theme.accent);
+    lineGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = lineGrad;
+    ctx.fillRect(0, H - 6, W, 6);
+  }
+
+  function renderSplit(ctx, W, H, theme, inp, dateTimeStr) {
+    // Left panel dark
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, W * 0.4, H);
+
+    // Diagonal separator
+    ctx.beginPath();
+    ctx.moveTo(W * 0.4, 0); ctx.lineTo(W * 0.42, 0);
+    ctx.lineTo(W * 0.38, H); ctx.lineTo(W * 0.36, H);
+    ctx.closePath();
+    const sepGrad = ctx.createLinearGradient(W * 0.36, 0, W * 0.42, H);
+    sepGrad.addColorStop(0, theme.accent);
+    sepGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = sepGrad;
+    ctx.fill();
+
+    // Left: icon + name + date
+    const LCX = W * 0.2;
+    drawIcon(ctx, LCX, H * 0.38, 130, theme);
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillText(inp.name, LCX, H * 0.38 + 90);
+
+    if (dateTimeStr) {
+      ctx.fillStyle = theme.accent2;
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(dateTimeStr, LCX, H - 80);
+    }
+
+    drawBadge(ctx, 30, 36, theme);
+
+    // Right: title + game + sub
+    const RPad = W * 0.45;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 58px sans-serif';
+    const titleLines = splitToLines(ctx, inp.title, W - RPad - 40, 58);
+    const startY = H * 0.5 - (titleLines.length * 74) / 2;
+    titleLines.forEach((line, i) => ctx.fillText(line, RPad, startY + i * 74));
+
+    if (inp.game) {
+      ctx.fillStyle = `${theme.accent}cc`;
+      ctx.font = '30px sans-serif';
+      ctx.fillText(`🎮  ${inp.game}`, RPad, startY + titleLines.length * 74 + 24);
+    }
+
+    if (inp.sub) {
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '20px sans-serif';
+      ctx.fillText(inp.sub, RPad, H - 40);
+    }
+
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+    lineGrad.addColorStop(0, theme.accent);
+    lineGrad.addColorStop(1, theme.accent2);
+    ctx.fillStyle = lineGrad;
+    ctx.fillRect(0, H - 6, W, 6);
+  }
+
+  function splitToLines(ctx, text, maxWidth, fontSize) {
+    if (!text) return [''];
+    const words = text.split('');
+    const lines = [];
+    let current = '';
+    for (const ch of words) {
+      const test = current + ch;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = ch;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.slice(0, 3);
+  }
+
+  function downloadImage() {
+    render();
+    const canvas = document.getElementById('announceCanvas');
+    const link = document.createElement('a');
+    const name = document.getElementById('inName').value || 'announce';
+    link.download = `${name}_配信告知.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  // Init
+  setTheme('purple');
+  setLayout('centered');
+
+  // Set today's date
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('inDate').value = `${yyyy}-${mm}-${dd}`;
+
+  render();
+</script>

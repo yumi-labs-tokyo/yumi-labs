@@ -251,7 +251,7 @@ export const tools: Tool[] = [
 		id: 37, slug: 'vtuber-announce',
 		name: 'VTuber配信枠取り告知画像',
 		description: '日時・タイトル・ゲーム名を入れるとTwitter投稿サイズで自動レイアウト。',
-		emoji: '📺', category: 'creator', status: 'coming-soon',
+		emoji: '📺', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 38, slug: 'bpm-calculator',
