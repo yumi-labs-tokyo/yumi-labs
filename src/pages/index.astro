@@ -268,27 +268,12 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		padding-block: 2rem 1.5rem;
 	}
 
-	/* Hero photo — モバイル: 小さめ */
+	/* Hero photo — モバイルは非表示 */
 	.hero-visual {
-		flex-shrink: 0;
+		display: none;
 	}
 
-	.hero-photo {
-		width: 80px;
-		height: auto;
-		border-radius: 1.2rem;
-		object-fit: cover;
-		object-position: top;
-		border: 3px solid var(--accent-light);
-		box-shadow: var(--shadow-md);
-	}
-
-	/* モバイルのタイトルを少し小さく（画像と共存できるサイズに） */
-	.hero-title {
-		font-size: clamp(1.45rem, 5vw, 3.5rem);
-	}
-
-	/* Desktop: 余裕があるので大きく */
+	/* Desktop: 表示・大きく */
 	@media (min-width: 50em) {
 		.hero {
 			align-items: center;
@@ -296,9 +281,18 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 			padding-block: 4rem 2rem;
 		}
 
+		.hero-visual {
+			display: block;
+			flex-shrink: 0;
+		}
+
 		.hero-photo {
 			width: 200px;
 			border-radius: 2rem;
+			object-fit: cover;
+			object-position: top;
+			border: 3px solid var(--accent-light);
+			box-shadow: var(--shadow-md);
 		}
 	}
 

@@ -214,20 +214,22 @@ update();
 </script>
 
 <style>
-.pp-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.pp-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; position: relative; }
 .pp-header { text-align: center; margin-bottom: 2rem; }
-.pp-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.pp-title { font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: 800; color: var(--gray-0); word-break: break-word; }
 .pp-sub { color: var(--gray-400); margin-top: .3rem; }
 .pp-body { display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; }
 @media (max-width: 780px) { .pp-body { grid-template-columns: 1fr; } }
 .pp-card, .pp-result-card, .pp-svg-card, .pp-steps-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
 .pp-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
 .pp-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: .8rem; }
+@media (max-width: 420px) { .pp-form-grid { grid-template-columns: 1fr 1fr; } }
 .pp-fg { display: flex; flex-direction: column; gap: .3rem; }
 .pp-label { font-size: .75rem; color: var(--gray-400); }
 .pp-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .95rem; width: 100%; box-sizing: border-box; }
 .pp-quick { margin-top: .5rem; }
 .pp-quick-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4rem; }
+@media (max-width: 580px) { .pp-quick-grid { grid-template-columns: repeat(3, 1fr); } }
 .pp-qbtn { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .35rem .2rem; font-size: .7rem; cursor: pointer; color: var(--gray-300); line-height: 1.4; }
 .pp-qbtn:hover { border-color: #7c3aed; }
 .pp-qbtn small { color: var(--gray-500); }

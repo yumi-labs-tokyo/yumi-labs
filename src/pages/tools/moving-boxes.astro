@@ -163,18 +163,19 @@ calc();
 </script>
 
 <style>
-.mb-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.mb-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; position: relative; }
 .mb-header { text-align: center; margin-bottom: 2rem; }
-.mb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.mb-title { font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: 800; color: var(--gray-0); word-break: break-word; }
 .mb-sub { color: var(--gray-400); margin-top: .3rem; }
 .mb-body { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
 @media (max-width: 750px) { .mb-body { grid-template-columns: 1fr; } }
 .mb-card, .mb-result, .mb-tips, .mb-size-guide { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
 .mb-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
 .mb-form-row { display: grid; grid-template-columns: repeat(3,1fr); gap: .6rem; }
+@media (max-width: 480px) { .mb-form-row { grid-template-columns: 1fr 1fr; } }
 .mb-fg { display: flex; flex-direction: column; gap: .3rem; }
 .mb-label { font-size: .75rem; color: var(--gray-400); }
-.mb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.mb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; min-width: 0; }
 .cl-room { margin-bottom: .8rem; }
 .cl-room-title { font-size: .82rem; font-weight: 700; color: var(--gray-300); margin-bottom: .4rem; }
 .cl-items { display: flex; flex-wrap: wrap; gap: .3rem; }
@@ -192,6 +193,7 @@ calc();
 .mb-total strong { color: #fbbf24; }
 .tip-list { display: flex; flex-direction: column; gap: .5rem; }
 .tip-item { font-size: .82rem; color: var(--gray-300); padding: .4rem .6rem; background: var(--gray-900); border-radius: 6px; }
+.mb-size-guide { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .size-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
 .size-table th { background: var(--gray-700); padding: .4rem .6rem; color: var(--gray-200); text-align: left; }
 .size-table td { padding: .35rem .6rem; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
