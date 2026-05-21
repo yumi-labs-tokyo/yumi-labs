@@ -1,0 +1,356 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ハンドメイドアクセサリー「原価計算」" description="材料費・作業時間・経費から原価と適正販売価格を算出。ハンドメイド作家の価格設定をサポート。">
+<main class="hc-wrap">
+  <div class="hc-header">
+    <div class="hc-title">💎 ハンドメイド原価計算</div>
+    <div class="hc-sub">材料費・工賃から適正価格を算出</div>
+  </div>
+
+  <div class="hc-tabs">
+    <button class="hc-tab active" onclick="showTab('calc')">原価計算</button>
+    <button class="hc-tab" onclick="showTab('products')">商品一覧</button>
+    <button class="hc-tab" onclick="showTab('materials')">材料マスタ</button>
+  </div>
+
+  <div id="tab-calc" class="hc-tab-content">
+    <div class="hc-card">
+      <div class="hc-card-title">商品情報</div>
+      <div class="hc-form-row">
+        <div class="hc-fg">
+          <label class="hc-label">商品名</label>
+          <input type="text" id="pName" class="hc-input" placeholder="例：フラワーピアス（バラ）" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">カテゴリ</label>
+          <select id="pCategory" class="hc-select">
+            <option value="ピアス">ピアス・イヤリング</option>
+            <option value="ネックレス">ネックレス</option>
+            <option value="ブレスレット">ブレスレット</option>
+            <option value="リング">リング</option>
+            <option value="ヘアアクセ">ヘアアクセサリー</option>
+            <option value="バッグ">バッグ・ポーチ</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-card">
+      <div class="hc-card-title">材料費</div>
+      <div id="materialRows" class="hc-material-list"></div>
+      <button class="hc-btn-link" onclick="addMaterialRow()">＋ 材料を追加</button>
+    </div>
+
+    <div class="hc-card">
+      <div class="hc-card-title">作業時間・経費</div>
+      <div class="hc-form-row">
+        <div class="hc-fg">
+          <label class="hc-label">作業時間（分）</label>
+          <input type="number" id="workMinutes" class="hc-input" placeholder="60" min="0" oninput="calcAll()" style="max-width:100px" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">時給設定（円）</label>
+          <input type="number" id="hourlyRate" class="hc-input" placeholder="1500" min="0" oninput="calcAll()" style="max-width:110px" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">梱包・送料（円）</label>
+          <input type="number" id="shippingCost" class="hc-input" placeholder="200" min="0" oninput="calcAll()" style="max-width:110px" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">手数料率（%）</label>
+          <input type="number" id="feePct" class="hc-input" placeholder="6.6" min="0" max="50" step="0.1" oninput="calcAll()" style="max-width:100px" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">利益率目標（%）</label>
+          <input type="number" id="profitPct" class="hc-input" placeholder="30" min="0" max="200" oninput="calcAll()" style="max-width:100px" />
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-result-card" id="resultCard">
+      <div class="hc-result-title">原価計算結果</div>
+      <div class="hc-result-grid">
+        <div class="hc-result-row">
+          <span class="hc-result-label">材料費合計</span>
+          <span class="hc-result-val" id="resMaterial">¥0</span>
+        </div>
+        <div class="hc-result-row">
+          <span class="hc-result-label">工賃（作業時間×時給）</span>
+          <span class="hc-result-val" id="resLabor">¥0</span>
+        </div>
+        <div class="hc-result-row">
+          <span class="hc-result-label">梱包・送料</span>
+          <span class="hc-result-val" id="resShipping">¥0</span>
+        </div>
+        <div class="hc-result-row total">
+          <span class="hc-result-label">原価合計</span>
+          <span class="hc-result-val" id="resCost">¥0</span>
+        </div>
+        <div class="hc-result-row">
+          <span class="hc-result-label">販売手数料（推定）</span>
+          <span class="hc-result-val" id="resFee">¥0</span>
+        </div>
+        <div class="hc-result-row highlight">
+          <span class="hc-result-label">推奨販売価格</span>
+          <span class="hc-result-val big" id="resSuggest">¥0</span>
+        </div>
+        <div class="hc-result-row">
+          <span class="hc-result-label">この価格での利益</span>
+          <span class="hc-result-val green" id="resProfit">¥0</span>
+        </div>
+      </div>
+      <button class="hc-btn blue" onclick="saveProduct()" style="margin-top:.8rem;width:100%">この商品を保存</button>
+    </div>
+  </div>
+
+  <div id="tab-products" class="hc-tab-content" style="display:none">
+    <div id="productList" class="hc-product-list"></div>
+  </div>
+
+  <div id="tab-materials" class="hc-tab-content" style="display:none">
+    <div class="hc-card">
+      <div class="hc-card-title">材料マスタ登録</div>
+      <div class="hc-form-row">
+        <div class="hc-fg">
+          <label class="hc-label">材料名</label>
+          <input type="text" id="mName" class="hc-input" placeholder="例：淡水パール 4mm" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">単価（円）</label>
+          <input type="number" id="mPrice" class="hc-input" placeholder="80" min="0" step="0.1" style="max-width:100px" />
+        </div>
+        <div class="hc-fg">
+          <label class="hc-label">単位</label>
+          <input type="text" id="mUnit" class="hc-input" placeholder="個" style="max-width:70px" />
+        </div>
+        <button class="hc-btn blue" onclick="addMaster()">追加</button>
+      </div>
+    </div>
+    <div id="masterList" class="hc-master-list"></div>
+  </div>
+</main>
+
+<script is:inline>
+let products = [];
+let materials = [];
+let matRowCount = 0;
+
+try { products = JSON.parse(localStorage.getItem('hc_products') || '[]'); } catch(e) {}
+try { materials = JSON.parse(localStorage.getItem('hc_materials') || '[]'); } catch(e) {}
+
+function saveData() {
+  try {
+    localStorage.setItem('hc_products', JSON.stringify(products));
+    localStorage.setItem('hc_materials', JSON.stringify(materials));
+  } catch(e) {}
+}
+
+function addMaterialRow(name, unitPrice, qty) {
+  matRowCount++;
+  const id = 'mat_' + matRowCount;
+  const row = document.createElement('div');
+  row.className = 'hc-mat-row';
+  row.id = id;
+  row.innerHTML = `
+    <input type="text" class="hc-input-sm mat-name" placeholder="材料名" value="${name||''}" list="masterDataList" oninput="onMasterSelect(this,'${id}')" />
+    <datalist id="masterDataList">${materials.map(m => '<option value="' + m.name + '">').join('')}</datalist>
+    <input type="number" class="hc-input-sm mat-price" placeholder="単価(円)" min="0" step="0.1" value="${unitPrice||''}" oninput="calcAll()" style="max-width:90px" />
+    <input type="number" class="hc-input-sm mat-qty" placeholder="数量" min="0" step="0.1" value="${qty||1}" oninput="calcAll()" style="max-width:70px" />
+    <span class="mat-sub">= ¥<span class="mat-subtotal">0</span></span>
+    <button class="hc-del-btn" onclick="document.getElementById('${id}').remove();calcAll()">×</button>`;
+  document.getElementById('materialRows').appendChild(row);
+  calcAll();
+}
+
+function onMasterSelect(input, rowId) {
+  const found = materials.find(m => m.name === input.value);
+  if (found) {
+    const row = document.getElementById(rowId);
+    row.querySelector('.mat-price').value = found.price;
+    calcAll();
+  }
+}
+
+function getMatRows() {
+  return Array.from(document.querySelectorAll('.hc-mat-row')).map(row => ({
+    name: row.querySelector('.mat-name').value,
+    price: parseFloat(row.querySelector('.mat-price').value) || 0,
+    qty: parseFloat(row.querySelector('.mat-qty').value) || 0,
+    sub: (parseFloat(row.querySelector('.mat-price').value) || 0) * (parseFloat(row.querySelector('.mat-qty').value) || 0)
+  }));
+}
+
+function calcAll() {
+  const rows = getMatRows();
+  rows.forEach((r, i) => {
+    const rowEl = document.querySelectorAll('.hc-mat-row')[i];
+    if (rowEl) rowEl.querySelector('.mat-subtotal').textContent = r.sub.toFixed(0);
+  });
+
+  const materialTotal = rows.reduce((s, r) => s + r.sub, 0);
+  const minutes = parseFloat(document.getElementById('workMinutes').value) || 0;
+  const hourly = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const shipping = parseFloat(document.getElementById('shippingCost').value) || 0;
+  const feePct = parseFloat(document.getElementById('feePct').value) || 0;
+  const profitPct = parseFloat(document.getElementById('profitPct').value) || 30;
+
+  const labor = minutes / 60 * hourly;
+  const baseCost = materialTotal + labor + shipping;
+  const suggest = Math.ceil(baseCost * (1 + profitPct / 100) / (1 - feePct / 100) / 10) * 10;
+  const fee = suggest * feePct / 100;
+  const profit = suggest - baseCost - fee;
+
+  document.getElementById('resMaterial').textContent = '¥' + materialTotal.toFixed(0);
+  document.getElementById('resLabor').textContent = '¥' + labor.toFixed(0);
+  document.getElementById('resShipping').textContent = '¥' + shipping.toFixed(0);
+  document.getElementById('resCost').textContent = '¥' + baseCost.toFixed(0);
+  document.getElementById('resFee').textContent = '¥' + fee.toFixed(0);
+  document.getElementById('resSuggest').textContent = '¥' + suggest.toLocaleString();
+  document.getElementById('resProfit').textContent = '¥' + profit.toFixed(0) + ' (' + (suggest > 0 ? Math.round(profit/suggest*100) : 0) + '%)';
+}
+
+function saveProduct() {
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { alert('商品名を入力してください'); return; }
+  const rows = getMatRows();
+  const materialTotal = rows.reduce((s, r) => s + r.sub, 0);
+  const minutes = parseFloat(document.getElementById('workMinutes').value) || 0;
+  const hourly = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const shipping = parseFloat(document.getElementById('shippingCost').value) || 0;
+  const feePct = parseFloat(document.getElementById('feePct').value) || 0;
+  const profitPct = parseFloat(document.getElementById('profitPct').value) || 30;
+  const labor = minutes / 60 * hourly;
+  const baseCost = materialTotal + labor + shipping;
+  const suggest = Math.ceil(baseCost * (1 + profitPct / 100) / (1 - feePct / 100) / 10) * 10;
+
+  products.unshift({
+    id: Date.now(),
+    name, category: document.getElementById('pCategory').value,
+    materialRows: rows, materialTotal, labor, shipping, baseCost, suggest,
+    feePct, profitPct, savedDate: new Date().toISOString().split('T')[0]
+  });
+  saveData();
+  alert('保存しました！');
+}
+
+function removeProduct(id) {
+  if (!confirm('削除しますか？')) return;
+  products = products.filter(p => p.id !== id);
+  saveData();
+  renderProducts();
+}
+
+function addMaster() {
+  const name = document.getElementById('mName').value.trim();
+  const price = parseFloat(document.getElementById('mPrice').value) || 0;
+  const unit = document.getElementById('mUnit').value.trim() || '個';
+  if (!name) { alert('材料名を入力してください'); return; }
+  materials.push({ id: Date.now(), name, price, unit });
+  saveData();
+  document.getElementById('mName').value = '';
+  document.getElementById('mPrice').value = '';
+  renderMaster();
+}
+
+function removeMaster(id) {
+  materials = materials.filter(m => m.id !== id);
+  saveData();
+  renderMaster();
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.hc-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.hc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = '';
+  event.target.classList.add('active');
+  if (tab === 'products') renderProducts();
+  if (tab === 'materials') renderMaster();
+}
+
+function renderProducts() {
+  const el = document.getElementById('productList');
+  if (!products.length) { el.innerHTML = '<div class="hc-empty">保存済み商品がありません</div>'; return; }
+  el.innerHTML = products.map(p => `
+    <div class="hc-product-card">
+      <div class="hc-product-header">
+        <span class="hc-cat-badge">${p.category}</span>
+        <span class="hc-product-name">${p.name}</span>
+        <span class="hc-product-date">${p.savedDate}</span>
+      </div>
+      <div class="hc-product-detail">
+        <span>材料費 ¥${Math.round(p.materialTotal)}</span>
+        <span>工賃 ¥${Math.round(p.labor)}</span>
+        <span>原価 ¥${Math.round(p.baseCost)}</span>
+        <span class="hc-suggest">推奨価格 ¥${p.suggest.toLocaleString()}</span>
+      </div>
+      <button class="hc-del-btn" onclick="removeProduct(${p.id})">削除</button>
+    </div>`).join('');
+}
+
+function renderMaster() {
+  const el = document.getElementById('masterList');
+  if (!materials.length) { el.innerHTML = '<div class="hc-empty" style="margin-top:.8rem">材料マスタを登録してください</div>'; return; }
+  el.innerHTML = '<div class="hc-master-grid">' + materials.map(m => `
+    <div class="hc-master-row">
+      <span class="hc-master-name">${m.name}</span>
+      <span class="hc-master-price">¥${m.price}/${m.unit}</span>
+      <button class="hc-del-btn" onclick="removeMaster(${m.id})">×</button>
+    </div>`).join('') + '</div>';
+}
+
+// Initial setup
+addMaterialRow();
+calcAll();
+</script>
+
+<style>
+.hc-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.hc-header { text-align: center; margin-bottom: 1.5rem; }
+.hc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.hc-sub { color: var(--gray-400); margin-top: .3rem; }
+.hc-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1.5px solid var(--gray-700); }
+.hc-tab { background: none; border: none; color: var(--gray-400); padding: .5rem 1rem; cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
+.hc-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.hc-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: .8rem; }
+.hc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.hc-form-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.hc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.hc-label { font-size: .75rem; color: var(--gray-400); }
+.hc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.hc-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; }
+.hc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.hc-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.hc-btn.blue { background: #1d4ed8; color: #fff; }
+.hc-btn-link { background: none; border: none; color: #60a5fa; cursor: pointer; font-size: .85rem; padding: .3rem 0; }
+.hc-material-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .6rem; }
+.hc-mat-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.mat-sub { font-size: .82rem; color: var(--gray-400); white-space: nowrap; }
+.hc-del-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .9rem; }
+.hc-del-btn:hover { color: #ef4444; }
+.hc-result-card { background: var(--gray-800); border: 2px solid #3b82f650; border-radius: 14px; padding: 1.2rem; }
+.hc-result-title { font-weight: 800; color: var(--gray-100); margin-bottom: .8rem; font-size: 1rem; }
+.hc-result-grid { display: flex; flex-direction: column; gap: .4rem; }
+.hc-result-row { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); }
+.hc-result-row.total { border-top: 2px solid var(--gray-600); border-bottom: 2px solid var(--gray-600); padding: .4rem 0; }
+.hc-result-row.highlight { background: #1d4ed810; border-radius: 8px; padding: .5rem .6rem; border: none; margin-top: .4rem; }
+.hc-result-label { font-size: .85rem; color: var(--gray-400); }
+.hc-result-val { font-weight: 700; color: var(--gray-100); }
+.hc-result-val.big { font-size: 1.4rem; color: #60a5fa; }
+.hc-result-val.green { color: #4ade80; }
+.hc-product-list { display: flex; flex-direction: column; gap: .6rem; }
+.hc-product-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem 1rem; position: relative; }
+.hc-product-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .4rem; flex-wrap: wrap; }
+.hc-cat-badge { background: var(--gray-700); color: var(--gray-300); font-size: .72rem; padding: .15rem .5rem; border-radius: 20px; }
+.hc-product-name { font-weight: 700; color: var(--gray-100); }
+.hc-product-date { font-size: .75rem; color: var(--gray-500); margin-left: auto; }
+.hc-product-detail { display: flex; gap: 1rem; font-size: .82rem; color: var(--gray-400); flex-wrap: wrap; }
+.hc-suggest { color: #60a5fa; font-weight: 700; }
+.hc-master-grid { display: flex; flex-direction: column; gap: .3rem; margin-top: .8rem; }
+.hc-master-row { display: flex; align-items: center; gap: .8rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .4rem .8rem; }
+.hc-master-name { flex: 1; font-size: .85rem; color: var(--gray-200); }
+.hc-master-price { font-size: .82rem; color: #4ade80; font-weight: 700; }
+.hc-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

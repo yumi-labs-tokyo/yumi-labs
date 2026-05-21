@@ -1,0 +1,403 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="万年筆インク「使用日記」" description="万年筆とインクの組み合わせを記録。インク残量・書き心地・乾燥時間などを日記形式で管理。">
+<main class="fp-wrap">
+  <div class="fp-header">
+    <div class="fp-title">🖊️ 万年筆インク使用日記</div>
+    <div class="fp-sub">ペンとインクの組み合わせ・書き心地を記録</div>
+  </div>
+
+  <div class="fp-tabs">
+    <button class="fp-tab active" onclick="showTab('diary')">日記一覧</button>
+    <button class="fp-tab" onclick="showTab('add')">記録追加</button>
+    <button class="fp-tab" onclick="showTab('pens')">ペン管理</button>
+    <button class="fp-tab" onclick="showTab('inks')">インク管理</button>
+  </div>
+
+  <div id="tab-diary" class="fp-tab-content">
+    <div class="fp-filter-row">
+      <input type="text" id="diarySearch" class="fp-input" placeholder="ペン・インク名で検索..." oninput="renderDiary()" />
+      <select id="diaryFilter" class="fp-select" onchange="renderDiary()">
+        <option value="all">すべて</option>
+        <option value="5">★5のみ</option>
+        <option value="4">★4以上</option>
+      </select>
+    </div>
+    <div id="diaryList" class="fp-diary-list"></div>
+  </div>
+
+  <div id="tab-add" class="fp-tab-content" style="display:none">
+    <div class="fp-card">
+      <div class="fp-card-title">使用記録を追加</div>
+      <div class="fp-form-grid">
+        <div class="fp-fg">
+          <label class="fp-label">使用した万年筆</label>
+          <select id="entryPen" class="fp-select">
+            <option value="">-- ペンを選択 --</option>
+          </select>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">使用したインク</label>
+          <select id="entryInk" class="fp-select">
+            <option value="">-- インクを選択 --</option>
+          </select>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">使用した紙・手帳</label>
+          <input type="text" id="entryPaper" class="fp-input" placeholder="例：ほぼ日手帳、ロルバーン" />
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">乾燥時間（秒）</label>
+          <input type="number" id="entryDryTime" class="fp-input" placeholder="5" min="0" max="999" style="max-width:90px" />
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">インク残量</label>
+          <select id="entryLevel" class="fp-select">
+            <option value="full">満タン</option>
+            <option value="75">75%</option>
+            <option value="50">50%</option>
+            <option value="25">25%</option>
+            <option value="empty">補充必要</option>
+          </select>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">書き心地（5段階）</label>
+          <select id="entryRating" class="fp-select">
+            <option value="5">★★★★★ 最高</option>
+            <option value="4">★★★★☆ 良い</option>
+            <option value="3">★★★☆☆ 普通</option>
+            <option value="2">★★☆☆☆ やや難</option>
+            <option value="1">★☆☆☆☆ 不満</option>
+          </select>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">フロー</label>
+          <select id="entryFlow" class="fp-select">
+            <option value="wet">ウェット（流れが良い）</option>
+            <option value="normal">普通</option>
+            <option value="dry">ドライ（硬め）</option>
+          </select>
+        </div>
+        <div class="fp-fg" style="grid-column:1/-1">
+          <label class="fp-label">コメント・メモ</label>
+          <textarea id="entryNote" class="fp-textarea" placeholder="色の印象、相性メモ、気づいたことなど..." rows="3"></textarea>
+        </div>
+      </div>
+      <button class="fp-btn blue" onclick="addEntry()">＋ 記録を追加</button>
+    </div>
+  </div>
+
+  <div id="tab-pens" class="fp-tab-content" style="display:none">
+    <div class="fp-card">
+      <div class="fp-card-title">万年筆を登録</div>
+      <div class="fp-form-row">
+        <div class="fp-fg">
+          <label class="fp-label">ブランド</label>
+          <input type="text" id="penBrand" class="fp-input" placeholder="例：パイロット" list="penBrandList" />
+          <datalist id="penBrandList">
+            <option value="パイロット"><option value="セーラー万年筆"><option value="プラチナ万年筆">
+            <option value="LAMY"><option value="Pelikan"><option value="Montblanc">
+            <option value="Waterman"><option value="TWSBI"><option value="Kaweco">
+          </datalist>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">モデル名</label>
+          <input type="text" id="penModel" class="fp-input" placeholder="例：カスタム742" />
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">ニブサイズ</label>
+          <select id="penNib" class="fp-select">
+            <option value="EF">EF（極細）</option>
+            <option value="F">F（細字）</option>
+            <option value="M">M（中字）</option>
+            <option value="B">B（太字）</option>
+            <option value="BB">BB（極太）</option>
+            <option value="italic">イタリック</option>
+          </select>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">ニブ素材</label>
+          <select id="penNibMat" class="fp-select">
+            <option value="gold14">14金</option>
+            <option value="gold18">18金</option>
+            <option value="steel">ステンレス</option>
+          </select>
+        </div>
+        <button class="fp-btn blue" onclick="addPen()">＋ 登録</button>
+      </div>
+    </div>
+    <div id="penListEl" class="fp-item-list"></div>
+  </div>
+
+  <div id="tab-inks" class="fp-tab-content" style="display:none">
+    <div class="fp-card">
+      <div class="fp-card-title">インクを登録</div>
+      <div class="fp-form-row">
+        <div class="fp-fg">
+          <label class="fp-label">ブランド</label>
+          <input type="text" id="inkBrand" class="fp-input" placeholder="例：iroshizuku" list="inkBrandList" />
+          <datalist id="inkBrandList">
+            <option value="パイロット iroshizuku"><option value="セーラー ink studio">
+            <option value="プラチナ"><option value="LAMY"><option value="Diamine">
+            <option value="Pelikan"><option value="J.Herbin"><option value="万年橋"><option value="TAG STATIONERY">
+          </datalist>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">インク名</label>
+          <input type="text" id="inkName" class="fp-input" placeholder="例：ツユ草" />
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">カラー（HEX）</label>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <input type="color" id="inkColorPicker" value="#4488bb" style="height:36px;width:50px;border:none;background:none;cursor:pointer" oninput="document.getElementById('inkColorHex').value=this.value" />
+            <input type="text" id="inkColorHex" class="fp-input" value="#4488bb" placeholder="#336699" style="max-width:90px" oninput="document.getElementById('inkColorPicker').value=this.value" />
+          </div>
+        </div>
+        <div class="fp-fg">
+          <label class="fp-label">タイプ</label>
+          <select id="inkType" class="fp-select">
+            <option value="染料">染料系</option>
+            <option value="顔料">顔料系</option>
+            <option value="古典">古典インク（鉄ガレ）</option>
+            <option value="蛍光">蛍光</option>
+            <option value="シマー">シマー（光沢粒子入）</option>
+          </select>
+        </div>
+        <button class="fp-btn blue" onclick="addInk()">＋ 登録</button>
+      </div>
+    </div>
+    <div id="inkListEl" class="fp-item-list"></div>
+  </div>
+</main>
+
+<script is:inline>
+let pens = [], inks = [], entries = [];
+try { pens = JSON.parse(localStorage.getItem('fp_pens') || '[]'); } catch(e) {}
+try { inks = JSON.parse(localStorage.getItem('fp_inks') || '[]'); } catch(e) {}
+try { entries = JSON.parse(localStorage.getItem('fp_entries') || '[]'); } catch(e) {}
+
+function saveData() {
+  try {
+    localStorage.setItem('fp_pens', JSON.stringify(pens));
+    localStorage.setItem('fp_inks', JSON.stringify(inks));
+    localStorage.setItem('fp_entries', JSON.stringify(entries));
+  } catch(e) {}
+}
+
+const FLOW_LABELS = { wet:'ウェット', normal:'普通', dry:'ドライ' };
+const LEVEL_LABELS = { full:'満タン', '75':'75%', '50':'50%', '25':'25%', empty:'要補充' };
+const NIB_MAT_LABELS = { gold14:'14金', gold18:'18金', steel:'ステンレス' };
+
+function updateSelects() {
+  const penSel = document.getElementById('entryPen');
+  const inkSel = document.getElementById('entryInk');
+  if (penSel) {
+    const cur = penSel.value;
+    penSel.innerHTML = '<option value="">-- ペンを選択 --</option>' + pens.map(p => `<option value="${p.id}">${p.brand} ${p.model} (${p.nib})</option>`).join('');
+    penSel.value = cur;
+  }
+  if (inkSel) {
+    const cur = inkSel.value;
+    inkSel.innerHTML = '<option value="">-- インクを選択 --</option>' + inks.map(i => `<option value="${i.id}">${i.brand} ${i.name}</option>`).join('');
+    inkSel.value = cur;
+  }
+}
+
+function addPen() {
+  const brand = document.getElementById('penBrand').value.trim();
+  const model = document.getElementById('penModel').value.trim();
+  if (!brand || !model) { alert('ブランドとモデル名を入力してください'); return; }
+  pens.push({ id: Date.now(), brand, model, nib: document.getElementById('penNib').value, nibMat: document.getElementById('penNibMat').value });
+  saveData();
+  document.getElementById('penBrand').value = '';
+  document.getElementById('penModel').value = '';
+  renderPens();
+  updateSelects();
+}
+
+function removePen(id) {
+  if (!confirm('削除しますか？')) return;
+  pens = pens.filter(p => p.id !== id);
+  saveData(); renderPens(); updateSelects();
+}
+
+function addInk() {
+  const brand = document.getElementById('inkBrand').value.trim();
+  const name = document.getElementById('inkName').value.trim();
+  if (!brand || !name) { alert('ブランドとインク名を入力してください'); return; }
+  inks.push({ id: Date.now(), brand, name, color: document.getElementById('inkColorHex').value, type: document.getElementById('inkType').value });
+  saveData();
+  document.getElementById('inkBrand').value = '';
+  document.getElementById('inkName').value = '';
+  renderInks();
+  updateSelects();
+}
+
+function removeInk(id) {
+  if (!confirm('削除しますか？')) return;
+  inks = inks.filter(i => i.id !== id);
+  saveData(); renderInks(); updateSelects();
+}
+
+function addEntry() {
+  const penId = parseInt(document.getElementById('entryPen').value);
+  const inkId = parseInt(document.getElementById('entryInk').value);
+  if (!penId || !inkId) { alert('ペンとインクを選択してください'); return; }
+  const pen = pens.find(p => p.id === penId);
+  const ink = inks.find(i => i.id === inkId);
+  entries.unshift({
+    id: Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    penId, inkId,
+    penLabel: pen ? pen.brand + ' ' + pen.model + ' (' + pen.nib + ')' : '',
+    inkLabel: ink ? ink.brand + ' ' + ink.name : '',
+    inkColor: ink ? ink.color : '#999',
+    paper: document.getElementById('entryPaper').value.trim(),
+    dryTime: parseInt(document.getElementById('entryDryTime').value) || null,
+    level: document.getElementById('entryLevel').value,
+    rating: parseInt(document.getElementById('entryRating').value),
+    flow: document.getElementById('entryFlow').value,
+    note: document.getElementById('entryNote').value.trim()
+  });
+  saveData();
+  document.getElementById('entryNote').value = '';
+  document.getElementById('entryPaper').value = '';
+  showTabDirect('diary');
+  renderDiary();
+}
+
+function removeEntry(id) {
+  if (!confirm('削除しますか？')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveData(); renderDiary();
+}
+
+function showTab(tab) {
+  showTabDirect(tab);
+  event.target.classList.add('active');
+}
+
+function showTabDirect(tab) {
+  document.querySelectorAll('.fp-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.fp-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = '';
+  if (tab === 'pens') { renderPens(); }
+  if (tab === 'inks') { renderInks(); }
+  if (tab === 'add') { updateSelects(); }
+  if (tab === 'diary') { renderDiary(); }
+  const tabs = { diary:0, add:1, pens:2, inks:3 };
+  const allTabs = document.querySelectorAll('.fp-tab');
+  if (allTabs[tabs[tab]]) allTabs[tabs[tab]].classList.add('active');
+}
+
+function renderDiary() {
+  const query = (document.getElementById('diarySearch').value || '').toLowerCase();
+  const minRating = parseInt(document.getElementById('diaryFilter').value) || 0;
+  const el = document.getElementById('diaryList');
+
+  let filtered = entries.filter(e => {
+    const matchText = !query || e.penLabel.toLowerCase().includes(query) || e.inkLabel.toLowerCase().includes(query);
+    const matchRating = !minRating || e.rating >= minRating;
+    return matchText && matchRating;
+  });
+
+  if (!filtered.length) { el.innerHTML = '<div class="fp-empty">使用記録を追加してください</div>'; return; }
+
+  el.innerHTML = filtered.map(e => {
+    const stars = '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating);
+    return `<div class="fp-diary-card">
+      <div class="fp-diary-top">
+        <div class="fp-ink-dot" style="background:${e.inkColor}"></div>
+        <div class="fp-diary-info">
+          <div class="fp-diary-pen">${e.penLabel}</div>
+          <div class="fp-diary-ink">${e.inkLabel}</div>
+        </div>
+        <div class="fp-diary-right">
+          <div class="fp-stars">${stars}</div>
+          <div class="fp-diary-date">${e.date}</div>
+        </div>
+      </div>
+      <div class="fp-diary-detail">
+        ${e.paper ? '<span class="fp-chip">📓 ' + e.paper + '</span>' : ''}
+        <span class="fp-chip">フロー: ${FLOW_LABELS[e.flow]}</span>
+        ${e.dryTime ? '<span class="fp-chip">乾燥: ' + e.dryTime + '秒</span>' : ''}
+        <span class="fp-chip">残量: ${LEVEL_LABELS[e.level] || e.level}</span>
+      </div>
+      ${e.note ? '<div class="fp-diary-note">' + e.note + '</div>' : ''}
+      <button class="fp-del-btn" onclick="removeEntry(${e.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function renderPens() {
+  const el = document.getElementById('penListEl');
+  if (!pens.length) { el.innerHTML = '<div class="fp-empty">万年筆を登録してください</div>'; return; }
+  el.innerHTML = pens.map(p => `
+    <div class="fp-item-row">
+      <span class="fp-item-main">${p.brand} ${p.model}</span>
+      <span class="fp-chip">${p.nib}</span>
+      <span class="fp-chip">${NIB_MAT_LABELS[p.nibMat] || p.nibMat}</span>
+      <button class="fp-del-btn" onclick="removePen(${p.id})">削除</button>
+    </div>`).join('');
+}
+
+function renderInks() {
+  const el = document.getElementById('inkListEl');
+  if (!inks.length) { el.innerHTML = '<div class="fp-empty">インクを登録してください</div>'; return; }
+  el.innerHTML = inks.map(i => `
+    <div class="fp-item-row">
+      <div class="fp-ink-dot" style="background:${i.color};flex-shrink:0"></div>
+      <span class="fp-item-main">${i.brand} ${i.name}</span>
+      <span class="fp-chip">${i.type}</span>
+      <span class="fp-ink-hex" style="color:${i.color}">${i.color}</span>
+      <button class="fp-del-btn" onclick="removeInk(${i.id})">削除</button>
+    </div>`).join('');
+}
+
+renderDiary();
+</script>
+
+<style>
+.fp-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.fp-header { text-align: center; margin-bottom: 1.5rem; }
+.fp-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.fp-sub { color: var(--gray-400); margin-top: .3rem; }
+.fp-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1.5px solid var(--gray-700); flex-wrap: wrap; }
+.fp-tab { background: none; border: none; color: var(--gray-400); padding: .5rem 1rem; cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
+.fp-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.fp-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: .8rem; }
+.fp-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.fp-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+.fp-form-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.fp-fg { display: flex; flex-direction: column; gap: .3rem; }
+.fp-label { font-size: .75rem; color: var(--gray-400); }
+.fp-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.fp-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.fp-textarea { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; resize: vertical; }
+.fp-btn { padding: .5rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.fp-btn.blue { background: #1d4ed8; color: #fff; }
+.fp-filter-row { display: flex; gap: .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.fp-filter-row .fp-input { flex: 1; min-width: 200px; }
+.fp-diary-list { display: flex; flex-direction: column; gap: .6rem; }
+.fp-diary-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem 1rem; position: relative; }
+.fp-diary-top { display: flex; align-items: center; gap: .8rem; margin-bottom: .4rem; }
+.fp-ink-dot { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,.1); }
+.fp-diary-info { flex: 1; }
+.fp-diary-pen { font-weight: 700; color: var(--gray-100); font-size: .9rem; }
+.fp-diary-ink { font-size: .82rem; color: var(--gray-400); }
+.fp-diary-right { text-align: right; }
+.fp-stars { color: #fbbf24; font-size: .9rem; }
+.fp-diary-date { font-size: .75rem; color: var(--gray-500); }
+.fp-diary-detail { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.fp-chip { font-size: .75rem; background: var(--gray-900); color: var(--gray-400); padding: .2rem .5rem; border-radius: 20px; }
+.fp-diary-note { font-size: .82rem; color: var(--gray-400); line-height: 1.5; border-top: 1px solid var(--gray-700); padding-top: .4rem; }
+.fp-del-btn { position: absolute; top: .5rem; right: .6rem; background: none; border: none; color: var(--gray-600); cursor: pointer; font-size: .78rem; }
+.fp-del-btn:hover { color: #ef4444; }
+.fp-item-list { display: flex; flex-direction: column; gap: .4rem; margin-top: .8rem; }
+.fp-item-row { display: flex; align-items: center; gap: .6rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .5rem .8rem; flex-wrap: wrap; }
+.fp-item-main { flex: 1; font-weight: 700; color: var(--gray-100); font-size: .85rem; }
+.fp-ink-hex { font-size: .75rem; font-family: monospace; }
+.fp-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

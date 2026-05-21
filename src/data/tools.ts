@@ -610,32 +610,32 @@ export const tools: Tool[] = [
 	{
 		id: 96, slug: 'railway-coverage',
 		name: '鉄道「乗りつぶし率」可視化マップ',
-		description: '路線リストにチェックを入れると都道府県別の乗車率%を表示。',
-		emoji: '🚃', category: 'hobby', badge: '人気', status: 'coming-soon',
+		description: '路線リストにチェックを入れると会社別・種別の乗車率%を表示。',
+		emoji: '🚃', category: 'hobby', badge: '人気', status: 'available',
 	},
 	{
 		id: 97, slug: 'stamp-collection',
 		name: '切手コレクション管理',
-		description: 'LocalStorage保存、テーマ別アルバム化。',
-		emoji: '📮', category: 'hobby', status: 'coming-soon',
+		description: '切手の種類・発行年・状態を記録して国別コレクション統計を表示。',
+		emoji: '📮', category: 'hobby', badge: 'New', status: 'available',
 	},
 	{
 		id: 98, slug: 'vinyl-cleaning',
 		name: 'アナログレコード「クリーニング履歴」管理',
-		description: 'タイトル・状態・最終クリーニング日を記録、湿度警告機能付き。',
-		emoji: '🎵', category: 'hobby', status: 'coming-soon',
+		description: 'タイトル・状態・クリーニング日を記録、要メンテ警告機能付き。',
+		emoji: '🎵', category: 'hobby', badge: 'New', status: 'available',
 	},
 	{
 		id: 99, slug: 'handmade-cost',
 		name: 'ハンドメイドアクセサリー「原価計算」',
-		description: 'パーツ価格・所要時間・希望時給を入れると販売価格を提案。',
-		emoji: '💎', category: 'hobby', badge: 'New', status: 'coming-soon',
+		description: '材料費・作業時間・手数料率から適正販売価格を自動算出。',
+		emoji: '💎', category: 'hobby', badge: 'New', status: 'available',
 	},
 	{
 		id: 100, slug: 'fountain-pen-diary',
 		name: '万年筆インク「使用日記」',
-		description: 'インク名・使った日・気分を記録、色見本SVG付きで蒐集者向け。',
-		emoji: '🖊️', category: 'hobby', badge: 'New', status: 'coming-soon',
+		description: 'ペンとインクの組み合わせ・書き心地・乾燥時間を日記形式で記録。',
+		emoji: '🖊️', category: 'hobby', badge: 'New', status: 'available',
 	},
 ];
 

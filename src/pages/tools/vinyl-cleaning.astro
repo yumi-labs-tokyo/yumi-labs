@@ -1,0 +1,342 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="アナログレコード「クリーニング履歴」管理" description="レコードのクリーニング日時・方法・音質変化を記録して最適なメンテナンスサイクルを把握。">
+<main class="vc-wrap">
+  <div class="vc-header">
+    <div class="vc-title">🎵 レコード クリーニング管理</div>
+    <div class="vc-sub">アナログレコードのメンテナンス記録</div>
+  </div>
+
+  <div class="vc-tabs">
+    <button class="vc-tab active" onclick="showTab('records')">レコード一覧</button>
+    <button class="vc-tab" onclick="showTab('add')">レコード追加</button>
+    <button class="vc-tab" onclick="showTab('tips')">クリーニング方法</button>
+  </div>
+
+  <div id="tab-records" class="vc-tab-content">
+    <div class="vc-filter-row">
+      <input type="text" id="searchBox" class="vc-input" placeholder="アーティスト・タイトルで検索..." oninput="renderRecords()" />
+      <select id="filterNeed" class="vc-select" onchange="renderRecords()">
+        <option value="all">すべて</option>
+        <option value="needed">要クリーニング</option>
+        <option value="ok">良好</option>
+      </select>
+    </div>
+    <div id="recordList" class="vc-record-list"></div>
+  </div>
+
+  <div id="tab-add" class="vc-tab-content" style="display:none">
+    <div class="vc-card">
+      <div class="vc-card-title">レコードを登録</div>
+      <div class="vc-form-grid">
+        <div class="vc-fg">
+          <label class="vc-label">アーティスト名</label>
+          <input type="text" id="rArtist" class="vc-input" placeholder="例：Miles Davis" />
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">アルバム名</label>
+          <input type="text" id="rTitle" class="vc-input" placeholder="例：Kind of Blue" />
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">レーベル</label>
+          <input type="text" id="rLabel" class="vc-input" placeholder="例：Columbia" />
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">発売年</label>
+          <input type="number" id="rYear" class="vc-input" placeholder="1959" min="1900" max="2030" style="max-width:90px" />
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">ジャンル</label>
+          <select id="rGenre" class="vc-select">
+            <option value="jazz">Jazz</option>
+            <option value="rock">Rock</option>
+            <option value="pop">Pop</option>
+            <option value="classical">Classical</option>
+            <option value="blues">Blues</option>
+            <option value="soul">Soul / R&B</option>
+            <option value="electronic">Electronic</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">コンディション</label>
+          <select id="rCondition" class="vc-select">
+            <option value="m">M（ミント）</option>
+            <option value="nm">NM（ニアミント）</option>
+            <option value="vgp">VG+</option>
+            <option value="vg">VG</option>
+            <option value="g">G（グッド）</option>
+          </select>
+        </div>
+      </div>
+      <button class="vc-btn blue" onclick="addRecord()">＋ レコード登録</button>
+    </div>
+  </div>
+
+  <div id="tab-tips" class="vc-tab-content" style="display:none">
+    <div class="vc-tips-grid">
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">🖌️</div>
+        <div class="vc-tip-name">カーボンファイバーブラシ</div>
+        <div class="vc-tip-desc">再生前の基本ケア。静電気除去と表面ホコリの除去に効果的。</div>
+        <div class="vc-tip-freq">頻度: 毎回再生前</div>
+      </div>
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">💧</div>
+        <div class="vc-tip-name">ウェットクリーニング</div>
+        <div class="vc-tip-desc">専用クリーニング液をレコードに塗布してウォッシャーや専用ブラシで拭き取る。深い溝の汚れに効果的。</div>
+        <div class="vc-tip-freq">頻度: 月1回程度</div>
+      </div>
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">🌀</div>
+        <div class="vc-tip-name">真空クリーナー</div>
+        <div class="vc-tip-desc">クリーニング液を使用後に真空吸引で完全除去。プロ仕様の最高品質クリーニング。</div>
+        <div class="vc-tip-freq">頻度: 3ヶ月に1回</div>
+      </div>
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">🔊</div>
+        <div class="vc-tip-name">超音波クリーニング</div>
+        <div class="vc-tip-desc">超音波振動で溝の奥まで洗浄。最も徹底的なクリーニング方法で状態改善効果が高い。</div>
+        <div class="vc-tip-freq">頻度: 半年に1回</div>
+      </div>
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">📦</div>
+        <div class="vc-tip-name">保管のコツ</div>
+        <div class="vc-tip-desc">インナースリーブを内袋に、レコードは縦置きで保管。直射日光・高温多湿を避けること。</div>
+        <div class="vc-tip-freq">常時実施</div>
+      </div>
+      <div class="vc-tip-card">
+        <div class="vc-tip-icon">💡</div>
+        <div class="vc-tip-name">スタイラスクリーニング</div>
+        <div class="vc-tip-desc">針先の汚れはレコードを傷める原因。専用ブラシで前から後ろへ優しくブラッシング。</div>
+        <div class="vc-tip-freq">頻度: 毎回再生前</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- クリーニング記録モーダル -->
+  <div id="cleanModal" class="vc-modal" style="display:none">
+    <div class="vc-modal-inner">
+      <div class="vc-modal-title">クリーニング記録を追加</div>
+      <input type="hidden" id="cleanRecordId" />
+      <div class="vc-modal-form">
+        <div class="vc-fg">
+          <label class="vc-label">クリーニング方法</label>
+          <select id="cleanMethod" class="vc-select">
+            <option value="carbon">カーボンファイバーブラシ</option>
+            <option value="wet">ウェットクリーニング</option>
+            <option value="vacuum">真空クリーナー</option>
+            <option value="ultrasonic">超音波クリーニング</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">音質変化</label>
+          <select id="cleanResult" class="vc-select">
+            <option value="great">大きく改善</option>
+            <option value="good">改善あり</option>
+            <option value="same">変化なし</option>
+            <option value="need">まだノイズあり</option>
+          </select>
+        </div>
+        <div class="vc-fg">
+          <label class="vc-label">メモ</label>
+          <input type="text" id="cleanNote" class="vc-input" placeholder="気になった点など" />
+        </div>
+      </div>
+      <div class="vc-modal-btns">
+        <button class="vc-btn gray" onclick="closeModal()">キャンセル</button>
+        <button class="vc-btn blue" onclick="saveClean()">記録する</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+let records = [];
+try { records = JSON.parse(localStorage.getItem('vc_records') || '[]'); } catch(e) {}
+
+function save() { try { localStorage.setItem('vc_records', JSON.stringify(records)); } catch(e) {} }
+
+const GENRE_COLORS = { jazz:'#fbbf24', rock:'#ef4444', pop:'#f472b6', classical:'#60a5fa', blues:'#a78bfa', soul:'#4ade80', electronic:'#f97316', other:'#94a3b8' };
+const METHOD_LABELS = { carbon:'ブラシ', wet:'ウェット', vacuum:'真空', ultrasonic:'超音波', other:'その他' };
+const RESULT_LABELS = { great:'大きく改善', good:'改善あり', same:'変化なし', need:'要追加' };
+const COND_LABELS = { m:'M', nm:'NM', vgp:'VG+', vg:'VG', g:'G' };
+
+function addRecord() {
+  const artist = document.getElementById('rArtist').value.trim();
+  const title = document.getElementById('rTitle').value.trim();
+  if (!artist || !title) { alert('アーティスト名とアルバム名を入力してください'); return; }
+  records.unshift({
+    id: Date.now(),
+    artist, title,
+    label: document.getElementById('rLabel').value.trim(),
+    year: parseInt(document.getElementById('rYear').value) || null,
+    genre: document.getElementById('rGenre').value,
+    condition: document.getElementById('rCondition').value,
+    cleanings: [],
+    addedDate: new Date().toISOString().split('T')[0]
+  });
+  save();
+  ['rArtist','rTitle','rLabel'].forEach(id => document.getElementById(id).value = '');
+  showTab('records');
+  renderRecords();
+}
+
+function removeRecord(id) {
+  if (!confirm('このレコードを削除しますか？')) return;
+  records = records.filter(r => r.id !== id);
+  save();
+  renderRecords();
+}
+
+function openCleanModal(id) {
+  document.getElementById('cleanRecordId').value = id;
+  document.getElementById('cleanNote').value = '';
+  document.getElementById('cleanModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('cleanModal').style.display = 'none';
+}
+
+function saveClean() {
+  const id = parseInt(document.getElementById('cleanRecordId').value);
+  const record = records.find(r => r.id === id);
+  if (!record) return;
+  record.cleanings.push({
+    id: Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    method: document.getElementById('cleanMethod').value,
+    result: document.getElementById('cleanResult').value,
+    note: document.getElementById('cleanNote').value.trim()
+  });
+  save();
+  closeModal();
+  renderRecords();
+}
+
+function needsCleaning(record) {
+  if (!record.cleanings.length) return true;
+  const last = record.cleanings[record.cleanings.length - 1];
+  const daysSince = (Date.now() - new Date(last.date)) / 86400000;
+  return daysSince > 90 || last.result === 'need';
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.vc-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.vc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = '';
+  if (event && event.target) event.target.classList.add('active');
+  else document.querySelectorAll('.vc-tab')[tab === 'records' ? 0 : tab === 'add' ? 1 : 2].classList.add('active');
+  if (tab === 'records') renderRecords();
+}
+
+function renderRecords() {
+  const query = (document.getElementById('searchBox').value || '').toLowerCase();
+  const filter = document.getElementById('filterNeed').value;
+  const el = document.getElementById('recordList');
+
+  let filtered = records.filter(r => {
+    const matchText = !query || r.artist.toLowerCase().includes(query) || r.title.toLowerCase().includes(query);
+    const nc = needsCleaning(r);
+    const matchNeed = filter === 'all' || (filter === 'needed' && nc) || (filter === 'ok' && !nc);
+    return matchText && matchNeed;
+  });
+
+  if (!filtered.length) { el.innerHTML = '<div class="vc-empty">レコードを登録してください</div>'; return; }
+
+  el.innerHTML = filtered.map(r => {
+    const gc = GENRE_COLORS[r.genre] || '#94a3b8';
+    const nc = needsCleaning(r);
+    const lastClean = r.cleanings.length ? r.cleanings[r.cleanings.length - 1] : null;
+    const daysSince = lastClean ? Math.floor((Date.now() - new Date(lastClean.date)) / 86400000) : null;
+
+    return `<div class="vc-record-card ${nc ? 'needs-clean' : ''}">
+      <div class="vc-record-header">
+        <div class="vc-record-badges">
+          <span class="vc-genre-badge" style="background:${gc}20;color:${gc}">${r.genre.toUpperCase()}</span>
+          <span class="vc-cond-badge">${COND_LABELS[r.condition] || r.condition}</span>
+          ${nc ? '<span class="vc-warn-badge">要クリーニング</span>' : '<span class="vc-ok-badge">良好</span>'}
+        </div>
+        <div class="vc-record-title">${r.artist} — ${r.title}</div>
+        <div class="vc-record-meta">${r.label || ''}${r.year ? ' (' + r.year + ')' : ''}</div>
+        <div class="vc-last-clean">${lastClean ? '最終: ' + lastClean.date + ' (' + METHOD_LABELS[lastClean.method] + ') — ' + daysSince + '日前' : '未クリーニング'}</div>
+      </div>
+      ${r.cleanings.length ? `<div class="vc-clean-history">
+        ${r.cleanings.slice(-3).reverse().map(c => `
+          <div class="vc-clean-row">
+            <span class="vc-clean-date">${c.date}</span>
+            <span class="vc-clean-method">${METHOD_LABELS[c.method]}</span>
+            <span class="vc-clean-result">${RESULT_LABELS[c.result]}</span>
+            ${c.note ? '<span class="vc-clean-note">' + c.note + '</span>' : ''}
+          </div>`).join('')}
+      </div>` : ''}
+      <div class="vc-record-btns">
+        <button class="vc-btn sm green" onclick="openCleanModal(${r.id})">＋ クリーニング記録</button>
+        <button class="vc-del-btn" onclick="removeRecord(${r.id})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+renderRecords();
+</script>
+
+<style>
+.vc-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.vc-header { text-align: center; margin-bottom: 1.5rem; }
+.vc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.vc-sub { color: var(--gray-400); margin-top: .3rem; }
+.vc-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1.5px solid var(--gray-700); }
+.vc-tab { background: none; border: none; color: var(--gray-400); padding: .5rem 1rem; cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
+.vc-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.vc-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.vc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.vc-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+.vc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.vc-label { font-size: .75rem; color: var(--gray-400); }
+.vc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.vc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.vc-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.vc-btn.blue { background: #1d4ed8; color: #fff; }
+.vc-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.vc-btn.green { background: #16a34a; color: #fff; }
+.vc-btn.sm { padding: .35rem .7rem; font-size: .82rem; }
+.vc-filter-row { display: flex; gap: .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.vc-filter-row .vc-input { flex: 1; min-width: 200px; }
+.vc-record-list { display: flex; flex-direction: column; gap: .8rem; }
+.vc-record-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; }
+.vc-record-card.needs-clean { border-color: #fbbf2450; }
+.vc-record-badges { display: flex; gap: .4rem; margin-bottom: .4rem; flex-wrap: wrap; }
+.vc-genre-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 20px; }
+.vc-cond-badge { font-size: .72rem; font-weight: 800; padding: .15rem .5rem; border-radius: 20px; background: var(--gray-700); color: var(--gray-200); }
+.vc-warn-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 20px; background: #fbbf2420; color: #fbbf24; }
+.vc-ok-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 20px; background: #4ade8020; color: #4ade80; }
+.vc-record-title { font-size: 1rem; font-weight: 800; color: var(--gray-100); margin: .2rem 0; }
+.vc-record-meta { font-size: .78rem; color: var(--gray-400); }
+.vc-last-clean { font-size: .78rem; color: var(--gray-400); margin-top: .3rem; }
+.vc-clean-history { margin: .6rem 0; border-top: 1px solid var(--gray-700); padding-top: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+.vc-clean-row { display: flex; gap: .8rem; align-items: center; font-size: .8rem; flex-wrap: wrap; }
+.vc-clean-date { color: var(--gray-400); min-width: 85px; }
+.vc-clean-method { font-weight: 700; color: #60a5fa; }
+.vc-clean-result { color: #4ade80; }
+.vc-clean-note { color: var(--gray-500); }
+.vc-record-btns { display: flex; align-items: center; gap: .6rem; margin-top: .6rem; border-top: 1px solid var(--gray-700); padding-top: .6rem; }
+.vc-del-btn { margin-left: auto; background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .8rem; }
+.vc-del-btn:hover { color: #ef4444; }
+.vc-tips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .8rem; }
+.vc-tip-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; }
+.vc-tip-icon { font-size: 1.5rem; margin-bottom: .4rem; }
+.vc-tip-name { font-weight: 700; color: var(--gray-100); margin-bottom: .4rem; }
+.vc-tip-desc { font-size: .82rem; color: var(--gray-400); line-height: 1.5; margin-bottom: .4rem; }
+.vc-tip-freq { font-size: .75rem; color: #60a5fa; font-weight: 700; }
+.vc-modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.vc-modal-inner { background: var(--gray-800); border: 1.5px solid var(--gray-600); border-radius: 14px; padding: 1.5rem; width: 90%; max-width: 420px; }
+.vc-modal-title { font-weight: 700; color: var(--gray-100); margin-bottom: 1rem; }
+.vc-modal-form { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
+.vc-modal-btns { display: flex; gap: .6rem; justify-content: flex-end; }
+.vc-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>
