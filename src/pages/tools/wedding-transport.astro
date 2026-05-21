@@ -206,7 +206,7 @@ calc();
 </script>
 
 <style>
-.wt-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.wt-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; }
 .wt-header { text-align: center; margin-bottom: 2rem; }
 .wt-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
 .wt-sub { color: var(--gray-400); margin-top: .3rem; }
@@ -221,10 +221,10 @@ calc();
 .wt-radio { display: flex; align-items: center; gap: .5rem; color: var(--gray-200); font-size: .9rem; cursor: pointer; }
 .wt-add-btn { width: 100%; margin-top: 1rem; padding: .6rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
 .wt-preset-list { display: flex; flex-direction: column; gap: .4rem; }
-.preset-row { display: flex; justify-content: space-between; padding: .45rem .7rem; background: var(--gray-900); border-radius: 8px; font-size: .85rem; color: var(--gray-300); cursor: pointer; }
+.preset-row { display: flex; justify-content: space-between; align-items: center; gap: .4rem; padding: .45rem .7rem; background: var(--gray-900); border-radius: 8px; font-size: .85rem; color: var(--gray-300); cursor: pointer; flex-wrap: wrap; }
 .preset-row:hover { background: var(--gray-700); }
 .preset-val { color: #818cf8; font-weight: 600; }
-.res-amount-range { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: 1.5rem; font-weight: 800; }
+.res-amount-range { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: clamp(1.1rem, 5vw, 1.5rem); font-weight: 800; flex-wrap: wrap; }
 .ra-min, .ra-max { color: #fbbf24; }
 .ra-sep { color: var(--gray-400); font-size: 1rem; }
 .res-recommended { font-size: 1rem; color: var(--gray-300); margin-bottom: .4rem; }

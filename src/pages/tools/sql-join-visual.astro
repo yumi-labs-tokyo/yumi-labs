@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="SQL JOIN種類ビジュアル学習" description="INNER/LEFT/RIGHT/FULLをベン図でアニメ表示。サンプルデータで結果をリアルタイムプレビュー。">
 <style>
-  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; overflow-x: hidden; }
   .hero { text-align: center; margin-bottom: 28px; }
   .hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-0); margin-bottom: 6px; }
   .hero-sub { color: #94a3b8; font-size: 0.92rem; }
@@ -24,7 +24,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .venn-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
   .venn-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-align: center; }
   .venn-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; }
-  #venn-svg { flex-shrink: 0; }
+  #venn-svg { flex-shrink: 0; max-width: 100%; }
   .venn-legend { flex: 1; min-width: 200px; }
   .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #94a3b8; }
   .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
@@ -32,6 +32,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     background: #0f172a; border-radius: 10px; padding: 14px 16px;
     font-family: 'Courier New', monospace; font-size: 0.9rem; color: var(--gray-0);
     margin-top: 14px; line-height: 1.8; position: relative;
+    overflow-x: auto;
   }
   .sql-kw { color: #38bdf8; font-weight: 700; }
   .sql-tbl { color: #a78bfa; }

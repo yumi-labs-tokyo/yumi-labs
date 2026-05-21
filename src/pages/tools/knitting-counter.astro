@@ -235,7 +235,7 @@ renderSaved(); renderProgress(); renderLog(); renderPatterns();
 </script>
 
 <style>
-.kc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.kc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; overflow-x: hidden; }
 .kc-header { text-align: center; margin-bottom: 2rem; }
 .kc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
 .kc-sub { color: var(--gray-400); margin-top: .3rem; }
@@ -267,7 +267,7 @@ renderSaved(); renderProgress(); renderLog(); renderPatterns();
 .kc-cbtn.plus { background: #7c3aed; color: #fff; }
 .kc-cbtn.minus { background: var(--gray-700); color: var(--gray-200); }
 .kc-divider { height: 1px; background: var(--gray-700); margin: .5rem 0; }
-.kc-counter-actions { display: flex; gap: .5rem; margin-top: .8rem; }
+.kc-counter-actions { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: wrap; }
 .kc-counter-actions .kc-btn { margin-top: 0; }
 .prog-bar-wrap { background: var(--gray-700); border-radius: 8px; height: 16px; margin-bottom: .5rem; overflow: hidden; }
 .prog-bar { background: #7c3aed; height: 100%; border-radius: 8px; transition: width .3s; }
