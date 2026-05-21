@@ -239,7 +239,7 @@ export const tools: Tool[] = [
 		id: 35, slug: 'goods-size-preview',
 		name: 'グッズサイズ感シミュレーター',
 		description: 'アクスタ・缶バッジのサイズを実寸表示。購入前確認に。',
-		emoji: '🏷️', category: 'creator', status: 'coming-soon',
+		emoji: '🏷️', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 36, slug: 'event-schedule',

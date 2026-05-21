@@ -1,0 +1,488 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="グッズサイズ感シミュレーター | yumi Labs">
+  <style>
+    .preview-area {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+      overflow: hidden;
+    }
+    .goods-shape {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: width 0.3s, height 0.3s;
+    }
+    .goods-shape.circle {
+      border-radius: 50%;
+    }
+    .goods-shape.rounded-rect {
+      border-radius: 18%;
+    }
+    .goods-shape.rect {
+      border-radius: 8px;
+    }
+    .ruler-h {
+      position: absolute;
+      bottom: -28px;
+      left: 0;
+      right: 0;
+      height: 18px;
+      display: flex;
+      align-items: center;
+    }
+    .ruler-v {
+      position: absolute;
+      right: -28px;
+      top: 0;
+      bottom: 0;
+      width: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ruler-line-h {
+      flex: 1;
+      height: 2px;
+      background: rgba(255,255,255,0.4);
+      position: relative;
+    }
+    .ruler-line-h::before, .ruler-line-h::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      width: 2px;
+      height: 10px;
+      background: rgba(255,255,255,0.4);
+    }
+    .ruler-line-h::before { left: 0; }
+    .ruler-line-h::after { right: 0; }
+    .ruler-line-v {
+      flex: 1;
+      width: 2px;
+      background: rgba(255,255,255,0.4);
+      position: relative;
+    }
+    .ruler-line-v::before, .ruler-line-v::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      width: 10px;
+      height: 2px;
+      background: rgba(255,255,255,0.4);
+    }
+    .ruler-line-v::before { top: 0; }
+    .ruler-line-v::after { bottom: 0; }
+    .ruler-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      margin: 0 4px;
+    }
+    .size-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+    .dpi-warning {
+      display: none;
+    }
+    @media print {
+      .no-print { display: none !important; }
+    }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🏷️</div>
+      <div class="text-3xl font-bold text-white mb-2">グッズサイズ感シミュレーター</div>
+      <div class="text-gray-400 text-sm">アクスタ・缶バッジなどのサイズを実寸表示。スマホで100%表示なら購入前確認OK</div>
+    </div>
+
+    <!-- DPI notice -->
+    <div id="dpiNotice" class="no-print mb-4 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300/80 leading-relaxed text-center">
+      ⚠ 実寸表示はディスプレイのDPIによって誤差が生じる場合があります。「キャリブレーション」で調整できます。
+    </div>
+
+    <!-- Controls -->
+    <div class="no-print bg-white/5 rounded-2xl p-5 mb-6 space-y-5">
+
+      <!-- グッズ種別 -->
+      <div>
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">グッズ種別</div>
+        <div class="grid grid-cols-2 gap-2" id="typeButtons">
+          <button onclick="setType('acrylic-stand')" data-type="acrylic-stand"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/10 transition-all text-left flex items-center gap-2">
+            <span>🧍</span><span>アクリルスタンド</span>
+          </button>
+          <button onclick="setType('can-badge')" data-type="can-badge"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/5 transition-all text-left flex items-center gap-2">
+            <span>🔘</span><span>缶バッジ</span>
+          </button>
+          <button onclick="setType('acrylic-keychain')" data-type="acrylic-keychain"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/5 transition-all text-left flex items-center gap-2">
+            <span>🔑</span><span>アクリルキーホルダー</span>
+          </button>
+          <button onclick="setType('card')" data-type="card"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/5 transition-all text-left flex items-center gap-2">
+            <span>🃏</span><span>トレーディングカード</span>
+          </button>
+          <button onclick="setType('bromide')" data-type="bromide"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/5 transition-all text-left flex items-center gap-2">
+            <span>🖼️</span><span>ブロマイド</span>
+          </button>
+          <button onclick="setType('shikishi')" data-type="shikishi"
+            class="type-btn px-3 py-2 rounded-xl text-sm font-medium text-white border border-white/10 bg-white/5 transition-all text-left flex items-center gap-2">
+            <span>📄</span><span>色紙</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- サイズ選択 -->
+      <div id="sizeSection">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">サイズ</div>
+        <div class="flex flex-wrap gap-2" id="sizeButtons"></div>
+        <!-- カスタムサイズ -->
+        <div class="mt-3 flex gap-2 items-center" id="customRow">
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-gray-400">W</span>
+            <input id="customW" type="number" min="10" max="500" placeholder="幅mm"
+              class="w-20 bg-white/10 rounded-lg px-2 py-1.5 text-white text-xs border border-white/10 focus:border-purple-400 focus:outline-none" />
+            <span class="text-xs text-gray-400">mm</span>
+          </div>
+          <span class="text-gray-500">×</span>
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-gray-400">H</span>
+            <input id="customH" type="number" min="10" max="500" placeholder="高さmm"
+              class="w-20 bg-white/10 rounded-lg px-2 py-1.5 text-white text-xs border border-white/10 focus:border-purple-400 focus:outline-none" />
+            <span class="text-xs text-gray-400">mm</span>
+          </div>
+          <button onclick="applyCustom()"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-purple-600/40 hover:bg-purple-600/60 border border-purple-400/30 transition-all">
+            適用
+          </button>
+        </div>
+      </div>
+
+      <!-- キャリブレーション -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">キャリブレーション</div>
+          <button onclick="resetCalibration()" class="text-xs text-gray-500 hover:text-gray-300 transition-all">リセット</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <input id="calSlider" type="range" min="60" max="160" value="100"
+            oninput="updateCalibration(this.value)"
+            class="flex-1 accent-purple-400" />
+          <span id="calValue" class="text-xs text-gray-300 w-10 text-right">100%</span>
+        </div>
+        <div class="text-xs text-gray-600 mt-1">実際のクレジットカード（85.6×54mm）と比べて調整してください</div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="bg-white/5 rounded-2xl p-6 mb-4">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-4 no-print">実寸プレビュー</div>
+      <div class="preview-area" id="previewArea">
+        <div class="goods-shape" id="goodsShape">
+          <div class="size-label" id="sizeLabel">
+            <div class="text-white font-bold text-sm" id="labelMain"></div>
+            <div class="text-gray-400 text-xs" id="labelSub"></div>
+          </div>
+          <!-- rulers -->
+          <div class="ruler-h">
+            <div class="ruler-line-h" id="rulerH"></div>
+            <span class="ruler-label" id="rulerHLabel"></span>
+            <div class="ruler-line-h"></div>
+          </div>
+          <div class="ruler-v">
+            <div class="ruler-line-v" id="rulerV"></div>
+            <span class="ruler-label" id="rulerVLabel" style="writing-mode:vertical-rl;"></span>
+            <div class="ruler-line-v"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- reference objects -->
+      <div class="no-print mt-8 pt-4 border-t border-white/10">
+        <div class="text-xs text-gray-500 mb-3">参考サイズ比較</div>
+        <div class="flex gap-3 flex-wrap" id="referenceItems"></div>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="no-print bg-white/5 rounded-2xl p-4 text-xs text-gray-400 leading-relaxed">
+      <div class="font-semibold text-gray-300 mb-1">📱 スマホで実寸確認するには</div>
+      ブラウザのズームを <strong class="text-white">100%（等倍）</strong> にしてご利用ください。
+      Safariは「ぼかし表示」をオフに、Chromeはアドレスバーのズーム表示で確認できます。
+      ディスプレイにより誤差があるため、キャリブレーションスライダーで調整してください。
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // ---- Config ----
+  const TYPES = {
+    'acrylic-stand': {
+      label: 'アクリルスタンド',
+      shape: 'rounded-rect',
+      color: 'rgba(147,51,234,0.25)',
+      border: 'rgba(147,51,234,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(147,51,234,0.3) 0%, rgba(236,72,153,0.2) 100%)',
+      sizes: [
+        { label: 'SS (50×70mm)',  w: 50,  h: 70  },
+        { label: 'S (60×80mm)',   w: 60,  h: 80  },
+        { label: 'M (70×100mm)',  w: 70,  h: 100 },
+        { label: 'L (80×120mm)',  w: 80,  h: 120 },
+        { label: 'LL (100×150mm)',w: 100, h: 150 },
+        { label: 'カスタム',      w: null, h: null },
+      ],
+    },
+    'can-badge': {
+      label: '缶バッジ',
+      shape: 'circle',
+      color: 'rgba(234,179,8,0.2)',
+      border: 'rgba(234,179,8,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(234,179,8,0.3) 0%, rgba(249,115,22,0.2) 100%)',
+      sizes: [
+        { label: '44mm',  w: 44,  h: 44  },
+        { label: '54mm',  w: 54,  h: 54  },
+        { label: '57mm',  w: 57,  h: 57  },
+        { label: '65mm',  w: 65,  h: 65  },
+        { label: '75mm',  w: 75,  h: 75  },
+        { label: 'カスタム', w: null, h: null },
+      ],
+    },
+    'acrylic-keychain': {
+      label: 'アクリルキーホルダー',
+      shape: 'rounded-rect',
+      color: 'rgba(34,197,94,0.2)',
+      border: 'rgba(34,197,94,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(34,197,94,0.3) 0%, rgba(6,182,212,0.2) 100%)',
+      sizes: [
+        { label: 'SS (50×50mm)',  w: 50,  h: 50  },
+        { label: 'S (60×60mm)',   w: 60,  h: 60  },
+        { label: 'M (70×70mm)',   w: 70,  h: 70  },
+        { label: 'L (80×80mm)',   w: 80,  h: 80  },
+        { label: 'カスタム',      w: null, h: null },
+      ],
+    },
+    'card': {
+      label: 'トレーディングカード',
+      shape: 'rect',
+      color: 'rgba(239,68,68,0.2)',
+      border: 'rgba(239,68,68,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(239,68,68,0.3) 0%, rgba(236,72,153,0.2) 100%)',
+      sizes: [
+        { label: '標準 (63×88mm)',  w: 63,  h: 88  },
+        { label: 'スリム (59×86mm)',w: 59,  h: 86  },
+        { label: 'ポケモン (63×88mm)', w: 63, h: 88 },
+        { label: '名刺サイズ (55×91mm)', w: 55, h: 91 },
+        { label: 'カスタム',        w: null, h: null },
+      ],
+    },
+    'bromide': {
+      label: 'ブロマイド',
+      shape: 'rect',
+      color: 'rgba(96,165,250,0.2)',
+      border: 'rgba(96,165,250,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(96,165,250,0.3) 0%, rgba(167,139,250,0.2) 100%)',
+      sizes: [
+        { label: 'L判 (89×127mm)',  w: 89,  h: 127 },
+        { label: '2L判 (127×178mm)',w: 127, h: 178 },
+        { label: 'A5 (148×210mm)', w: 148, h: 210 },
+        { label: 'カスタム',        w: null, h: null },
+      ],
+    },
+    'shikishi': {
+      label: '色紙',
+      shape: 'rect',
+      color: 'rgba(251,191,36,0.2)',
+      border: 'rgba(251,191,36,0.6)',
+      gradient: 'linear-gradient(135deg, rgba(251,191,36,0.3) 0%, rgba(52,211,153,0.2) 100%)',
+      sizes: [
+        { label: 'SS (200×200mm)', w: 200, h: 200 },
+        { label: 'S (240×270mm)',  w: 240, h: 270 },
+        { label: '標準 (272×242mm)',w: 272, h: 242 },
+        { label: 'カスタム',       w: null, h: null },
+      ],
+    },
+  };
+
+  const REFERENCE_ITEMS = [
+    { label: '500円玉',       w: 26.5, h: 26.5, shape: 'circle',   color: 'rgba(150,150,150,0.3)' },
+    { label: '10円玉',        w: 23.5, h: 23.5, shape: 'circle',   color: 'rgba(180,120,60,0.3)'  },
+    { label: 'クレジットカード',w: 85.6, h: 54,   shape: 'rect',     color: 'rgba(100,100,200,0.3)' },
+    { label: 'A4用紙',        w: 210,  h: 297,  shape: 'rect',     color: 'rgba(200,200,200,0.2)' },
+  ];
+
+  let currentType = 'acrylic-stand';
+  let currentW = 70;
+  let currentH = 100;
+  let calibration = 100; // percent
+  let customMode = false;
+
+  // DPI detection (mm per px)
+  function getMmPerPx() {
+    const testDiv = document.createElement('div');
+    testDiv.style.width = '1in';
+    testDiv.style.height = '1in';
+    testDiv.style.position = 'fixed';
+    testDiv.style.visibility = 'hidden';
+    document.body.appendChild(testDiv);
+    const pxPerInch = testDiv.offsetWidth;
+    document.body.removeChild(testDiv);
+    return 25.4 / pxPerInch; // mm per px
+  }
+
+  function mmToPx(mm) {
+    return (mm / getMmPerPx()) * (calibration / 100);
+  }
+
+  function setType(type) {
+    currentType = type;
+    customMode = false;
+    document.querySelectorAll('.type-btn').forEach(b => {
+      b.style.background = b.dataset.type === type ? 'rgba(147,51,234,0.3)' : 'rgba(255,255,255,0.05)';
+      b.style.borderColor = b.dataset.type === type ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+    });
+    renderSizeButtons();
+    // pick first non-custom size
+    const t = TYPES[type];
+    const first = t.sizes.find(s => s.w !== null);
+    if (first) { currentW = first.w; currentH = first.h; }
+    renderPreview();
+    renderReferences();
+  }
+
+  function renderSizeButtons() {
+    const t = TYPES[currentType];
+    const container = document.getElementById('sizeButtons');
+    container.innerHTML = '';
+    t.sizes.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      btn.className = 'size-btn px-3 py-1.5 rounded-lg text-xs font-medium border transition-all';
+      const isActive = s.w !== null
+        ? (s.w === currentW && s.h === currentH && !customMode)
+        : customMode;
+      btn.style.cssText = isActive
+        ? 'background:rgba(147,51,234,0.4);border-color:rgba(147,51,234,0.7);color:white;'
+        : 'background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:rgb(209,213,219);';
+      if (s.w !== null) {
+        btn.onclick = () => { customMode = false; currentW = s.w; currentH = s.h; renderSizeButtons(); renderPreview(); };
+      } else {
+        btn.onclick = () => { customMode = true; renderSizeButtons(); };
+      }
+      container.appendChild(btn);
+    });
+    document.getElementById('customRow').style.display = customMode ? 'flex' : 'none';
+  }
+
+  function applyCustom() {
+    const w = parseFloat(document.getElementById('customW').value);
+    const h = parseFloat(document.getElementById('customH').value);
+    if (!w || !h || w < 5 || h < 5 || w > 500 || h > 500) return;
+    currentW = w; currentH = h;
+    renderPreview();
+  }
+
+  function renderPreview() {
+    const t = TYPES[currentType];
+    const shape = document.getElementById('goodsShape');
+    const area = document.getElementById('previewArea');
+
+    // pixel sizes
+    const px_w = mmToPx(currentW);
+    const px_h = mmToPx(currentH);
+
+    // fit within area (max 90% of container)
+    const maxW = area.offsetWidth * 0.75;
+    const maxH = 220;
+    const scale = Math.min(1, maxW / px_w, maxH / px_h);
+    const dw = px_w * scale;
+    const dh = px_h * scale;
+
+    shape.style.width  = dw + 'px';
+    shape.style.height = dh + 'px';
+    shape.style.background = t.gradient;
+    shape.style.border = `2px solid ${t.border}`;
+    shape.className = 'goods-shape ' + t.shape;
+
+    // remove old ruler labels
+    document.getElementById('rulerHLabel').textContent = currentW + 'mm';
+    document.getElementById('rulerVLabel').textContent = currentH + 'mm';
+
+    // size labels inside
+    document.getElementById('labelMain').textContent = t.label;
+    document.getElementById('labelSub').textContent = `${currentW}×${currentH}mm`;
+
+    // scale indicator
+    if (scale < 1) {
+      document.getElementById('labelSub').textContent += ` (縮小表示 ${Math.round(scale*100)}%)`;
+    }
+  }
+
+  function renderReferences() {
+    const container = document.getElementById('referenceItems');
+    container.innerHTML = '';
+    const t = TYPES[currentType];
+    REFERENCE_ITEMS.forEach(ref => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex flex-col items-center gap-1';
+
+      const dot = document.createElement('div');
+      const pw = Math.min(mmToPx(ref.w), 80);
+      const ph = Math.min(mmToPx(ref.h), 60);
+      dot.style.cssText = `width:${pw}px;height:${ph}px;background:${ref.color};border:1px solid rgba(255,255,255,0.2);border-radius:${ref.shape==='circle'?'50%':'4px'};`;
+
+      // current goods mini indicator
+      const ratio_w = currentW / ref.w;
+      const ratio_h = currentH / ref.h;
+
+      const label = document.createElement('div');
+      label.className = 'text-xs text-gray-500 text-center';
+      label.innerHTML = `${ref.label}<br><span class="text-gray-400">${ref.w}×${ref.h}mm</span>`;
+
+      const compare = document.createElement('div');
+      compare.className = 'text-xs text-purple-300 text-center';
+      compare.textContent = `約${ratio_w.toFixed(1)}×${ratio_h.toFixed(1)}倍`;
+
+      wrapper.append(dot, label, compare);
+      container.appendChild(wrapper);
+    });
+  }
+
+  function updateCalibration(val) {
+    calibration = parseFloat(val);
+    document.getElementById('calValue').textContent = val + '%';
+    renderPreview();
+    renderReferences();
+  }
+
+  function resetCalibration() {
+    calibration = 100;
+    document.getElementById('calSlider').value = 100;
+    document.getElementById('calValue').textContent = '100%';
+    renderPreview();
+    renderReferences();
+  }
+
+  // Init
+  setType('acrylic-stand');
+  window.addEventListener('resize', () => { renderPreview(); renderReferences(); });
+</script>
