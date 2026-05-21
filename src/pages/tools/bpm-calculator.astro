@@ -1,0 +1,482 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="楽曲BPM計算機（タップで測定） | yumi Labs">
+  <style>
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);   opacity: 0.6; }
+      50%  { transform: scale(1.08); opacity: 1;   }
+      100% { transform: scale(1);   opacity: 0.6; }
+    }
+    .bpm-pulse { animation: pulse-ring 0.5s ease-in-out; }
+    @keyframes beat-flash {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .beat-flash { animation: beat-flash 0.25s ease-out forwards; }
+    .key-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.4rem; height: 2.4rem; border-radius: 0.5rem;
+      font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06); color: #d1d5db;
+      transition: all 0.15s;
+    }
+    .key-chip.active {
+      background: rgba(147,51,234,0.35); border-color: rgba(147,51,234,0.7);
+      color: white; transform: scale(1.15);
+    }
+    .needle {
+      transform-origin: bottom center;
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🎵</div>
+      <div class="text-3xl font-bold text-white mb-2">楽曲BPM計算機</div>
+      <div class="text-gray-400 text-sm">スペースキー連打 / タップでBPM測定 ＋ DJ用キー判定 ＋ 類似BPM曲提案</div>
+    </div>
+
+    <!-- Tap area -->
+    <div class="bg-white/5 rounded-2xl p-6 mb-5 text-center">
+
+      <!-- BPM display -->
+      <div class="relative inline-flex items-center justify-center mb-4">
+        <div id="bpmRing" class="w-48 h-48 rounded-full border-4 flex items-center justify-center flex-col transition-all duration-200"
+          style="border-color: rgba(147,51,234,0.4); background: radial-gradient(circle, rgba(147,51,234,0.1) 0%, transparent 70%)">
+          <div id="bpmValue" class="text-6xl font-black text-white leading-none">--</div>
+          <div class="text-sm text-gray-400 mt-1">BPM</div>
+        </div>
+        <!-- flash overlay -->
+        <div id="beatFlash" class="absolute inset-0 rounded-full bg-purple-400 opacity-0 pointer-events-none"></div>
+      </div>
+
+      <!-- Tap button -->
+      <button id="tapBtn"
+        onclick="tap()"
+        class="w-full py-5 rounded-2xl text-xl font-bold text-white mb-3 select-none active:scale-95 transition-transform"
+        style="background: linear-gradient(135deg, #9333ea, #ec4899); touch-action: manipulation;">
+        タップ / スペースキー
+      </button>
+
+      <!-- Controls -->
+      <div class="flex gap-3 justify-center">
+        <button onclick="resetTap()"
+          class="px-5 py-2 rounded-xl text-sm font-medium bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-all">
+          リセット
+        </button>
+        <div class="flex items-center gap-2 bg-white/5 rounded-xl px-4 py-2 border border-white/10">
+          <span class="text-xs text-gray-400">直近</span>
+          <select id="tapWindow" onchange="recalc()"
+            class="bg-transparent text-white text-sm focus:outline-none">
+            <option value="4">4タップ</option>
+            <option value="8" selected>8タップ</option>
+            <option value="16">16タップ</option>
+            <option value="0">全タップ</option>
+          </select>
+          <span class="text-xs text-gray-400">で計算</span>
+        </div>
+      </div>
+
+      <!-- Tap count & stability -->
+      <div class="mt-3 flex gap-4 justify-center text-xs text-gray-500">
+        <span>タップ数: <span id="tapCount" class="text-gray-300">0</span></span>
+        <span>安定度: <span id="stability" class="text-gray-300">--</span></span>
+        <span>間隔: <span id="lastInterval" class="text-gray-300">-- ms</span></span>
+      </div>
+    </div>
+
+    <!-- Tempo Meter (metronome visual) -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-5">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">テンポゾーン</div>
+      <div id="tempoZone" class="text-center">
+        <div id="tempoLabel" class="text-2xl font-bold text-white mb-1">--</div>
+        <div id="tempoJP" class="text-sm text-gray-400 mb-3">BPMを測定すると表示されます</div>
+        <!-- Metronome arc -->
+        <div class="relative mx-auto" style="width:180px;height:100px;overflow:hidden;">
+          <svg width="180" height="180" viewBox="0 0 180 180" style="position:absolute;top:0;left:0;">
+            <!-- arc segments -->
+            <path d="M 10 170 A 80 80 0 0 1 48 97" fill="none" stroke="#1d4ed8" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+            <path d="M 48 97 A 80 80 0 0 1 80 80" fill="none" stroke="#059669" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+            <path d="M 80 80 A 80 80 0 0 1 100 80" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+            <path d="M 100 80 A 80 80 0 0 1 132 97" fill="none" stroke="#eab308" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+            <path d="M 132 97 A 80 80 0 0 1 170 170" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+            <!-- needle -->
+            <line id="metroNeedle" x1="90" y1="170" x2="90" y2="95" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"
+              style="transform-origin:90px 170px; transform:rotate(0deg); transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);" />
+            <circle cx="90" cy="170" r="6" fill="white" opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
+          <span>Largo<br>40</span><span>Andante<br>76</span><span>Moderato<br>108</span><span>Allegro<br>132</span><span>Presto<br>180+</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DJ Key / Musical Info -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-5" id="djSection">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">DJ / ハーモニック情報</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500 mb-2">Camelot Wheel 互換キー</div>
+          <div class="flex flex-wrap gap-1.5" id="camelotKeys">
+            <span class="text-xs text-gray-600">BPM測定後に表示</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 mb-2">ビート細分化（ms）</div>
+          <div class="space-y-1" id="beatDivisions">
+            <span class="text-xs text-gray-600">BPM測定後に表示</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 mb-2">隣接BPM（ダブル / ハーフ）</div>
+        <div class="flex gap-2 flex-wrap" id="relatedBpm">
+          <span class="text-xs text-gray-600">BPM測定後に表示</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Similar BPM songs -->
+    <div class="bg-white/5 rounded-2xl p-5 mb-5">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">類似BPMの有名曲</div>
+      <div id="similarSongs" class="space-y-2">
+        <span class="text-xs text-gray-600">BPM測定後に表示</span>
+      </div>
+    </div>
+
+    <!-- Manual input -->
+    <div class="bg-white/5 rounded-2xl p-5">
+      <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">BPM直接入力</div>
+      <div class="flex gap-3">
+        <input id="manualBpm" type="number" min="20" max="400" placeholder="例: 128"
+          class="flex-1 bg-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        <button onclick="setManualBpm()"
+          class="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+          style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+          適用
+        </button>
+      </div>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  // ---- BPM song database ----
+  const SONGS = [
+    // Vocaloid / J-Pop / Anime
+    { title: 'ダンスロボットダンス', artist: 'natalie', bpm: 95 },
+    { title: 'ロストワンの号哭', artist: 'Neru', bpm: 172 },
+    { title: 'メルト', artist: 'ryo', bpm: 148 },
+    { title: 'ブレス・ユア・ブレス', artist: 'and_nothing', bpm: 175 },
+    { title: 'シニカルナイトプラン', artist: 'Nekomata Master', bpm: 175 },
+    { title: 'えれくとりっく・えんじぇう', artist: 'びびび', bpm: 185 },
+    { title: '炉心融解', artist: 'iroha(sasaki)', bpm: 175 },
+    { title: 'ボカロ打ち込み系（代表例）', artist: '各種', bpm: 160 },
+    { title: 'プロジェクトDIVA曲平均', artist: 'セガ', bpm: 160 },
+    // Anime OP/ED
+    { title: '紅蓮華', artist: 'LiSA', bpm: 96 },
+    { title: 'Butter-Fly', artist: '和田光司', bpm: 124 },
+    { title: 'God knows...', artist: '平野綾', bpm: 180 },
+    { title: 'ルパン三世のテーマ', artist: '大野雄二', bpm: 176 },
+    { title: '残酷な天使のテーゼ', artist: '高橋洋子', bpm: 124 },
+    { title: 'Tank! (カウボーイビバップ)', artist: 'seatbelts', bpm: 160 },
+    { title: 'Crossing Field', artist: 'LiSA', bpm: 135 },
+    { title: 'アイドル', artist: 'YOASOBI', bpm: 170 },
+    { title: '夜に駆ける', artist: 'YOASOBI', bpm: 130 },
+    { title: '怪物', artist: 'YOASOBI', bpm: 175 },
+    { title: 'ミックスナッツ', artist: 'Official髭男dism', bpm: 140 },
+    { title: 'Pretender', artist: 'Official髭男dism', bpm: 91 },
+    { title: 'Cry Baby', artist: 'Official髭男dism', bpm: 145 },
+    { title: 'うっせぇわ', artist: 'Ado', bpm: 184 },
+    { title: '新時代', artist: 'Ado', bpm: 115 },
+    // K-Pop
+    { title: 'Dynamite', artist: 'BTS', bpm: 114 },
+    { title: 'Butter', artist: 'BTS', bpm: 110 },
+    { title: 'BLACKPINK - Pink Venom', artist: 'BLACKPINK', bpm: 88 },
+    { title: 'How You Like That', artist: 'BLACKPINK', bpm: 130 },
+    // EDM / Dance
+    { title: 'One More Time', artist: 'Daft Punk', bpm: 123 },
+    { title: 'Get Lucky', artist: 'Daft Punk', bpm: 116 },
+    { title: 'Levels', artist: 'Avicii', bpm: 126 },
+    { title: 'Wake Me Up', artist: 'Avicii', bpm: 124 },
+    { title: 'Lean On', artist: 'Major Lazer', bpm: 98 },
+    { title: 'Animals', artist: 'Martin Garrix', bpm: 128 },
+    { title: 'Titanium', artist: 'David Guetta', bpm: 126 },
+    { title: 'Don\'t You Worry Child', artist: 'Swedish House Mafia', bpm: 128 },
+    { title: 'Closer', artist: 'The Chainsmokers', bpm: 95 },
+    { title: 'Roses', artist: 'The Chainsmokers', bpm: 120 },
+    // Pop
+    { title: 'Shape of You', artist: 'Ed Sheeran', bpm: 96 },
+    { title: 'Blinding Lights', artist: 'The Weeknd', bpm: 171 },
+    { title: 'Bad Guy', artist: 'Billie Eilish', bpm: 135 },
+    { title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', bpm: 115 },
+    { title: 'Happy', artist: 'Pharrell Williams', bpm: 160 },
+    { title: 'Thriller', artist: 'Michael Jackson', bpm: 118 },
+    { title: 'Billie Jean', artist: 'Michael Jackson', bpm: 117 },
+    // Rock
+    { title: 'Eye of the Tiger', artist: 'Survivor', bpm: 109 },
+    { title: 'We Will Rock You', artist: 'Queen', bpm: 82 },
+    { title: 'Bohemian Rhapsody', artist: 'Queen', bpm: 72 },
+    { title: 'Enter Sandman', artist: 'Metallica', bpm: 123 },
+    // Game music
+    { title: 'Megalovania', artist: 'Toby Fox (Undertale)', bpm: 120 },
+    { title: 'Hopes and Dreams', artist: 'Toby Fox (Undertale)', bpm: 100 },
+    { title: 'Bloody Tears', artist: 'Konami (Castlevania)', bpm: 163 },
+    { title: 'One-Winged Angel', artist: 'Nobuo Uematsu (FF7)', bpm: 168 },
+    { title: 'Battle Theme (FF7 Remake)', artist: 'Nobuo Uematsu', bpm: 155 },
+    { title: 'Baba Yetu', artist: 'Christopher Tin (Civ4)', bpm: 113 },
+    { title: 'Jump Up, Super Star!', artist: 'Super Mario Odyssey', bpm: 140 },
+    // 音ゲー
+    { title: 'FREEDOM DiVE', artist: 'xi', bpm: 222 },
+    { title: 'Elemental Creation', artist: 'DJ Genericname feat. Sara', bpm: 200 },
+    { title: 'Claiomh Solais', artist: 'Nhato', bpm: 135 },
+    { title: 'Triple Counter', artist: 'Imperial Circus Dead Decadence', bpm: 180 },
+  ];
+
+  // ---- Tempo zones ----
+  const TEMPO_ZONES = [
+    { min: 20,  max: 60,  label: 'Grave',    jp: '重く荘厳に',    color: '#60a5fa' },
+    { min: 60,  max: 66,  label: 'Largo',    jp: '広く遅く',      color: '#60a5fa' },
+    { min: 66,  max: 76,  label: 'Adagio',   jp: 'ゆっくりと',    color: '#818cf8' },
+    { min: 76,  max: 108, label: 'Andante',  jp: '歩くような速さ', color: '#a78bfa' },
+    { min: 108, max: 120, label: 'Moderato', jp: '中くらいの速さ', color: '#4ade80' },
+    { min: 120, max: 132, label: 'Allegretto',jp: 'やや速く',     color: '#86efac' },
+    { min: 132, max: 168, label: 'Allegro',  jp: '速く',          color: '#facc15' },
+    { min: 168, max: 200, label: 'Presto',   jp: '非常に速く',    color: '#fb923c' },
+    { min: 200, max: 999, label: 'Prestissimo',jp:'最速！',       color: '#f87171' },
+  ];
+
+  // ---- State ----
+  let taps = [];
+  let currentBpm = null;
+  let resetTimer = null;
+
+  // ---- Core functions ----
+  function tap() {
+    const now = performance.now();
+    taps.push(now);
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(resetTap, 3000);
+
+    flashBeat();
+    recalc();
+  }
+
+  function recalc() {
+    const window = parseInt(document.getElementById('tapWindow').value) || 0;
+    const usedTaps = window > 0 ? taps.slice(-window - 1) : taps;
+
+    document.getElementById('tapCount').textContent = taps.length;
+
+    if (usedTaps.length < 2) {
+      document.getElementById('bpmValue').textContent = '--';
+      document.getElementById('stability').textContent = '--';
+      document.getElementById('lastInterval').textContent = '-- ms';
+      return;
+    }
+
+    // intervals
+    const intervals = [];
+    for (let i = 1; i < usedTaps.length; i++) intervals.push(usedTaps[i] - usedTaps[i-1]);
+    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const bpm = Math.round(60000 / avg);
+    currentBpm = bpm;
+
+    const last = intervals[intervals.length - 1];
+    document.getElementById('lastInterval').textContent = Math.round(last) + ' ms';
+
+    // stability
+    const variance = intervals.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / intervals.length;
+    const stdDev = Math.sqrt(variance);
+    const stab = Math.max(0, Math.min(100, Math.round(100 - (stdDev / avg) * 200)));
+    document.getElementById('stability').textContent = stab + '%';
+
+    // update display
+    document.getElementById('bpmValue').textContent = bpm;
+    updateTempoZone(bpm);
+    updateDJInfo(bpm);
+    updateSimilarSongs(bpm);
+    updateNeedle(bpm);
+  }
+
+  function flashBeat() {
+    const flash = document.getElementById('beatFlash');
+    flash.classList.remove('beat-flash');
+    void flash.offsetWidth;
+    flash.classList.add('beat-flash');
+
+    const ring = document.getElementById('bpmRing');
+    ring.classList.remove('bpm-pulse');
+    void ring.offsetWidth;
+    ring.classList.add('bpm-pulse');
+  }
+
+  function resetTap() {
+    taps = [];
+    currentBpm = null;
+    document.getElementById('bpmValue').textContent = '--';
+    document.getElementById('tapCount').textContent = '0';
+    document.getElementById('stability').textContent = '--';
+    document.getElementById('lastInterval').textContent = '-- ms';
+    document.getElementById('tempoLabel').textContent = '--';
+    document.getElementById('tempoJP').textContent = 'BPMを測定すると表示されます';
+    document.getElementById('camelotKeys').innerHTML = '<span class="text-xs text-gray-600">BPM測定後に表示</span>';
+    document.getElementById('beatDivisions').innerHTML = '<span class="text-xs text-gray-600">BPM測定後に表示</span>';
+    document.getElementById('relatedBpm').innerHTML = '<span class="text-xs text-gray-600">BPM測定後に表示</span>';
+    document.getElementById('similarSongs').innerHTML = '<span class="text-xs text-gray-600">BPM測定後に表示</span>';
+    document.getElementById('metroNeedle').style.transform = 'rotate(0deg)';
+  }
+
+  function updateNeedle(bpm) {
+    // map 40-220 BPM to -75deg to +75deg
+    const clamped = Math.max(40, Math.min(220, bpm));
+    const angle = ((clamped - 40) / (220 - 40)) * 150 - 75;
+    document.getElementById('metroNeedle').style.transform = `rotate(${angle}deg)`;
+  }
+
+  function updateTempoZone(bpm) {
+    const zone = TEMPO_ZONES.find(z => bpm >= z.min && bpm < z.max) || TEMPO_ZONES[TEMPO_ZONES.length - 1];
+    const labelEl = document.getElementById('tempoLabel');
+    labelEl.textContent = zone.label;
+    labelEl.style.color = zone.color;
+    document.getElementById('tempoJP').textContent = `${bpm} BPM — ${zone.jp}`;
+  }
+
+  // ---- DJ Info ----
+  const CAMELOT = [
+    { key: '8B', note: 'C メジャー' },  { key: '3B', note: 'D♭メジャー' },
+    { key: '10B', note: 'D メジャー' }, { key: '5B', note: 'E♭メジャー' },
+    { key: '12B', note: 'E メジャー' }, { key: '7B', note: 'F メジャー' },
+    { key: '2B', note: 'G♭メジャー' }, { key: '9B', note: 'G メジャー' },
+    { key: '4B', note: 'A♭メジャー' }, { key: '11B', note: 'A メジャー' },
+    { key: '6B', note: 'B♭メジャー' }, { key: '1B', note: 'B メジャー' },
+    { key: '5A', note: 'A マイナー' },  { key: '12A', note: 'B♭マイナー' },
+    { key: '7A', note: 'B マイナー' },  { key: '2A', note: 'C マイナー' },
+    { key: '9A', note: 'C♯マイナー' }, { key: '4A', note: 'D マイナー' },
+    { key: '11A', note: 'E♭マイナー' },{ key: '6A', note: 'E マイナー' },
+    { key: '1A', note: 'F マイナー' },  { key: '8A', note: 'F♯マイナー' },
+    { key: '3A', note: 'G マイナー' },  { key: '10A', note: 'G♯マイナー' },
+  ];
+
+  function updateDJInfo(bpm) {
+    // Beat divisions
+    const divs = [
+      { label: '1拍（♩）', factor: 1 },
+      { label: '2分音符', factor: 2 },
+      { label: '4分音符', factor: 1 },
+      { label: '8分音符', factor: 0.5 },
+      { label: '16分音符', factor: 0.25 },
+      { label: '付点4分', factor: 1.5 },
+      { label: '1小節（4拍）', factor: 4 },
+      { label: '8小節ループ', factor: 32 },
+    ];
+    const beatMs = 60000 / bpm;
+    document.getElementById('beatDivisions').innerHTML = divs.map(d =>
+      `<div class="flex justify-between text-xs">
+        <span class="text-gray-400">${d.label}</span>
+        <span class="text-white font-mono">${Math.round(beatMs * d.factor)} ms</span>
+       </div>`
+    ).join('');
+
+    // Camelot — show all 24 keys (user would normally know their track's key)
+    const cKeys = document.getElementById('camelotKeys');
+    cKeys.innerHTML = '';
+    CAMELOT.forEach(c => {
+      const chip = document.createElement('span');
+      chip.className = 'key-chip';
+      chip.textContent = c.key;
+      chip.title = c.note;
+      cKeys.appendChild(chip);
+    });
+
+    // Related BPM
+    const related = [
+      { label: `½ = ${Math.round(bpm/2)} BPM`, bpm: Math.round(bpm/2) },
+      { label: `¾ = ${Math.round(bpm*0.75)} BPM`, bpm: Math.round(bpm*0.75) },
+      { label: `×2 = ${Math.round(bpm*2)} BPM`, bpm: Math.round(bpm*2) },
+      { label: `×1.5 = ${Math.round(bpm*1.5)} BPM`, bpm: Math.round(bpm*1.5) },
+    ];
+    document.getElementById('relatedBpm').innerHTML = related.map(r =>
+      `<span class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-gray-200 border border-white/10 cursor-pointer hover:bg-purple-500/20 hover:border-purple-400/40 transition-all"
+        onclick="applyBpm(${r.bpm})" title="クリックで適用">${r.label}</span>`
+    ).join('');
+  }
+
+  function updateSimilarSongs(bpm) {
+    const margin = 4;
+    const matches = SONGS
+      .filter(s => Math.abs(s.bpm - bpm) <= margin)
+      .sort((a, b) => Math.abs(a.bpm - bpm) - Math.abs(b.bpm - bpm))
+      .slice(0, 6);
+
+    // Also check half / double
+    const halfBpm = Math.round(bpm / 2);
+    const doubleBpm = Math.round(bpm * 2);
+    const hd = SONGS
+      .filter(s => Math.abs(s.bpm - halfBpm) <= margin || Math.abs(s.bpm - doubleBpm) <= margin)
+      .slice(0, 3);
+
+    const container = document.getElementById('similarSongs');
+    if (matches.length === 0 && hd.length === 0) {
+      container.innerHTML = '<div class="text-xs text-gray-500">このBPM近辺の登録曲はありません</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    if (matches.length > 0) {
+      container.innerHTML += matches.map(s => `
+        <div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+          <div>
+            <div class="text-sm text-white">${s.title}</div>
+            <div class="text-xs text-gray-500">${s.artist}</div>
+          </div>
+          <div class="text-sm font-bold text-purple-300 flex-shrink-0 ml-3">${s.bpm} BPM</div>
+        </div>
+      `).join('');
+    }
+    if (hd.length > 0) {
+      container.innerHTML += `<div class="text-xs text-gray-500 mt-2 mb-1">ハーフ / ダブルBPMで近い曲</div>`;
+      container.innerHTML += hd.map(s => `
+        <div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+          <div>
+            <div class="text-sm text-gray-300">${s.title}</div>
+            <div class="text-xs text-gray-500">${s.artist}</div>
+          </div>
+          <div class="text-sm font-bold text-gray-400 flex-shrink-0 ml-3">${s.bpm} BPM</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  function applyBpm(bpm) {
+    currentBpm = bpm;
+    document.getElementById('bpmValue').textContent = bpm;
+    updateTempoZone(bpm);
+    updateDJInfo(bpm);
+    updateSimilarSongs(bpm);
+    updateNeedle(bpm);
+  }
+
+  function setManualBpm() {
+    const v = parseFloat(document.getElementById('manualBpm').value);
+    if (!v || v < 20 || v > 400) return;
+    taps = [];
+    applyBpm(Math.round(v));
+  }
+
+  // ---- Keyboard ----
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      tap();
+    }
+    if (e.code === 'Escape') resetTap();
+  });
+</script>

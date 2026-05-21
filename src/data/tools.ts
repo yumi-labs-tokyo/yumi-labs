@@ -257,7 +257,7 @@ export const tools: Tool[] = [
 		id: 38, slug: 'bpm-calculator',
 		name: '楽曲BPM計算機（タップ測定）',
 		description: 'スペースキー連打でBPM測定＋DJ用キー判定＋類似BPM曲提案。',
-		emoji: '🎵', category: 'creator', badge: 'New', status: 'coming-soon',
+		emoji: '🎵', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 39, slug: 'cosplay-spots',
