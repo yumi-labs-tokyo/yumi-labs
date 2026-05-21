@@ -355,7 +355,7 @@ export const tools: Tool[] = [
 		id: 54, slug: 'cyrillic-typing',
 		name: 'ロシア語キリル文字タイピング練習',
 		description: '英字→キリル変換しながら入力練習。',
-		emoji: '🇷🇺', category: 'learning', status: 'coming-soon',
+		emoji: '🇷🇺', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 55, slug: 'legal-ruby',

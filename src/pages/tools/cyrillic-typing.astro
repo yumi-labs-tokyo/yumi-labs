@@ -1,0 +1,532 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ロシア語キリル文字タイピング練習" description="英字キーボードでキリル文字をタイピング練習。ロシア語入力を身につける。">
+<style>
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 24px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* mode tabs */
+  .tab-row { display: flex; gap: 4px; background: #0f172a; border-radius: 12px; padding: 4px; width: fit-content; margin: 0 auto 20px; }
+  .tab-btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #64748b; background: transparent; transition: all .2s; }
+  .tab-btn.active { background: #1e293b; color: #e2e8f0; }
+
+  /* stats */
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+  .stat-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; text-align: center; min-width: 80px; }
+  .stat-val { font-size: 1.5rem; font-weight: 800; color: #f43f5e; }
+  .stat-label { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+
+  /* lesson selector */
+  .lesson-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+  .lesson-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #334155; background: #1e293b; color: #64748b; cursor: pointer; font-size: 0.8rem; font-weight: 700; transition: all .2s; }
+  .lesson-btn.active { border-color: #f43f5e; background: #1c0a10; color: #fda4af; }
+  .lesson-btn.done   { border-color: #4ade80; background: #052e16; color: #86efac; }
+
+  /* text display */
+  .text-display {
+    background: #0f172a; border: 2px solid #334155; border-radius: 14px;
+    padding: 20px 24px; font-size: 1.6rem; line-height: 2.2;
+    letter-spacing: .08em; min-height: 90px; margin-bottom: 12px;
+    font-family: 'Georgia', serif; position: relative; overflow: hidden;
+  }
+  .char { display: inline; }
+  .char.ok     { color: #4ade80; }
+  .char.err    { color: #f87171; background: rgba(248,113,113,.15); border-radius: 2px; }
+  .char.cursor { border-left: 2px solid #f43f5e; margin-left: -1px; color: #e2e8f0; animation: blink .7s step-end infinite; }
+  .char.upcoming { color: #334155; }
+  @keyframes blink { 0%,100%{border-color:#f43f5e} 50%{border-color:transparent} }
+  .progress-bar-wrap { background: #1e293b; border-radius: 99px; height: 4px; margin-bottom: 12px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#f43f5e,#fb923c); border-radius: 99px; transition: width .2s; }
+
+  /* input */
+  .input-wrap { position: relative; margin-bottom: 16px; }
+  .typing-input {
+    width: 100%; box-sizing: border-box; background: #1e293b; border: 2px solid #334155;
+    border-radius: 12px; color: #e2e8f0; font-family: 'Georgia', serif; font-size: 1.2rem;
+    padding: 12px 16px; outline: none; transition: border-color .2s; caret-color: #f43f5e;
+    letter-spacing: .05em;
+  }
+  .typing-input:focus { border-color: #f43f5e; }
+  .input-hint { font-size: 0.75rem; color: #475569; margin-top: 4px; text-align: center; }
+
+  /* transliteration hint */
+  .translit-hint { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.85rem; color: #94a3b8; }
+  .translit-hint span { color: #fda4af; font-weight: 700; }
+
+  /* controls */
+  .ctrl-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .btn { padding: 9px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; transition: all .2s; }
+  .btn-primary { background: linear-gradient(135deg,#f43f5e,#fb923c); color: #fff; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244,63,94,.35); }
+  .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .btn-secondary:hover { border-color: #f43f5e; color: #fda4af; }
+
+  /* keyboard layout */
+  .keyboard-section { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .kb-title { font-size: 0.78rem; font-weight: 700; color: #64748b; margin-bottom: 12px; text-align: center; }
+  .kb-rows { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+  .kb-row { display: flex; gap: 4px; }
+  .key {
+    width: 42px; height: 42px; border-radius: 7px; background: #0f172a; border: 1px solid #334155;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #64748b; cursor: default; position: relative; transition: all .15s;
+  }
+  .key.active { border-color: #f43f5e; background: #1c0a10; }
+  .key-cyr { font-size: 1rem; color: #fda4af; font-family: 'Georgia', serif; line-height: 1; }
+  .key-lat { font-size: 0.6rem; color: #475569; }
+  .key.shift-key { width: 60px; }
+  .key.space-key { width: 180px; }
+
+  /* result card */
+  .result-card { background: #1e293b; border: 2px solid #f43f5e; border-radius: 16px; padding: 26px; text-align: center; display: none; margin-bottom: 20px; }
+  .result-card.show { display: block; }
+  .result-grade { font-size: 3rem; margin-bottom: 6px; }
+  .result-title { font-size: 1.3rem; font-weight: 800; color: #fda4af; margin-bottom: 16px; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .result-item .val { font-size: 1.4rem; font-weight: 800; color: #f43f5e; }
+  .result-item .lbl { font-size: 0.7rem; color: #64748b; }
+  .result-item { background: #0f172a; border-radius: 10px; padding: 10px; }
+
+  /* reference table */
+  .ref-section { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .ref-title { font-size: 0.82rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap: 6px; }
+  .ref-cell { background: #0f172a; border-radius: 8px; padding: 7px; text-align: center; border: 1px solid #334155; }
+  .ref-cyr  { font-size: 1.2rem; color: #fda4af; font-family: 'Georgia', serif; line-height: 1.2; }
+  .ref-lat  { font-size: 0.7rem; color: #64748b; }
+
+  /* history */
+  .history-section { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+  .history-title { font-size: 0.82rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { color: #64748b; padding: 5px 8px; text-align: left; border-bottom: 1px solid #334155; }
+  td { color: #e2e8f0; padding: 5px 8px; border-bottom: 1px solid #0f172a; }
+
+  @media(max-width:540px){ .key { width: 32px; height: 36px; } .key-cyr { font-size: .85rem; } .key.space-key { width: 120px; } }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">🇷🇺 ロシア語キリル文字タイピング練習</div>
+    <div class="hero-sub">英字キーを押すとキリル文字で入力。ロシア語配列を体で覚えよう。</div>
+  </div>
+
+  <!-- mode tabs -->
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="setMode('lesson')" id="tab-lesson">レッスン</button>
+    <button class="tab-btn" onclick="setMode('free')"   id="tab-free">フリー入力</button>
+    <button class="tab-btn" onclick="setMode('timed')"  id="tab-timed">タイムアタック</button>
+  </div>
+
+  <!-- stats -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" id="stat-acc">--</div><div class="stat-label">正確率%</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-cpm">--</div><div class="stat-label">CPM</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-time">60</div><div class="stat-label">残り秒</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-label">連続正解</div></div>
+  </div>
+
+  <!-- lesson selector -->
+  <div class="lesson-row" id="lesson-row"></div>
+
+  <!-- text display -->
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="text-display" id="text-display"></div>
+
+  <!-- transliteration hint -->
+  <div class="translit-hint" id="translit-hint"></div>
+
+  <!-- input -->
+  <div class="input-wrap">
+    <input type="text" class="typing-input" id="typing-input"
+      placeholder="英字キーで入力（自動的にキリル文字に変換されます）"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    <div class="input-hint">例：a→а、b→б、v→в ／ Shift+ключ で大文字</div>
+  </div>
+
+  <!-- controls -->
+  <div class="ctrl-row">
+    <button class="btn btn-primary" onclick="startLesson()" id="btn-start">▶ スタート</button>
+    <button class="btn btn-secondary" onclick="resetLesson()">↺ リセット</button>
+  </div>
+
+  <!-- result -->
+  <div class="result-card" id="result-card">
+    <div class="result-grade" id="r-grade">🎉</div>
+    <div class="result-title" id="r-title">完了！</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="val" id="r-acc">--</div><div class="lbl">正確率%</div></div>
+      <div class="result-item"><div class="val" id="r-cpm">--</div><div class="lbl">CPM</div></div>
+      <div class="result-item"><div class="val" id="r-chars">--</div><div class="lbl">入力文字数</div></div>
+      <div class="result-item"><div class="val" id="r-time">--</div><div class="lbl">秒</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="startLesson()">もう一度</button>
+  </div>
+
+  <!-- keyboard -->
+  <div class="keyboard-section">
+    <div class="kb-title">ロシア語キーボード配列（ЙЦУКЕН）</div>
+    <div class="kb-rows" id="kb-rows"></div>
+  </div>
+
+  <!-- reference -->
+  <div class="ref-section">
+    <div class="ref-title">📖 キリル文字対応表（英字→キリル）</div>
+    <div class="ref-grid" id="ref-grid"></div>
+  </div>
+
+  <!-- history -->
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="history-title">📊 練習履歴</div>
+    <table>
+      <thead><tr><th>日時</th><th>モード</th><th>正確率</th><th>CPM</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script is:inline>
+// ======= TRANSLITERATION MAP (phonetic layout) =======
+// Key = English char user presses, Value = Cyrillic to output
+const TRANSLIT = {
+  'a':'а','b':'б','v':'в','g':'г','d':'д','e':'е','yo':'ё',
+  'zh':'ж','z':'з','i':'и','j':'й','k':'к','l':'л','m':'м',
+  'n':'н','o':'о','p':'п','r':'р','s':'с','t':'т','u':'у',
+  'f':'ф','h':'х','ts':'ц','ch':'ч','sh':'ш','sch':'щ',
+  '`':'ъ','y':'ы',"'":'ь','eh':'э','yu':'ю','ya':'я',
+  // caps
+  'A':'А','B':'Б','V':'В','G':'Г','D':'Д','E':'Е',
+  'Z':'З','I':'И','J':'Й','K':'К','L':'Л','M':'М',
+  'N':'Н','O':'О','P':'П','R':'Р','S':'С','T':'Т','U':'У',
+  'F':'Ф','H':'Х','Y':'Ы',
+};
+
+// Single-char map for display
+const SINGLE = {
+  'a':'а','b':'б','v':'в','g':'г','d':'д','e':'е','z':'з',
+  'i':'и','j':'й','k':'к','l':'л','m':'м','n':'н','o':'о',
+  'p':'п','r':'р','s':'с','t':'т','u':'у','f':'ф','h':'х','y':'ы',
+};
+
+// Keyboard layout rows [latin key, cyrillic]
+const KB_ROWS = [
+  [['й','q'],['ц','w'],['у','e'],['к','r'],['е','t'],['н','y'],['г','u'],['ш','i'],['щ','o'],['з','p'],['х','['],['ъ',']']],
+  [['ф','a'],['ы','s'],['в','d'],['а','f'],['п','g'],['р','h'],['о','j'],['л','k'],['д','l'],['ж',';'],['э',"'"]],
+  [['я','z'],['ч','x'],['с','c'],['м','v'],['и','b'],['т','n'],['ь','m'],['б',','],['ю','.']],
+];
+
+// ======= LESSONS =======
+const LESSONS = [
+  {
+    id: 1, name: 'アルファベット基礎',
+    texts: ['а б в г д е', 'и й к л м н', 'о п р с т у', 'ф х ц ч ш щ', 'ъ ы ь э ю я'],
+    hint: 'a b v g d e / i j k l m n / o p r s t u ...',
+  },
+  {
+    id: 2, name: '単語練習（基本）',
+    texts: ['да нет','мама папа','дом кот','кто как'],
+    hint: 'da net / mama papa / dom kot',
+  },
+  {
+    id: 3, name: '日常フレーズ',
+    texts: ['привет','спасибо','пожалуйста','до свидания','как дела'],
+    hint: 'privet / spasibo / pozhalujsta',
+  },
+  {
+    id: 4, name: '数字と曜日',
+    texts: ['один два три','четыре пять шесть','понедельник вторник среда','четверг пятница суббота'],
+    hint: 'odin dva tri / chetyire pyat shest',
+  },
+  {
+    id: 5, name: '長文チャレンジ',
+    texts: [
+      'россия москва санкт петербург',
+      'я люблю русский язык',
+      'добрый день как вас зовут',
+    ],
+    hint: 'rossiya moskva / ya lyublyu russkij yazyk',
+  },
+];
+
+// ======= STATE =======
+let mode = 'lesson';
+let lessonIdx = 0;
+let textIdx = 0;
+let targetText = '';
+let typedCyr = '';
+let inputBuffer = '';
+let startTime = null;
+let timerInterval = null;
+let running = false;
+let duration = 60;
+let remaining = 60;
+let totalTyped = 0;
+let totalErrors = 0;
+let streak = 0;
+let lessonDone = JSON.parse(localStorage.getItem('cyrillic_done_v1') || '[]');
+let history = JSON.parse(localStorage.getItem('cyrillic_hist_v1') || '[]');
+
+// ======= INIT =======
+function buildLessonRow() {
+  document.getElementById('lesson-row').innerHTML = LESSONS.map((l,i) =>
+    `<button class="lesson-btn${i===lessonIdx?' active':''}${lessonDone.includes(l.id)?' done':''}"
+      onclick="selectLesson(${i})">${l.name}</button>`
+  ).join('');
+}
+
+function buildKeyboard() {
+  const rows = document.getElementById('kb-rows');
+  rows.innerHTML = KB_ROWS.map(row =>
+    `<div class="kb-row">${row.map(([cyr,lat]) =>
+      `<div class="key" id="key-${lat}" data-cyr="${cyr}">
+        <div class="key-cyr">${cyr}</div>
+        <div class="key-lat">${lat.toUpperCase()}</div>
+      </div>`
+    ).join('')}</div>`
+  ).join('');
+}
+
+function buildRef() {
+  const entries = Object.entries(SINGLE);
+  document.getElementById('ref-grid').innerHTML = entries.map(([lat,cyr]) =>
+    `<div class="ref-cell"><div class="ref-cyr">${cyr} ${cyr.toUpperCase()}</div><div class="ref-lat">${lat}</div></div>`
+  ).join('');
+}
+
+function selectLesson(i) {
+  lessonIdx = i; textIdx = 0;
+  buildLessonRow();
+  resetLesson();
+}
+
+function setMode(m) {
+  mode = m;
+  ['lesson','free','timed'].forEach(id => document.getElementById('tab-'+id).classList.toggle('active', id===m));
+  document.getElementById('lesson-row').style.display = m === 'timed' ? 'none' : '';
+  resetLesson();
+}
+
+// ======= TRANSLITERATE =======
+// Convert typed latin buffer to cyrillic (greedy multi-char match)
+function bufferToCyr(buf) {
+  let result = '';
+  let i = 0;
+  while (i < buf.length) {
+    // Try 3-char
+    if (i+3<=buf.length && TRANSLIT[buf.slice(i,i+3)]) { result += TRANSLIT[buf.slice(i,i+3)]; i+=3; }
+    // Try 2-char
+    else if (i+2<=buf.length && TRANSLIT[buf.slice(i,i+2)]) { result += TRANSLIT[buf.slice(i,i+2)]; i+=2; }
+    // Try 1-char
+    else if (TRANSLIT[buf[i]]) { result += TRANSLIT[buf[i]]; i++; }
+    // passthrough space/punct
+    else { result += buf[i]; i++; }
+  }
+  return result;
+}
+
+// ======= TEXT SETUP =======
+function getTargetText() {
+  if (mode === 'timed') {
+    // random mix from all lessons
+    const all = LESSONS.flatMap(l => l.texts);
+    return all[Math.floor(Math.random() * all.length)];
+  }
+  if (mode === 'free') return '';
+  const lesson = LESSONS[lessonIdx];
+  return lesson.texts[textIdx % lesson.texts.length];
+}
+
+function startLesson() {
+  clearInterval(timerInterval);
+  targetText = getTargetText();
+  typedCyr = '';
+  inputBuffer = '';
+  totalTyped = 0;
+  totalErrors = 0;
+  streak = 0;
+  startTime = null;
+  running = false;
+  remaining = duration;
+
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('typing-input').value = '';
+  document.getElementById('typing-input').disabled = false;
+
+  const lesson = LESSONS[lessonIdx];
+  document.getElementById('translit-hint').innerHTML =
+    `ローマ字で入力 → キリル文字に変換 ｜ ヒント: <span>${mode==='lesson'?lesson.hint:'a→а b→б v→в e→е i→и ...'}</span>`;
+
+  if (mode === 'free') {
+    document.getElementById('text-display').innerHTML = '<span style="color:#475569">自由に入力してください。キリル文字に変換されます。</span>';
+    document.getElementById('prog-fill').style.width = '0%';
+  } else {
+    renderText();
+  }
+  updateStats();
+  setTimeout(() => document.getElementById('typing-input').focus(), 50);
+}
+
+function resetLesson() {
+  clearInterval(timerInterval);
+  running = false;
+  startLesson();
+}
+
+// ======= TEXT RENDER =======
+function renderText() {
+  const display = document.getElementById('text-display');
+  if (mode === 'free') {
+    display.textContent = typedCyr || '…';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < targetText.length; i++) {
+    const ch = targetText[i] === ' ' ? '&nbsp;' : escHtml(targetText[i]);
+    if (i < typedCyr.length) {
+      const ok = typedCyr[i] === targetText[i];
+      html += `<span class="char ${ok?'ok':'err'}">${ch}</span>`;
+    } else if (i === typedCyr.length) {
+      html += `<span class="char cursor">${ch}</span>`;
+    } else {
+      html += `<span class="char upcoming">${ch}</span>`;
+    }
+  }
+  display.innerHTML = html;
+  const pct = targetText.length > 0 ? (typedCyr.length / targetText.length * 100) : 0;
+  document.getElementById('prog-fill').style.width = Math.min(100, pct) + '%';
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ======= INPUT HANDLER =======
+document.getElementById('typing-input').addEventListener('input', function(e) {
+  const val = this.value;
+
+  if (!startTime && val.length > 0) {
+    startTime = Date.now();
+    running = true;
+    if (mode === 'timed') {
+      timerInterval = setInterval(tick, 200);
+    }
+  }
+
+  // Convert full buffer to cyrillic
+  const newCyr = bufferToCyr(val);
+
+  if (mode === 'free') {
+    typedCyr = newCyr;
+    renderText();
+    highlightKey(val[val.length-1] || '');
+    return;
+  }
+
+  // Check accuracy
+  for (let i = typedCyr.length; i < newCyr.length; i++) {
+    totalTyped++;
+    if (i < targetText.length) {
+      if (newCyr[i] === targetText[i]) { streak++; }
+      else { totalErrors++; streak = 0; }
+    }
+  }
+
+  typedCyr = newCyr;
+  renderText();
+  updateStats();
+  highlightKey(val[val.length-1] || '');
+
+  // Check complete
+  if (mode !== 'timed' && typedCyr.length >= targetText.length) {
+    finishLesson();
+  }
+});
+
+// ======= KEY HIGHLIGHT =======
+function highlightKey(latChar) {
+  document.querySelectorAll('.key.active').forEach(k => k.classList.remove('active'));
+  const key = document.getElementById('key-' + latChar.toLowerCase());
+  if (key) key.classList.add('active');
+}
+
+// ======= TICK =======
+function tick() {
+  if (!running) return;
+  remaining = Math.max(0, duration - (Date.now() - startTime) / 1000);
+  document.getElementById('stat-time').textContent = Math.ceil(remaining);
+  if (remaining <= 0) finishLesson();
+}
+
+// ======= STATS =======
+function updateStats() {
+  const elapsed = startTime ? (Date.now() - startTime) / 1000 : 1;
+  const correct = totalTyped - totalErrors;
+  const cpm = elapsed > 0 && totalTyped > 0 ? Math.round(correct / elapsed * 60) : 0;
+  const acc = totalTyped > 0 ? Math.round(correct / totalTyped * 100) : 100;
+  document.getElementById('stat-acc').textContent = totalTyped > 0 ? acc : '--';
+  document.getElementById('stat-cpm').textContent = cpm || '--';
+  document.getElementById('stat-streak').textContent = streak;
+  if (mode !== 'timed') document.getElementById('stat-time').textContent = '--';
+}
+
+// ======= FINISH =======
+function finishLesson() {
+  clearInterval(timerInterval);
+  running = false;
+  document.getElementById('typing-input').disabled = true;
+
+  const elapsed = startTime ? (Date.now() - startTime) / 1000 : 1;
+  const correct = totalTyped - totalErrors;
+  const cpm = Math.round(correct / elapsed * 60);
+  const acc = totalTyped > 0 ? Math.round(correct / totalTyped * 100) : 100;
+
+  let grade = '🎉', title = 'よく頑張りました！';
+  if (acc >= 95 && cpm >= 60) { grade = '🏆'; title = 'エキスパート！'; }
+  else if (acc >= 90) { grade = '⭐'; title = '素晴らしい！'; }
+  else if (acc >= 75) { grade = '📘'; title = 'いい調子です！'; }
+
+  document.getElementById('r-grade').textContent = grade;
+  document.getElementById('r-title').textContent = title;
+  document.getElementById('r-acc').textContent = acc;
+  document.getElementById('r-cpm').textContent = cpm;
+  document.getElementById('r-chars').textContent = correct;
+  document.getElementById('r-time').textContent = Math.round(elapsed);
+  document.getElementById('result-card').classList.add('show');
+
+  // mark lesson done
+  const lid = LESSONS[lessonIdx].id;
+  if (mode === 'lesson' && acc >= 80 && !lessonDone.includes(lid)) {
+    lessonDone.push(lid);
+    localStorage.setItem('cyrillic_done_v1', JSON.stringify(lessonDone));
+    buildLessonRow();
+  }
+
+  // save history
+  const MODE_L = { lesson: LESSONS[lessonIdx].name, free: 'フリー', timed: 'タイムアタック' };
+  history.unshift({ date: new Date().toLocaleString('ja-JP'), mode: MODE_L[mode], acc, cpm });
+  if (history.length > 20) history = history.slice(0,20);
+  localStorage.setItem('cyrillic_hist_v1', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  if (!history.length) { document.getElementById('history-section').style.display='none'; return; }
+  document.getElementById('history-section').style.display='';
+  document.getElementById('history-body').innerHTML = history.slice(0,10).map(r =>
+    `<tr><td>${r.date}</td><td>${r.mode}</td><td>${r.acc}%</td><td>${r.cpm}</td></tr>`
+  ).join('');
+}
+
+// keyboard Enter = next text
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') resetLesson();
+});
+
+buildLessonRow();
+buildKeyboard();
+buildRef();
+renderHistory();
+startLesson();
+</script>
+</BaseLayout>
