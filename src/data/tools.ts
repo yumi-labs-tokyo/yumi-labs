@@ -361,7 +361,7 @@ export const tools: Tool[] = [
 		id: 55, slug: 'legal-ruby',
 		name: '法律用語ふりがな付き読解',
 		description: '判例文をペーストすると専門用語にフリガナと意味を表示。',
-		emoji: '⚖️', category: 'learning', status: 'coming-soon',
+		emoji: '⚖️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 56, slug: 'latex-math',

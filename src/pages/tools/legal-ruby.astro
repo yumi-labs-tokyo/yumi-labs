@@ -1,0 +1,471 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="法律用語ふりがな付き読解" description="判例文・法律文をペーストすると専門用語にフリガナと意味を自動表示。法律読解をサポート。">
+<style>
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 24px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* input area */
+  .input-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .section-label { font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 8px; }
+  .text-area {
+    width: 100%; box-sizing: border-box; background: #0f172a; border: 2px solid #334155;
+    border-radius: 10px; color: #e2e8f0; font-size: 1rem; padding: 12px 14px;
+    outline: none; resize: vertical; min-height: 120px; line-height: 1.9;
+    font-family: inherit; transition: border-color .2s;
+  }
+  .text-area:focus { border-color: #f59e0b; }
+  .sample-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sample-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #334155;
+    background: #0f172a; color: #64748b; cursor: pointer; font-size: 0.75rem;
+    transition: all .15s;
+  }
+  .sample-btn:hover { border-color: #f59e0b; color: #fbbf24; }
+
+  /* controls */
+  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .btn {
+    padding: 9px 22px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 700; transition: all .2s;
+  }
+  .btn-primary { background: linear-gradient(135deg,#f59e0b,#f97316); color: #fff; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,.35); }
+  .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .btn-secondary:hover { border-color: #f59e0b; color: #fbbf24; }
+  .toggle-wrap { display: flex; gap: 6px; align-items: center; font-size: 0.8rem; color: #64748b; margin-left: auto; }
+  .toggle { appearance: none; width: 36px; height: 20px; background: #334155; border-radius: 99px; position: relative; cursor: pointer; transition: background .2s; }
+  .toggle:checked { background: #f59e0b; }
+  .toggle::after { content:''; position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 99px; top: 3px; left: 3px; transition: left .2s; }
+  .toggle:checked::after { left: 19px; }
+
+  /* stats */
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat-chip { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem; color: #94a3b8; }
+  .stat-chip span { font-weight: 800; color: #f59e0b; }
+
+  /* result area */
+  .result-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 20px; display: none; }
+  .result-card.show { display: block; }
+  .result-label { font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 14px; }
+  .ruby-text {
+    font-size: 1.05rem; line-height: 2.8; color: #e2e8f0;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
+  }
+  ruby { ruby-align: center; }
+  rt {
+    font-size: 0.6em; color: #fbbf24; font-family: sans-serif;
+    line-height: 1;
+  }
+  .term-hl {
+    background: rgba(245,158,11,.12); border-bottom: 2px solid #f59e0b;
+    border-radius: 2px; cursor: pointer; position: relative; transition: background .15s;
+  }
+  .term-hl:hover { background: rgba(245,158,11,.25); }
+  .term-hl.active { background: rgba(245,158,11,.3); }
+
+  /* tooltip */
+  .tooltip-box {
+    position: fixed; z-index: 999; background: #1e293b; border: 1px solid #f59e0b;
+    border-radius: 12px; padding: 14px 16px; max-width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    display: none; pointer-events: none;
+  }
+  .tooltip-box.show { display: block; }
+  .tt-term { font-size: 1.1rem; font-weight: 800; color: #fbbf24; margin-bottom: 4px; }
+  .tt-reading { font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px; }
+  .tt-meaning { font-size: 0.85rem; color: #e2e8f0; line-height: 1.7; }
+  .tt-law { font-size: 0.72rem; color: #64748b; margin-top: 6px; border-top: 1px solid #334155; padding-top: 6px; }
+
+  /* glossary panel */
+  .glossary-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+  .glossary-title { font-size: 0.82rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+  .glossary-list { display: flex; flex-direction: column; gap: 8px; }
+  .glossary-item { background: #0f172a; border-radius: 10px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; cursor: pointer; border: 1px solid transparent; transition: border-color .15s; }
+  .glossary-item:hover { border-color: #f59e0b; }
+  .gl-term { font-size: 1rem; font-weight: 800; color: #fbbf24; min-width: 80px; font-family: serif; }
+  .gl-reading { font-size: 0.72rem; color: #64748b; }
+  .gl-meaning { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; }
+
+  /* search */
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-input {
+    width: 100%; box-sizing: border-box; background: #0f172a; border: 2px solid #334155;
+    border-radius: 10px; color: #e2e8f0; font-size: 0.9rem; padding: 9px 14px;
+    outline: none; transition: border-color .2s;
+  }
+  .search-input:focus { border-color: #f59e0b; }
+
+  .empty-note { color: #475569; font-size: 0.85rem; text-align: center; padding: 20px; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">⚖️ 法律用語ふりがな付き読解</div>
+    <div class="hero-sub">判例文・法律文をペーストすると専門用語にフリガナ＋意味を自動表示</div>
+  </div>
+
+  <!-- input -->
+  <div class="input-card">
+    <div class="section-label">📄 法律文・判例文を貼り付け</div>
+    <textarea class="text-area" id="text-area" placeholder="判例文や法律条文をここに貼り付けてください..."></textarea>
+    <div class="sample-row">
+      <span style="font-size:.75rem;color:#64748b">サンプル：</span>
+      <button class="sample-btn" onclick="loadSample(0)">民事訴訟</button>
+      <button class="sample-btn" onclick="loadSample(1)">刑事判決</button>
+      <button class="sample-btn" onclick="loadSample(2)">行政処分</button>
+      <button class="sample-btn" onclick="loadSample(3)">契約条文</button>
+    </div>
+    <div class="ctrl-row">
+      <button class="btn btn-primary" onclick="analyze()">⚖️ フリガナ表示</button>
+      <button class="btn btn-secondary" onclick="clearAll()">クリア</button>
+      <div class="toggle-wrap">
+        <label>意味を常時表示</label>
+        <input type="checkbox" class="toggle" id="always-show" onchange="toggleAlways()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- stats -->
+  <div class="stats-row" id="stats-row" style="display:none">
+    <div class="stat-chip">検出用語 <span id="st-terms">0</span>件</div>
+    <div class="stat-chip">総文字数 <span id="st-chars">0</span>字</div>
+  </div>
+
+  <!-- result -->
+  <div class="result-card" id="result-card">
+    <div class="result-label">📖 フリガナ付き本文（用語をクリックで意味表示）</div>
+    <div class="ruby-text" id="ruby-text"></div>
+  </div>
+
+  <!-- glossary -->
+  <div class="glossary-card" id="glossary-card" style="display:none">
+    <div class="glossary-title">📚 検出された用語一覧</div>
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="glossary-search" placeholder="用語を検索..." oninput="filterGlossary()" />
+    </div>
+    <div class="glossary-list" id="glossary-list"></div>
+  </div>
+
+  <!-- tooltip -->
+  <div class="tooltip-box" id="tooltip-box">
+    <div class="tt-term" id="tt-term"></div>
+    <div class="tt-reading" id="tt-reading"></div>
+    <div class="tt-meaning" id="tt-meaning"></div>
+    <div class="tt-law" id="tt-law"></div>
+  </div>
+</div>
+
+<script is:inline>
+// ======= LEGAL TERM DICTIONARY =======
+// { term, reading, meaning, law(条文出典) }
+const DICT = [
+  // 民事・訴訟
+  { term:'原告', reading:'げんこく', meaning:'裁判所に訴えを提起した側の当事者。民事訴訟における訴える側。', law:'民事訴訟法' },
+  { term:'被告', reading:'ひこく', meaning:'原告から訴えられた側の当事者。民事訴訟で訴えられた人・法人。', law:'民事訴訟法' },
+  { term:'訴訟', reading:'そしょう', meaning:'裁判所に解決を求める手続き全体。民事・刑事・行政の各種がある。', law:'民事訴訟法' },
+  { term:'上訴', reading:'じょうそ', meaning:'下級裁判所の判決に不服として上級裁判所に審査を求めること。', law:'民事訴訟法' },
+  { term:'控訴', reading:'こうそ', meaning:'第一審の判決に不服として第二審（高等裁判所）に審査を求めること。', law:'民事訴訟法第281条' },
+  { term:'上告', reading:'じょうこく', meaning:'第二審の判決に不服として最高裁判所に審査を求めること。', law:'民事訴訟法第311条' },
+  { term:'抗告', reading:'こうこく', meaning:'決定・命令に対する不服申立て。判決ではなく決定への不服申立。', law:'民事訴訟法第328条' },
+  { term:'判決', reading:'はんけつ', meaning:'裁判所が当事者の主張・証拠を審理した上で下す最終的な判断。', law:'民事訴訟法' },
+  { term:'決定', reading:'けってい', meaning:'口頭弁論を必要とせずに裁判所が行う裁判。手続的事項について。', law:'民事訴訟法第87条' },
+  { term:'命令', reading:'めいれい', meaning:'裁判長・受命裁判官・受託裁判官が行う裁判。', law:'民事訴訟法' },
+  { term:'和解', reading:'わかい', meaning:'当事者間が互いに譲歩して争いを解決すること。裁判上和解と裁判外和解がある。', law:'民法第695条' },
+  { term:'調停', reading:'ちょうてい', meaning:'第三者（調停委員）が当事者間を仲介して合意を促す紛争解決手続。', law:'民事調停法' },
+  { term:'仲裁', reading:'ちゅうさい', meaning:'当事者が選んだ仲裁人の判断に委ねて紛争を解決する方法。', law:'仲裁法' },
+  { term:'訴状', reading:'そじょう', meaning:'原告が裁判所に提出する、訴訟を提起するための書面。', law:'民事訴訟法第133条' },
+  { term:'答弁書', reading:'とうべんしょ', meaning:'被告が原告の訴状に対して反論・認否を述べる書面。', law:'民事訴訟法第158条' },
+  { term:'準備書面', reading:'じゅんびしょめん', meaning:'口頭弁論で陳述する事項を事前に記載して提出する書面。', law:'民事訴訟法第161条' },
+  { term:'証拠', reading:'しょうこ', meaning:'事実を証明するための資料。書証・人証・物証などがある。', law:'民事訴訟法第179条以下' },
+  { term:'証拠調べ', reading:'しょうこしらべ', meaning:'裁判所が証拠の内容を確認・評価する手続。', law:'民事訴訟法第181条' },
+  { term:'書証', reading:'しょしょう', meaning:'文書を証拠とすること。契約書・領収書・メールなど。', law:'民事訴訟法第219条' },
+  { term:'証人', reading:'しょうにん', meaning:'事実を知る第三者として裁判所で証言する人。', law:'民事訴訟法第190条' },
+  { term:'宣誓', reading:'せんせい', meaning:'証人が真実を述べることを誓う行為。偽証の場合は刑事責任を問われる。', law:'民事訴訟法第201条' },
+  { term:'弁論', reading:'べんろん', meaning:'当事者が裁判所で口頭により主張・立証を行うこと。', law:'民事訴訟法' },
+  { term:'口頭弁論', reading:'こうとうべんろん', meaning:'当事者が裁判官の前で口頭で主張・立証を行う手続。', law:'民事訴訟法第87条' },
+  { term:'弁論主義', reading:'べんろんしゅぎ', meaning:'訴訟の主な素材（事実・証拠）の収集を当事者に委ねる建前。', law:'民事訴訟の基本原則' },
+  { term:'既判力', reading:'きはんりょく', meaning:'確定判決の内容が後の訴訟を拘束する効力。同一事項を再び争えない。', law:'民事訴訟法第114条' },
+  { term:'執行力', reading:'しっこうりょく', meaning:'判決に基づいて強制執行を申し立てることができる効力。', law:'民事執行法' },
+  { term:'仮処分', reading:'かりしょぶん', meaning:'本案判決前に権利を暫定的に保全する手続。', law:'民事保全法' },
+  { term:'仮差押', reading:'かりさしおさえ', meaning:'金銭債権の将来の強制執行を保全するため財産を仮に差し押さえる手続。', law:'民事保全法第20条' },
+  // 刑事
+  { term:'被疑者', reading:'ひぎしゃ', meaning:'犯罪を犯したと疑われているが、まだ起訴されていない人。容疑者とも呼ばれる。', law:'刑事訴訟法' },
+  { term:'被告人', reading:'ひこくにん', meaning:'刑事訴訟で起訴された人。公訴を提起された者。', law:'刑事訴訟法' },
+  { term:'起訴', reading:'きそ', meaning:'検察官が裁判所に対して刑事裁判の開始を求める行為（公訴の提起）。', law:'刑事訴訟法第247条' },
+  { term:'不起訴', reading:'ふきそ', meaning:'検察官が起訴しないと決定すること。嫌疑不十分・起訴猶予などの理由がある。', law:'刑事訴訟法第248条' },
+  { term:'起訴猶予', reading:'きそゆうよ', meaning:'犯罪は成立するが様々な事情を考慮して検察官が起訴しないこと。', law:'刑事訴訟法第248条' },
+  { term:'勾留', reading:'こうりゅう', meaning:'被疑者・被告人を引き続き拘禁する処分。逮捕後の身柄拘束。', law:'刑事訴訟法第60条' },
+  { term:'逮捕', reading:'たいほ', meaning:'被疑者の身体を拘束する処分。令状逮捕・現行犯逮捕・緊急逮捕がある。', law:'刑事訴訟法第199条' },
+  { term:'令状', reading:'れいじょう', meaning:'裁判官が発する強制処分の許可証。逮捕状・捜索令状など。', law:'刑事訴訟法第199条' },
+  { term:'捜索', reading:'そうさく', meaning:'証拠物・犯人を発見するため場所・物・身体を調べる強制処分。', law:'刑事訴訟法第218条' },
+  { term:'差押', reading:'さしおさえ', meaning:'証拠となる物を強制的に取得・保管する処分。', law:'刑事訴訟法第218条' },
+  { term:'押収', reading:'おうしゅう', meaning:'差押・提出命令・任意提出により物の占有を取得すること。', law:'刑事訴訟法' },
+  { term:'公訴時効', reading:'こうそじこう', meaning:'一定期間が経過すると公訴を提起できなくなる制度。', law:'刑事訴訟法第250条' },
+  { term:'黙秘権', reading:'もくひけん', meaning:'自己に不利益な供述を強要されない権利。憲法38条で保障。', law:'憲法第38条・刑事訴訟法第311条' },
+  { term:'弁護人', reading:'べんごにん', meaning:'被疑者・被告人の法的利益を守るために弁護する弁護士。', law:'刑事訴訟法第30条' },
+  { term:'国選弁護人', reading:'こくせんべんごにん', meaning:'資力のない被告人のために国が費用を負担して選任する弁護人。', law:'刑事訴訟法第36条' },
+  { term:'無罪推定', reading:'むざいすいてい', meaning:'有罪が確定するまで被告人を無罪と推定する原則。無罪の推定。', law:'憲法第31条・刑事訴訟法' },
+  { term:'有罪', reading:'ゆうざい', meaning:'犯罪行為の成立が認められた状態。刑事裁判の有罪判決。', law:'刑事訴訟法' },
+  { term:'無罪', reading:'むざい', meaning:'犯罪の成立が認められない状態。無罪判決を受けた場合。', law:'刑事訴訟法第336条' },
+  { term:'執行猶予', reading:'しっこうゆうよ', meaning:'有罪判決でも一定期間内に再犯しなければ刑の執行を免除する制度。', law:'刑法第25条' },
+  { term:'懲役', reading:'ちょうえき', meaning:'刑務所に収容し所定の作業を行わせる自由刑。', law:'刑法第12条' },
+  { term:'禁錮', reading:'きんこ', meaning:'刑務所に収容するが作業を義務付けない自由刑。', law:'刑法第13条' },
+  { term:'罰金', reading:'ばっきん', meaning:'国に一定の金銭を支払わせる財産刑。1万円以上。', law:'刑法第15条' },
+  { term:'科料', reading:'かりょう', meaning:'1000円以上1万円未満の財産刑。罰金より軽い刑。', law:'刑法第17条' },
+  { term:'没収', reading:'ぼっしゅう', meaning:'犯罪に関係する物を国が取り上げる付加刑。', law:'刑法第19条' },
+  // 民法
+  { term:'不法行為', reading:'ふほうこうい', meaning:'故意または過失により他人の権利・利益を侵害して損害を与えること。', law:'民法第709条' },
+  { term:'債務不履行', reading:'さいむふりこう', meaning:'債務者が正当な理由なく債務の本旨に従った履行をしないこと。', law:'民法第415条' },
+  { term:'損害賠償', reading:'そんがいばいしょう', meaning:'他人に与えた損害を金銭などで填補する義務。', law:'民法第709条' },
+  { term:'慰謝料', reading:'いしゃりょう', meaning:'精神的損害（苦痛）に対する賠償。', law:'民法第710条' },
+  { term:'連帯保証', reading:'れんたいほしょう', meaning:'主債務者と連帯して債務を負う保証。催告・検索の抗弁権がない。', law:'民法第454条' },
+  { term:'抵当権', reading:'ていとうけん', meaning:'債権の担保として不動産に設定する担保物権。', law:'民法第369条' },
+  { term:'質権', reading:'しちけん', meaning:'債権の担保として動産・不動産・権利を債権者に引き渡す担保物権。', law:'民法第342条' },
+  { term:'留置権', reading:'りゅうちけん', meaning:'他人の物に関して生じた債権を持つ者が弁済を受けるまで物を留置できる権利。', law:'民法第295条' },
+  { term:'先取特権', reading:'さきどりとっけん', meaning:'特定の債権者が他の債権者に優先して弁済を受けることができる権利。', law:'民法第303条' },
+  { term:'時効', reading:'じこう', meaning:'一定期間の経過により権利が消滅・取得される制度。', law:'民法第144条以下' },
+  { term:'消滅時効', reading:'しょうめつじこう', meaning:'権利を行使しない状態が一定期間続くと権利が消滅する制度。', law:'民法第166条' },
+  { term:'取得時効', reading:'しゅとくじこう', meaning:'一定期間占有を続けると所有権などを取得できる制度。', law:'民法第162条' },
+  { term:'相殺', reading:'そうさい', meaning:'互いに同種の債権を対当額で消滅させること。', law:'民法第505条' },
+  { term:'代位弁済', reading:'だいいべんさい', meaning:'第三者が債務者に代わって弁済すること。弁済者は債権者の地位を引き継ぐ。', law:'民法第499条' },
+  { term:'解除', reading:'かいじょ', meaning:'有効に成立した契約を遡及的に消滅させる意思表示。', law:'民法第540条以下' },
+  { term:'取消', reading:'とりけし', meaning:'瑕疵ある意思表示・行為を遡及的に無効にすること。', law:'民法第120条以下' },
+  { term:'無効', reading:'むこう', meaning:'法律行為が最初から法律上の効力を生じないこと。', law:'民法第119条' },
+  { term:'強迫', reading:'きょうはく', meaning:'害悪を告知して相手の意思決定の自由を侵害すること。取消原因となる。', law:'民法第96条' },
+  { term:'詐欺', reading:'さぎ', meaning:'故意に虚偽の事実を告げて相手を錯誤に陥れること。', law:'民法第96条' },
+  { term:'錯誤', reading:'さくご', meaning:'意思表示の内容または動機に誤解があること。取消原因となりうる。', law:'民法第95条' },
+  // 行政
+  { term:'行政処分', reading:'ぎょうせいしょぶん', meaning:'行政庁が法令に基づき特定の者に対して行う権利義務を形成・確認する行為。', law:'行政事件訴訟法' },
+  { term:'取消訴訟', reading:'とりけしそしょう', meaning:'行政処分の取消しを求める訴訟。行政事件訴訟の中心。', law:'行政事件訴訟法第3条' },
+  { term:'処分性', reading:'しょぶんせい', meaning:'取消訴訟の対象となる「処分」にあたるか否かの要件。', law:'行政事件訴訟法第3条2項' },
+  { term:'原告適格', reading:'げんこくてきかく', meaning:'訴訟を提起できる資格。「法律上の利益」を有することが要件。', law:'行政事件訴訟法第9条' },
+  { term:'訴えの利益', reading:'うったえのりえき', meaning:'訴訟を維持する実益・必要性があること。これがなければ訴訟は却下される。', law:'行政事件訴訟法' },
+  { term:'裁量権', reading:'さいりょうけん', meaning:'行政庁が法律の範囲内で独自に判断する権限。', law:'行政法の原理' },
+  { term:'裁量権の逸脱', reading:'さいりょうけんのいつだつ', meaning:'行政庁が裁量の範囲を超えて違法な判断を行うこと。', law:'行政事件訴訟法第30条' },
+  { term:'行政指導', reading:'ぎょうせいしどう', meaning:'行政機関が相手方に任意の協力を求める非権力的な行政作用。', law:'行政手続法第32条' },
+  { term:'聴聞', reading:'ちょうもん', meaning:'不利益処分の前に相手方に意見を述べる機会を与える手続。', law:'行政手続法第15条' },
+  { term:'弁明', reading:'べんめい', meaning:'不利益処分の前に行う書面による事前告知・弁明の機会付与手続。', law:'行政手続法第29条' },
+  { term:'情報公開', reading:'じょうほうこうかい', meaning:'行政機関が保有する情報を公開する制度。', law:'情報公開法' },
+  // 憲法
+  { term:'基本的人権', reading:'きほんてきじんけん', meaning:'人間として当然に有する基本的な権利。憲法により保障される。', law:'憲法第11条' },
+  { term:'公共の福祉', reading:'こうきょうのふくし', meaning:'個人の人権を調整するための社会全体の利益・必要性。', law:'憲法第12・13条' },
+  { term:'違憲審査', reading:'いけんしんさ', meaning:'法律・命令が憲法に違反していないか審査すること。', law:'憲法第81条' },
+  { term:'違憲', reading:'いけん', meaning:'法律・命令・処分などが憲法の規定に反すること。', law:'憲法第81条' },
+  { term:'立法', reading:'りっぽう', meaning:'国会が法律を制定する作用。', law:'憲法第41条' },
+  { term:'行政', reading:'ぎょうせい', meaning:'法律に基づいて国・地方公共団体が行う具体的な行為。', law:'憲法第65条' },
+  { term:'司法', reading:'しほう', meaning:'裁判所が法を適用して紛争を解決する作用。', law:'憲法第76条' },
+  { term:'三権分立', reading:'さんけんぶんりつ', meaning:'立法・行政・司法の権力を分け相互に抑制・均衡させる制度。', law:'憲法' },
+  // 一般法律用語
+  { term:'当事者', reading:'とうじしゃ', meaning:'法律関係や訴訟において直接の利害関係を持つ者。', law:'民事訴訟法' },
+  { term:'第三者', reading:'だいさんしゃ', meaning:'当事者以外の者。契約・訴訟の当事者ではない人。', law:'民法・民事訴訟法' },
+  { term:'善意', reading:'ぜんい', meaning:'法律上の意味では「知らなかったこと」。日常用語の善意とは異なる。', law:'民法' },
+  { term:'悪意', reading:'あくい', meaning:'法律上の意味では「知っていたこと」。日常用語の悪意とは異なる。', law:'民法' },
+  { term:'善意無過失', reading:'ぜんいむかしつ', meaning:'知らなかったことに過失（不注意）がないこと。', law:'民法' },
+  { term:'過失', reading:'かしつ', meaning:'注意義務を怠った不注意な行為。', law:'民法第709条' },
+  { term:'故意', reading:'こい', meaning:'結果の発生を認識・認容しながら行為すること。わざと。', law:'民法第709条・刑法' },
+  { term:'因果関係', reading:'いんがかんけい', meaning:'原因と結果の関係。損害賠償の要件として行為と損害の間に必要。', law:'民法第416条' },
+  { term:'立証責任', reading:'りっしょうせきにん', meaning:'主張する事実を証明する責任。立証できない場合は不利益を受ける。', law:'民事訴訟法第247条' },
+  { term:'挙証責任', reading:'きょしょうせきにん', meaning:'立証責任と同義。証拠を提出して事実を証明する責任。', law:'民事訴訟法' },
+  { term:'推定', reading:'すいてい', meaning:'ある事実から別の事実を法律上あるものとみなすこと。反証で覆せる。', law:'民法・民事訴訟法' },
+  { term:'みなす', reading:'みなす', meaning:'反証を許さず、ある事実を法律上一定の事実とする効果。', law:'各種法律' },
+  { term:'強行規定', reading:'きょうこうきてい', meaning:'当事者の意思で変更・排除できない法律の規定。', law:'各種法律' },
+  { term:'任意規定', reading:'にんいきてい', meaning:'当事者の合意で変更・排除できる法律の規定。', law:'民法' },
+  { term:'特別法', reading:'とくべつほう', meaning:'特定の人・事項・地域に適用される法律。一般法より優先適用される。', law:'法律の一般原則' },
+  { term:'一般法', reading:'いっぱんほう', meaning:'広く一般的に適用される法律。特別法がある場合は特別法が優先される。', law:'法律の一般原則' },
+  { term:'公序良俗', reading:'こうじょりょうぞく', meaning:'公の秩序と善良な風俗。これに反する法律行為は無効。', law:'民法第90条' },
+  { term:'信義誠実', reading:'しんぎせいじつ', meaning:'社会的・法律的関係において誠実に行動すべきとする原則（信義則）。', law:'民法第1条' },
+  { term:'権利濫用', reading:'けんりらんよう', meaning:'形式的に権利の行使であっても社会的に許容されない権利行使。', law:'民法第1条3項' },
+  { term:'法人', reading:'ほうじん', meaning:'自然人（個人）以外で法律上の権利義務の主体とされる団体。', law:'民法第33条' },
+  { term:'代理', reading:'だいり', meaning:'代理人が本人の名において意思表示を行い、その効果が本人に帰属すること。', law:'民法第99条' },
+  { term:'委任', reading:'いにん', meaning:'ある事務の処理を他人に委託する契約。', law:'民法第643条' },
+  { term:'相続', reading:'そうぞく', meaning:'人の死亡により、その者の財産・権利義務が相続人に承継されること。', law:'民法第882条以下' },
+  { term:'遺言', reading:'いごん', meaning:'死後の法律関係を決めるため生前に行う意思表示。遺言（ゆいごん）とも読む。', law:'民法第960条以下' },
+  { term:'遺産分割', reading:'いさんぶんかつ', meaning:'相続人全員で共同相続した遺産を各自に具体的に分ける手続。', law:'民法第906条' },
+  { term:'遺留分', reading:'いりゅうぶん', meaning:'法定相続人が必ず取得できる最低限の相続分。', law:'民法第1042条' },
+  { term:'不動産', reading:'ふどうさん', meaning:'土地および建物など土地に定着している物。', law:'民法第86条' },
+  { term:'動産', reading:'どうさん', meaning:'不動産以外の物。物理的に移動できる物。', law:'民法第86条' },
+  { term:'占有', reading:'せんゆう', meaning:'物を自己のためにする意思をもって所持すること。', law:'民法第180条' },
+  { term:'所有権', reading:'しょゆうけん', meaning:'物を全面的・排他的に支配できる物権。最も完全な物権。', law:'民法第206条' },
+  { term:'物権', reading:'ぶっけん', meaning:'物を直接支配する権利。所有権・用益物権・担保物権に分かれる。', law:'民法第175条' },
+  { term:'債権', reading:'さいけん', meaning:'特定の人（債務者）に対して一定の行為を請求できる権利。', law:'民法第399条以下' },
+  { term:'債務', reading:'さいむ', meaning:'特定の者（債権者）に対して一定の行為をしなければならない法的義務。', law:'民法' },
+  { term:'契約', reading:'けいやく', meaning:'当事者の合意により成立する法律行為。申込みと承諾が必要。', law:'民法第521条以下' },
+];
+
+// ======= SAMPLES =======
+const SAMPLES = [
+  `本件は、原告が被告に対し、不法行為に基づく損害賠償請求として慰謝料金100万円及び遅延損害金の支払いを求める事案である。被告は、消滅時効を援用するとともに、過失相殺を主張する。裁判所は、当事者双方の主張及び証拠を調べ、以下のとおり判断する。`,
+  `被告人は、故意に被害者の財物を窃取した事実が認められる。検察官は、懲役2年を求刑したが、弁護人は執行猶予を求めた。裁判所は、黙秘権の告知を行った上で審理し、被告人が起訴猶予を受けた前科がなく、真摯に反省していることを勾留中の態度から認定した。`,
+  `処分行政庁は、本件行政処分を行うにあたり、行政手続法所定の聴聞手続を経ることなく処分を行った。これは裁量権の逸脱に当たり、原告適格を有する原告による取消訴訟が認められるべきである。訴えの利益も現に存在する。`,
+  `甲は乙との間で不動産売買契約を締結し、所有権移転登記を具備した。しかし乙は、丙との間で抵当権を設定しており、丙の当該不動産に対する先取特権が問題となる。善意無過失の第三者たる甲は、公序良俗に反しない限り保護される。`,
+];
+
+// ======= STATE =======
+let foundTerms = [];
+let alwaysShow = false;
+
+// ======= SAMPLES =======
+function loadSample(i) {
+  document.getElementById('text-area').value = SAMPLES[i];
+}
+
+function clearAll() {
+  document.getElementById('text-area').value = '';
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('glossary-card').style.display = 'none';
+  document.getElementById('stats-row').style.display = 'none';
+}
+
+function toggleAlways() {
+  alwaysShow = document.getElementById('always-show').checked;
+}
+
+// ======= ANALYZE =======
+function analyze() {
+  const text = document.getElementById('text-area').value.trim();
+  if (!text) { alert('テキストを入力してください'); return; }
+
+  // Find all matching terms (longest match first)
+  const sortedDict = [...DICT].sort((a, b) => b.term.length - a.term.length);
+  foundTerms = [];
+  const foundSet = new Set();
+
+  // Build annotated HTML
+  let html = '';
+  let i = 0;
+  const chars = [...text];
+
+  while (i < chars.length) {
+    // Try longest match
+    let matched = false;
+    for (const entry of sortedDict) {
+      const term = entry.term;
+      const slice = chars.slice(i, i + term.length).join('');
+      if (slice === term) {
+        // Found a match
+        const tid = 'term-' + i;
+        html += `<span class="term-hl" id="${tid}" data-term="${escHtml(term)}" onclick="showTooltip(this, event)">`
+              + `<ruby>${escHtml(term)}<rt>${entry.reading}</rt></ruby>`
+              + `</span>`;
+        if (!foundSet.has(term)) {
+          foundSet.add(term);
+          foundTerms.push(entry);
+        }
+        i += term.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      const ch = chars[i];
+      if (ch === '\n') html += '<br>';
+      else html += escHtml(ch);
+      i++;
+    }
+  }
+
+  document.getElementById('ruby-text').innerHTML = html;
+  document.getElementById('result-card').style.display = 'block';
+
+  // stats
+  document.getElementById('st-terms').textContent = foundTerms.length;
+  document.getElementById('st-chars').textContent = text.replace(/\s/g,'').length;
+  document.getElementById('stats-row').style.display = 'flex';
+
+  // glossary
+  renderGlossary(foundTerms);
+  document.getElementById('glossary-card').style.display = 'block';
+
+  document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ======= TOOLTIP =======
+function showTooltip(el, e) {
+  const term = el.dataset.term;
+  const entry = DICT.find(d => d.term === term);
+  if (!entry) return;
+
+  // toggle active
+  document.querySelectorAll('.term-hl.active').forEach(t => { if (t !== el) t.classList.remove('active'); });
+  el.classList.toggle('active');
+
+  const box = document.getElementById('tooltip-box');
+  if (!el.classList.contains('active')) { box.classList.remove('show'); return; }
+
+  document.getElementById('tt-term').textContent = entry.term;
+  document.getElementById('tt-reading').textContent = '読み：' + entry.reading;
+  document.getElementById('tt-meaning').textContent = entry.meaning;
+  document.getElementById('tt-law').textContent = '根拠：' + (entry.law || '');
+
+  box.classList.add('show');
+  // position
+  const r = el.getBoundingClientRect();
+  let top = r.bottom + window.scrollY + 6;
+  let left = r.left + window.scrollX;
+  const bw = box.offsetWidth || 300;
+  if (left + bw > window.innerWidth - 12) left = window.innerWidth - bw - 12;
+  if (left < 8) left = 8;
+  box.style.top = top + 'px';
+  box.style.left = left + 'px';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.term-hl') && !e.target.closest('.tooltip-box')) {
+    document.getElementById('tooltip-box').classList.remove('show');
+    document.querySelectorAll('.term-hl.active').forEach(t => t.classList.remove('active'));
+  }
+});
+
+// ======= GLOSSARY =======
+function renderGlossary(terms) {
+  if (!terms.length) {
+    document.getElementById('glossary-list').innerHTML = '<div class="empty-note">法律用語が見つかりませんでした</div>';
+    return;
+  }
+  document.getElementById('glossary-list').innerHTML = terms.map(e =>
+    `<div class="glossary-item" onclick="highlightInText('${escHtml(e.term)}')">
+      <div>
+        <div class="gl-term">${escHtml(e.term)}</div>
+        <div class="gl-reading">${e.reading}</div>
+      </div>
+      <div class="gl-meaning">${escHtml(e.meaning)}<br><span style="font-size:.72rem;color:#475569">${escHtml(e.law||'')}</span></div>
+    </div>`
+  ).join('');
+}
+
+function filterGlossary() {
+  const q = document.getElementById('glossary-search').value.trim().toLowerCase();
+  const filtered = q ? foundTerms.filter(e =>
+    e.term.includes(q) || e.reading.includes(q) || e.meaning.includes(q)
+  ) : foundTerms;
+  renderGlossary(filtered);
+}
+
+function highlightInText(term) {
+  // scroll to first occurrence in ruby-text
+  const spans = document.querySelectorAll('.term-hl');
+  for (const s of spans) {
+    if (s.dataset.term === term) {
+      s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      s.classList.add('active');
+      // show tooltip
+      showTooltip(s, null);
+      setTimeout(() => s.classList.remove('active'), 2000);
+      break;
+    }
+  }
+}
+
+// Enter to analyze
+document.getElementById('text-area').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); analyze(); }
+});
+</script>
+</BaseLayout>
