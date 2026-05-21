@@ -1,0 +1,230 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="アクアリウム「水合わせタイマー」" description="購入魚種を選ぶと点滴法/コップ法の手順＋タイマーを表示。">
+<main class="fa-wrap">
+  <div class="fa-header">
+    <div class="fa-title">🐠 水合わせタイマー</div>
+    <div class="fa-sub">魚種を選んで適切な水合わせ方法とタイマーを確認</div>
+  </div>
+
+  <div class="fa-body">
+    <div class="fa-left">
+      <div class="fa-card">
+        <div class="fa-card-title">魚種・生体を選択</div>
+        <select id="fishType" class="fa-select" onchange="updateInfo()">
+          <optgroup label="熱帯魚">
+            <option value="neon">ネオンテトラ</option>
+            <option value="guppy">グッピー</option>
+            <option value="betta">ベタ</option>
+            <option value="angelfish">エンゼルフィッシュ</option>
+            <option value="discus">ディスカス</option>
+            <option value="corydoras">コリドラス</option>
+            <option value="pleco">プレコ</option>
+          </optgroup>
+          <optgroup label="金魚・和金">
+            <option value="goldfish">金魚（全般）</option>
+            <option value="ranchu">らんちゅう</option>
+          </optgroup>
+          <optgroup label="海水魚・珊瑚">
+            <option value="clown">クマノミ</option>
+            <option value="tang">ヤッコ類・ハギ類</option>
+            <option value="coral">サンゴ</option>
+          </optgroup>
+          <optgroup label="エビ・その他">
+            <option value="shrimp">チェリーシュリンプ</option>
+            <option value="crystal">クリスタルレッドシュリンプ</option>
+            <option value="crab">カニ・ヤドカリ</option>
+          </optgroup>
+        </select>
+
+        <div class="fa-method-sel">
+          <div class="fa-card-title" style="margin-top:1rem">水合わせ方法</div>
+          <div class="fa-method-tabs">
+            <button class="fa-mtab active" onclick="selMethod('drop',this)">点滴法（推奨）</button>
+            <button class="fa-mtab" onclick="selMethod('cup',this)">コップ法（簡易）</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="fa-info-card" id="fishInfoCard"></div>
+    </div>
+
+    <div class="fa-right">
+      <div class="fa-steps-card">
+        <div class="fa-card-title">水合わせ手順</div>
+        <div id="stepsContent"></div>
+      </div>
+
+      <div class="fa-timer-card">
+        <div class="fa-card-title">⏱️ タイマー</div>
+        <div id="timerDisplay" class="fa-timer-display">00:00</div>
+        <div class="fa-timer-btns">
+          <button class="fa-tbtn start" onclick="startTimer()">▶ スタート</button>
+          <button class="fa-tbtn pause" onclick="pauseTimer()">⏸ 一時停止</button>
+          <button class="fa-tbtn reset" onclick="resetTimer()">⏮ リセット</button>
+        </div>
+        <div class="fa-timer-phases" id="timerPhases"></div>
+      </div>
+
+      <div class="fa-checklist-card">
+        <div class="fa-card-title">✅ 事前チェックリスト</div>
+        <div class="fa-checks">
+          <label class="fa-check"><input type="checkbox" /> 水槽の水温を確認した（±2℃以内）</label>
+          <label class="fa-check"><input type="checkbox" /> 水槽のpHを確認した</label>
+          <label class="fa-check"><input type="checkbox" /> フィルターが正常に動作している</label>
+          <label class="fa-check"><input type="checkbox" /> 点滴チューブまたは適切な容器を準備した</label>
+          <label class="fa-check"><input type="checkbox" /> 購入したビニール袋を照明の当たらない場所に置いた</label>
+          <label class="fa-check"><input type="checkbox" /> エアレーションの準備ができている（点滴法の場合）</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const FISH_DATA = {
+  neon: { name:'ネオンテトラ', difficulty:'初級', sensitivity:'低', tempRange:'23-28℃', ph:'6.0-7.5', dropTime:30, cupTime:20, notes:'丈夫で水合わせに強い。ただし急激な温度変化は避ける。' },
+  guppy: { name:'グッピー', difficulty:'初級', sensitivity:'低', tempRange:'23-28℃', ph:'7.0-8.0', dropTime:30, cupTime:20, notes:'硬水を好む。塩分少量（岩塩）を加えると安定しやすい。' },
+  betta: { name:'ベタ', difficulty:'初級', sensitivity:'中', tempRange:'24-30℃', ph:'6.5-7.5', dropTime:45, cupTime:30, notes:'エラの発達した魚。温度差に注意。単独飼育が基本。' },
+  angelfish: { name:'エンゼルフィッシュ', difficulty:'中級', sensitivity:'中', tempRange:'26-30℃', ph:'6.5-7.0', dropTime:60, cupTime:40, notes:'水質に敏感。点滴法を推奨。混泳相手に注意。' },
+  discus: { name:'ディスカス', difficulty:'上級', sensitivity:'高', tempRange:'28-32℃', ph:'6.0-6.8', dropTime:90, cupTime:60, notes:'水質変化に非常に敏感。点滴法で慎重に行う。高温が必要。' },
+  corydoras: { name:'コリドラス', difficulty:'初級', sensitivity:'低', tempRange:'22-26℃', ph:'6.5-7.5', dropTime:30, cupTime:20, notes:'底物なので底砂も確認。塩分には弱いので入れない。' },
+  pleco: { name:'プレコ', difficulty:'初級', sensitivity:'低', tempRange:'22-28℃', ph:'6.0-7.5', dropTime:30, cupTime:20, notes:'流木が必要。夜行性なので隠れ家を用意する。' },
+  goldfish: { name:'金魚', difficulty:'初級', sensitivity:'低', tempRange:'10-28℃', ph:'6.8-7.5', dropTime:30, cupTime:20, notes:'温度変化に比較的強い。酸欠に弱いのでエアレーションは必須。' },
+  ranchu: { name:'らんちゅう', difficulty:'中級', sensitivity:'中', tempRange:'15-28℃', ph:'7.0-8.0', dropTime:45, cupTime:30, notes:'背びれがないため特に酸素量に気をつける。単独または少数飼育を推奨。' },
+  clown: { name:'クマノミ', difficulty:'中級', sensitivity:'中', tempRange:'25-28℃', ph:'8.1-8.4', dropTime:60, cupTime:45, notes:'海水魚なので比重と塩分濃度の確認が重要。イソギンチャクとの相性が良い。' },
+  tang: { name:'ヤッコ・ハギ類', difficulty:'上級', sensitivity:'高', tempRange:'25-28℃', ph:'8.1-8.4', dropTime:90, cupTime:60, notes:'白点病にかかりやすい。入念な水合わせと隔離水槽でのトリートメントを推奨。' },
+  coral: { name:'サンゴ', difficulty:'上級', sensitivity:'非常に高', tempRange:'25-27℃', ph:'8.1-8.4', dropTime:120, cupTime:90, notes:'比重・温度・pH・光の調整が全て重要。急激な変化は致命的。' },
+  shrimp: { name:'チェリーシュリンプ', difficulty:'初級', sensitivity:'中', tempRange:'20-25℃', ph:'6.5-7.5', dropTime:60, cupTime:45, notes:'農薬に非常に敏感。農薬不使用の水草を使用する。温度変化にも注意。' },
+  crystal: { name:'クリスタルレッドシュリンプ', difficulty:'上級', sensitivity:'非常に高', tempRange:'20-24℃', ph:'6.0-6.5', dropTime:120, cupTime:90, notes:'TDS値の管理が重要。農薬・銅イオンに致命的に弱い。RO水推奨。' },
+  crab: { name:'カニ・ヤドカリ', difficulty:'初級', sensitivity:'低', tempRange:'24-28℃', ph:'8.1-8.4', dropTime:45, cupTime:30, notes:'脱走名人なので蓋は必須。海水の比重管理が重要。' },
+};
+
+let method = 'drop';
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let currentFish = null;
+
+function selMethod(m, btn) {
+  method = m;
+  document.querySelectorAll('.fa-mtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateInfo();
+}
+
+function updateInfo() {
+  const type = document.getElementById('fishType').value;
+  const fish = FISH_DATA[type];
+  currentFish = fish;
+
+  document.getElementById('fishInfoCard').innerHTML = `
+    <div class="fi-row"><span class="fi-label">魚種</span><span class="fi-val">${fish.name}</span></div>
+    <div class="fi-row"><span class="fi-label">難易度</span><span class="fi-val">${fish.difficulty}</span></div>
+    <div class="fi-row"><span class="fi-label">デリケート度</span><span class="fi-val">${fish.sensitivity}</span></div>
+    <div class="fi-row"><span class="fi-label">適温</span><span class="fi-val">${fish.tempRange}</span></div>
+    <div class="fi-row"><span class="fi-label">pH</span><span class="fi-val">${fish.ph}</span></div>
+    <div class="fi-note">💡 ${fish.notes}</div>
+  `;
+
+  const totalMinutes = method === 'drop' ? fish.dropTime : fish.cupTime;
+
+  if (method === 'drop') {
+    document.getElementById('stepsContent').innerHTML = `
+      <div class="step-item"><div class="step-num">1</div><div>袋のまま水槽に20分浮かべて水温を合わせる</div></div>
+      <div class="step-item"><div class="step-num">2</div><div>バケツに袋の水と生体を入れる</div></div>
+      <div class="step-item"><div class="step-num">3</div><div>エアチューブで1秒3〜5滴の速さで点滴開始</div></div>
+      <div class="step-item"><div class="step-num">4</div><div>${Math.round(totalMinutes * 0.7)}分かけてバケツの水量を2倍以上にする</div></div>
+      <div class="step-item"><div class="step-num">5</div><div>水量が2倍になったら半分捨てて再度点滴 (${Math.round(totalMinutes * 0.3)}分)</div></div>
+      <div class="step-item"><div class="step-num">6</div><div>生体をすくい網で水槽に移す（袋の水は入れない）</div></div>
+    `;
+  } else {
+    document.getElementById('stepsContent').innerHTML = `
+      <div class="step-item"><div class="step-num">1</div><div>袋のまま水槽に20分浮かべて水温を合わせる</div></div>
+      <div class="step-item"><div class="step-num">2</div><div>袋に水槽の水を1/4程度入れて10分待つ</div></div>
+      <div class="step-item"><div class="step-num">3</div><div>もう1/4入れて10分待つ（合計2〜3回繰り返す）</div></div>
+      <div class="step-item"><div class="step-num">4</div><div>水量が3倍程度になったら完了</div></div>
+      <div class="step-item"><div class="step-num">5</div><div>生体をすくい網で水槽に移す（袋の水は入れない）</div></div>
+    `;
+  }
+
+  document.getElementById('timerPhases').innerHTML = `
+    <div class="phase-item"><span class="phase-dot blue"></span>水温合わせ: 20分</div>
+    <div class="phase-item"><span class="phase-dot green"></span>水質合わせ: ${totalMinutes - 20}分</div>
+    <div class="phase-item"><span class="phase-dot yellow"></span>目安合計: ${totalMinutes}分</div>
+  `;
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('timerDisplay').textContent =
+      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+
+    // Color change based on phase
+    const fish = currentFish;
+    const total = fish ? (method === 'drop' ? fish.dropTime : fish.cupTime) * 60 : 1800;
+    const pct = timerSeconds / total;
+    const el = document.getElementById('timerDisplay');
+    if (pct < 0.33) el.style.color = '#60a5fa';
+    else if (pct < 0.8) el.style.color = '#4ade80';
+    else el.style.color = '#fbbf24';
+  }, 1000);
+}
+
+function pauseTimer() {
+  timerRunning = false;
+  clearInterval(timerInterval);
+}
+
+function resetTimer() {
+  pauseTimer();
+  timerSeconds = 0;
+  document.getElementById('timerDisplay').textContent = '00:00';
+  document.getElementById('timerDisplay').style.color = '';
+}
+
+updateInfo();
+</script>
+
+<style>
+.fa-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.fa-header { text-align: center; margin-bottom: 2rem; }
+.fa-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.fa-sub { color: var(--gray-400); margin-top: .3rem; }
+.fa-body { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
+@media (max-width: 700px) { .fa-body { grid-template-columns: 1fr; } }
+.fa-card, .fa-info-card, .fa-steps-card, .fa-timer-card, .fa-checklist-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.fa-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.fa-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; }
+.fa-method-tabs { display: flex; gap: .4rem; }
+.fa-mtab { flex: 1; padding: .4rem; border-radius: 8px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .82rem; cursor: pointer; }
+.fa-mtab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.fi-row { display: flex; justify-content: space-between; font-size: .85rem; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.fi-row:last-of-type { border-bottom: none; }
+.fi-label { color: var(--gray-400); }
+.fi-val { font-weight: 700; color: var(--gray-100); }
+.fi-note { margin-top: .6rem; font-size: .8rem; color: #fbbf24; line-height: 1.5; }
+.step-item { display: flex; gap: .7rem; align-items: flex-start; margin-bottom: .6rem; font-size: .85rem; color: var(--gray-200); }
+.step-num { min-width: 22px; height: 22px; border-radius: 50%; background: #7c3aed; color: #fff; font-size: .75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.fa-timer-display { font-size: 3rem; font-weight: 800; color: var(--gray-100); text-align: center; font-family: monospace; margin: .8rem 0; }
+.fa-timer-btns { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.fa-tbtn { flex: 1; padding: .45rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .85rem; }
+.fa-tbtn.start { background: #16a34a; color: #fff; }
+.fa-tbtn.pause { background: #b45309; color: #fff; }
+.fa-tbtn.reset { background: var(--gray-700); color: var(--gray-200); }
+.fa-timer-phases { display: flex; flex-direction: column; gap: .3rem; }
+.phase-item { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: var(--gray-300); }
+.phase-dot { width: 10px; height: 10px; border-radius: 50%; }
+.phase-dot.blue { background: #60a5fa; }
+.phase-dot.green { background: #4ade80; }
+.phase-dot.yellow { background: #fbbf24; }
+.fa-checks { display: flex; flex-direction: column; gap: .5rem; }
+.fa-check { display: flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--gray-300); cursor: pointer; }
+</style>
+</BaseLayout>

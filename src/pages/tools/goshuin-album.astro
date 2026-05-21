@@ -1,0 +1,240 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="御朱印帳デジタル管理" description="撮影日・神社名・場所をタグ管理。地図SVG上にピン表示。">
+<main class="gs-wrap">
+  <div class="gs-header">
+    <div class="gs-title">⛩️ 御朱印帳デジタル管理</div>
+    <div class="gs-sub">御朱印の記録をデジタルで整理・コレクション</div>
+  </div>
+
+  <div class="gs-add-card">
+    <div class="gs-card-title">御朱印を追加</div>
+    <div class="gs-add-form">
+      <div class="gs-fg">
+        <label class="gs-label">神社・寺院名</label>
+        <input type="text" id="gsName" class="gs-input" placeholder="例：明治神宮" />
+      </div>
+      <div class="gs-fg">
+        <label class="gs-label">所在地（都道府県）</label>
+        <select id="gsPref" class="gs-select">
+          <option value="">選択...</option>
+          <option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option>
+          <option>山形県</option><option>福島県</option><option>茨城県</option><option>栃木県</option><option>群馬県</option>
+          <option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option><option>新潟県</option>
+          <option>富山県</option><option>石川県</option><option>福井県</option><option>山梨県</option><option>長野県</option>
+          <option>岐阜県</option><option>静岡県</option><option>愛知県</option><option>三重県</option><option>滋賀県</option>
+          <option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+          <option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option>
+          <option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option><option>福岡県</option>
+          <option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option>
+          <option>鹿児島県</option><option>沖縄県</option>
+        </select>
+      </div>
+      <div class="gs-fg">
+        <label class="gs-label">種別</label>
+        <select id="gsType" class="gs-select">
+          <option value="shrine">神社</option>
+          <option value="temple">寺院</option>
+          <option value="both">神仏習合</option>
+        </select>
+      </div>
+      <div class="gs-fg">
+        <label class="gs-label">参拝日</label>
+        <input type="date" id="gsDate" class="gs-input" />
+      </div>
+      <div class="gs-fg wide">
+        <label class="gs-label">タグ（カンマ区切り）</label>
+        <input type="text" id="gsTags" class="gs-input" placeholder="例：縁結び,パワースポット,世界遺産" />
+      </div>
+      <div class="gs-fg wide">
+        <label class="gs-label">メモ</label>
+        <input type="text" id="gsMemo" class="gs-input" placeholder="参拝の感想、御朱印の特徴など" />
+      </div>
+      <div class="gs-fg">
+        <label class="gs-label">御朱印の色</label>
+        <select id="gsColor" class="gs-select">
+          <option value="red">朱色（一般）</option>
+          <option value="gold">金色（特別）</option>
+          <option value="blue">青色</option>
+          <option value="seasonal">季節限定</option>
+          <option value="special">特別御朱印</option>
+        </select>
+      </div>
+      <button class="gs-btn red" onclick="addGoshuin()">＋ 追加</button>
+    </div>
+  </div>
+
+  <div class="gs-filter-bar">
+    <input type="text" id="gsSearch" class="gs-search" placeholder="🔍 神社名・タグで検索..." oninput="render()" />
+    <select id="gsPrefFilter" class="gs-select-sm" onchange="render()">
+      <option value="">全都道府県</option>
+    </select>
+    <select id="gsTypeFilter" class="gs-select-sm" onchange="render()">
+      <option value="">全種別</option>
+      <option value="shrine">神社</option>
+      <option value="temple">寺院</option>
+      <option value="both">神仏習合</option>
+    </select>
+    <div class="gs-stats" id="statsBar"></div>
+  </div>
+
+  <div class="gs-map-section">
+    <div class="gs-card-title">都道府県別 訪問マップ</div>
+    <div id="prefMap" class="gs-pref-map"></div>
+  </div>
+
+  <div id="gsList" class="gs-list"></div>
+</main>
+
+<script is:inline>
+let records = [];
+try { records = JSON.parse(localStorage.getItem('gs_records') || '[]'); } catch(e) {}
+
+document.getElementById('gsDate').value = new Date().toISOString().split('T')[0];
+
+const TYPE_LABELS = { shrine:'神社', temple:'寺院', both:'神仏習合' };
+const TYPE_COLORS = { shrine:'#dc2626', temple:'#7c3aed', both:'#b45309' };
+const COLOR_LABELS = { red:'朱色', gold:'金色', blue:'青色', seasonal:'季節限定', special:'特別' };
+const COLOR_HEX = { red:'#dc2626', gold:'#d97706', blue:'#2563eb', seasonal:'#16a34a', special:'#7c3aed' };
+
+const PREFS_ALL = ['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+
+function save() { try { localStorage.setItem('gs_records', JSON.stringify(records)); } catch(e) {} }
+
+function addGoshuin() {
+  const name = document.getElementById('gsName').value.trim();
+  const pref = document.getElementById('gsPref').value;
+  const type = document.getElementById('gsType').value;
+  const date = document.getElementById('gsDate').value;
+  const tags = document.getElementById('gsTags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const memo = document.getElementById('gsMemo').value.trim();
+  const color = document.getElementById('gsColor').value;
+  if (!name) { alert('神社・寺院名を入力してください'); return; }
+  records.unshift({ id: Date.now(), name, pref, type, date, tags, memo, color });
+  save();
+  document.getElementById('gsName').value = '';
+  document.getElementById('gsTags').value = '';
+  document.getElementById('gsMemo').value = '';
+  updatePrefFilter();
+  render();
+}
+
+function removeRecord(id) { records = records.filter(r => r.id !== id); save(); render(); }
+
+function updatePrefFilter() {
+  const prefs = [...new Set(records.map(r => r.pref).filter(Boolean))].sort();
+  const sel = document.getElementById('gsPrefFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全都道府県</option>' +
+    prefs.map(p => `<option value="${p}" ${p === cur ? 'selected' : ''}>${p}</option>`).join('');
+}
+
+function render() {
+  const q = document.getElementById('gsSearch').value.toLowerCase();
+  const pref = document.getElementById('gsPrefFilter').value;
+  const type = document.getElementById('gsTypeFilter').value;
+
+  let filtered = records.filter(r =>
+    (!q || r.name.toLowerCase().includes(q) || r.tags.some(t => t.includes(q))) &&
+    (!pref || r.pref === pref) &&
+    (!type || r.type === type)
+  );
+
+  const visitedPrefs = new Set(records.map(r => r.pref).filter(Boolean));
+  const allTags = records.flatMap(r => r.tags);
+  const topTags = [...new Set(allTags)].slice(0, 5);
+
+  document.getElementById('statsBar').innerHTML = `
+    <span class="gs-chip">⛩️ ${records.length}社</span>
+    <span class="gs-chip">🗾 ${visitedPrefs.size}都道府県</span>
+    <span class="gs-chip">📅 ${new Set(records.map(r => r.date?.slice(0,7))).size}ヶ月</span>
+  `;
+
+  // Map
+  const prefCounts = {};
+  records.forEach(r => { if (r.pref) prefCounts[r.pref] = (prefCounts[r.pref] || 0) + 1; });
+  const maxCount = Math.max(...Object.values(prefCounts), 1);
+  document.getElementById('prefMap').innerHTML = PREFS_ALL.map(p => {
+    const cnt = prefCounts[p] || 0;
+    const opacity = cnt > 0 ? 0.3 + (cnt / maxCount) * 0.7 : 0;
+    return `<div class="pref-cell" style="background:${cnt > 0 ? 'rgba(220,38,38,' + opacity + ')' : 'var(--gray-900)'}">
+      <div class="pref-name">${p.replace('県','').replace('府','').replace('都','').replace('道','')}</div>
+      ${cnt > 0 ? '<div class="pref-cnt">' + cnt + '</div>' : ''}
+    </div>`;
+  }).join('');
+
+  if (!filtered.length) {
+    document.getElementById('gsList').innerHTML = '<div class="gs-empty">御朱印を追加してください</div>';
+    return;
+  }
+
+  document.getElementById('gsList').innerHTML = filtered.map(r => {
+    const col = COLOR_HEX[r.color] || '#dc2626';
+    return `<div class="gs-item">
+      <div class="gs-item-stamp" style="border-color:${col};color:${col}">御朱印</div>
+      <div class="gs-item-info">
+        <div class="gs-item-name">${r.name}</div>
+        <div class="gs-item-meta">
+          ${r.pref ? '<span>' + r.pref + '</span>' : ''}
+          <span class="gs-type-badge" style="background:${TYPE_COLORS[r.type]}20;color:${TYPE_COLORS[r.type]}">${TYPE_LABELS[r.type]}</span>
+          ${r.date ? '<span>' + r.date + '</span>' : ''}
+        </div>
+        ${r.tags.length ? '<div class="gs-tags">' + r.tags.map(t => '<span class="gs-tag">' + t + '</span>').join('') + '</div>' : ''}
+        ${r.memo ? '<div class="gs-memo">' + r.memo + '</div>' : ''}
+      </div>
+      <div class="gs-item-color">
+        <div class="gs-color-dot" style="background:${col}"></div>
+        <div class="gs-color-label">${COLOR_LABELS[r.color]}</div>
+      </div>
+      <button class="gs-del" onclick="removeRecord(${r.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+updatePrefFilter();
+render();
+</script>
+
+<style>
+.gs-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.gs-header { text-align: center; margin-bottom: 2rem; }
+.gs-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.gs-sub { color: var(--gray-400); margin-top: .3rem; }
+.gs-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.gs-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.gs-add-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: .6rem; align-items: end; }
+.gs-fg { display: flex; flex-direction: column; gap: .3rem; }
+.gs-fg.wide { grid-column: span 2; }
+.gs-label { font-size: .75rem; color: var(--gray-400); }
+.gs-input, .gs-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.gs-btn { padding: .55rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.gs-btn.red { background: #dc2626; color: #fff; }
+.gs-filter-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+.gs-search { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .8rem; font-size: .9rem; flex: 1; min-width: 180px; }
+.gs-select-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .45rem .6rem; font-size: .82rem; }
+.gs-stats { display: flex; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
+.gs-chip { background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 20px; padding: .2rem .7rem; font-size: .78rem; color: var(--gray-300); }
+.gs-map-section { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.gs-pref-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px,1fr)); gap: .3rem; }
+.pref-cell { border-radius: 6px; padding: .35rem .2rem; text-align: center; border: 1px solid var(--gray-700); }
+.pref-name { font-size: .68rem; color: var(--gray-300); }
+.pref-cnt { font-size: .7rem; font-weight: 800; color: #fca5a5; }
+.gs-list { display: flex; flex-direction: column; gap: .7rem; }
+.gs-item { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .9rem 1rem; display: flex; align-items: center; gap: .8rem; }
+.gs-item-stamp { width: 50px; height: 50px; border: 2.5px solid; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 800; flex-shrink: 0; text-align: center; }
+.gs-item-info { flex: 1; }
+.gs-item-name { font-weight: 700; color: var(--gray-100); font-size: 1rem; }
+.gs-item-meta { display: flex; flex-wrap: wrap; gap: .4rem; font-size: .78rem; color: var(--gray-400); margin: .2rem 0; }
+.gs-type-badge { padding: .1rem .5rem; border-radius: 20px; font-size: .72rem; font-weight: 700; }
+.gs-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.gs-tag { background: var(--gray-900); border-radius: 20px; padding: .1rem .5rem; font-size: .72rem; color: var(--gray-300); }
+.gs-memo { font-size: .78rem; color: var(--gray-400); margin-top: .3rem; font-style: italic; }
+.gs-item-color { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.gs-color-dot { width: 18px; height: 18px; border-radius: 50%; }
+.gs-color-label { font-size: .68rem; color: var(--gray-400); text-align: center; }
+.gs-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.gs-del:hover { color: #ef4444; }
+.gs-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

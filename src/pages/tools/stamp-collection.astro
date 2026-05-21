@@ -1,0 +1,322 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="切手コレクション管理" description="切手の種類・発行年・状態を記録して価値ランクや国別コレクション統計を表示。">
+<main class="sc-wrap">
+  <div class="sc-header">
+    <div class="sc-title">📮 切手コレクション管理</div>
+    <div class="sc-sub">コレクションの記録・管理・統計</div>
+  </div>
+
+  <div class="sc-stats-row">
+    <div class="sc-stat-box">
+      <div class="sc-stat-num" id="totalStamps">0</div>
+      <div class="sc-stat-label">総切手数</div>
+    </div>
+    <div class="sc-stat-box">
+      <div class="sc-stat-num" id="totalCountries">0</div>
+      <div class="sc-stat-label">国・地域数</div>
+    </div>
+    <div class="sc-stat-box">
+      <div class="sc-stat-num" id="totalValue">¥0</div>
+      <div class="sc-stat-label">推定総額</div>
+    </div>
+    <div class="sc-stat-box">
+      <div class="sc-stat-num" id="rareCount">0</div>
+      <div class="sc-stat-label">レア枚数</div>
+    </div>
+  </div>
+
+  <div class="sc-tabs">
+    <button class="sc-tab active" onclick="showTab('add')">追加</button>
+    <button class="sc-tab" onclick="showTab('list')">一覧</button>
+    <button class="sc-tab" onclick="showTab('stats')">統計</button>
+  </div>
+
+  <div id="tab-add" class="sc-tab-content">
+    <div class="sc-card">
+      <div class="sc-card-title">切手を登録</div>
+      <div class="sc-form-grid">
+        <div class="sc-fg">
+          <label class="sc-label">切手名 / タイトル</label>
+          <input type="text" id="sName" class="sc-input" placeholder="例：東海道新幹線開業記念" />
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">国・地域</label>
+          <input type="text" id="sCountry" class="sc-input" placeholder="例：日本" list="countryList" />
+          <datalist id="countryList">
+            <option value="日本"><option value="アメリカ"><option value="イギリス">
+            <option value="フランス"><option value="ドイツ"><option value="オーストラリア">
+            <option value="カナダ"><option value="スイス"><option value="中国">
+            <option value="香港"><option value="台湾"><option value="韓国">
+          </datalist>
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">発行年</label>
+          <input type="number" id="sYear" class="sc-input" placeholder="1964" min="1840" max="2030" style="max-width:90px" />
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">額面</label>
+          <input type="text" id=sFaceValue class="sc-input" placeholder="例：10円" style="max-width:100px" />
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">状態</label>
+          <select id="sCondition" class="sc-select">
+            <option value="mint">ミント（未使用）</option>
+            <option value="fu">Fine Used（使用済・良）</option>
+            <option value="vg">Very Good</option>
+            <option value="g">Good</option>
+            <option value="poor">Poor（難あり）</option>
+          </select>
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">カテゴリ</label>
+          <select id="sCategory" class="sc-select">
+            <option value="通常">通常切手</option>
+            <option value="記念">記念切手</option>
+            <option value="特殊">特殊切手</option>
+            <option value="航空">航空便切手</option>
+            <option value="試刷">試刷・エラー切手</option>
+            <option value="古典">古典切手（明治～戦前）</option>
+            <option value="外国">外国切手</option>
+          </select>
+        </div>
+        <div class="sc-fg">
+          <label class="sc-label">推定価値（円）</label>
+          <input type="number" id="sValue" class="sc-input" placeholder="500" min="0" style="max-width:110px" />
+        </div>
+        <div class="sc-fg" style="grid-column:1/-1">
+          <label class="sc-label">メモ</label>
+          <input type="text" id="sMemo" class="sc-input" placeholder="入手経緯・特記事項など" />
+        </div>
+      </div>
+      <div class="sc-form-btns">
+        <label class="sc-check-label">
+          <input type="checkbox" id="sRare" /> レア・希少品
+        </label>
+        <button class="sc-btn blue" onclick="addStamp()">＋ 登録</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-list" class="sc-tab-content" style="display:none">
+    <div class="sc-filter-row">
+      <input type="text" id="searchBox" class="sc-input" placeholder="切手名・国で検索..." oninput="renderList()" />
+      <select id="filterCat" class="sc-select" onchange="renderList()">
+        <option value="">カテゴリ（すべて）</option>
+        <option value="通常">通常切手</option>
+        <option value="記念">記念切手</option>
+        <option value="特殊">特殊切手</option>
+        <option value="古典">古典切手</option>
+        <option value="外国">外国切手</option>
+      </select>
+      <select id="filterCond" class="sc-select" onchange="renderList()">
+        <option value="">状態（すべて）</option>
+        <option value="mint">ミント</option>
+        <option value="fu">Fine Used</option>
+      </select>
+    </div>
+    <div id="stampList" class="sc-stamp-list"></div>
+  </div>
+
+  <div id="tab-stats" class="sc-tab-content" style="display:none">
+    <div id="statsContent" class="sc-stats-content"></div>
+  </div>
+</main>
+
+<script is:inline>
+let stamps = [];
+try { stamps = JSON.parse(localStorage.getItem('sc_stamps') || '[]'); } catch(e) {}
+
+function save() { try { localStorage.setItem('sc_stamps', JSON.stringify(stamps)); } catch(e) {} }
+
+const CONDITION_LABELS = { mint:'ミント', fu:'Fine Used', vg:'Very Good', g:'Good', poor:'Poor' };
+const CAT_COLORS = { 通常:'#60a5fa', 記念:'#fbbf24', 特殊:'#4ade80', 航空:'#f97316', 試刷:'#ef4444', 古典:'#a78bfa', 外国:'#94a3b8' };
+
+function addStamp() {
+  const name = document.getElementById('sName').value.trim();
+  const country = document.getElementById('sCountry').value.trim();
+  if (!name || !country) { alert('切手名と国を入力してください'); return; }
+  stamps.unshift({
+    id: Date.now(),
+    name, country,
+    year: parseInt(document.getElementById('sYear').value) || null,
+    faceValue: document.getElementById('sFaceValue').value.trim(),
+    condition: document.getElementById('sCondition').value,
+    category: document.getElementById('sCategory').value,
+    value: parseInt(document.getElementById('sValue').value) || 0,
+    memo: document.getElementById('sMemo').value.trim(),
+    rare: document.getElementById('sRare').checked,
+    addedDate: new Date().toISOString().split('T')[0]
+  });
+  save();
+  ['sName','sFaceValue','sValue','sMemo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sRare').checked = false;
+  updateStats();
+}
+
+function removeStamp(id) {
+  if (!confirm('この切手を削除しますか？')) return;
+  stamps = stamps.filter(s => s.id !== id);
+  save();
+  renderList();
+  updateStats();
+}
+
+function updateStats() {
+  const total = stamps.length;
+  const countries = new Set(stamps.map(s => s.country)).size;
+  const value = stamps.reduce((s, st) => s + (st.value || 0), 0);
+  const rare = stamps.filter(s => s.rare).length;
+  document.getElementById('totalStamps').textContent = total;
+  document.getElementById('totalCountries').textContent = countries;
+  document.getElementById('totalValue').textContent = '¥' + value.toLocaleString();
+  document.getElementById('rareCount').textContent = rare;
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.sc-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.sc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = '';
+  event.target.classList.add('active');
+  if (tab === 'list') renderList();
+  if (tab === 'stats') renderStats();
+}
+
+function renderList() {
+  const query = (document.getElementById('searchBox').value || '').toLowerCase();
+  const cat = document.getElementById('filterCat').value;
+  const cond = document.getElementById('filterCond').value;
+  const el = document.getElementById('stampList');
+
+  let filtered = stamps.filter(s => {
+    const matchText = !query || s.name.toLowerCase().includes(query) || s.country.toLowerCase().includes(query);
+    const matchCat = !cat || s.category === cat;
+    const matchCond = !cond || s.condition === cond;
+    return matchText && matchCat && matchCond;
+  });
+
+  if (!filtered.length) { el.innerHTML = '<div class="sc-empty">切手を登録してください</div>'; return; }
+
+  el.innerHTML = filtered.map(s => {
+    const cc = CAT_COLORS[s.category] || '#94a3b8';
+    return `<div class="sc-stamp-row">
+      <div class="sc-stamp-main">
+        <span class="sc-cat-badge" style="background:${cc}20;color:${cc}">${s.category}</span>
+        ${s.rare ? '<span class="sc-rare-badge">★レア</span>' : ''}
+        <span class="sc-stamp-name">${s.name}</span>
+      </div>
+      <div class="sc-stamp-detail">
+        <span class="sc-country">${s.country}</span>
+        ${s.year ? '<span class="sc-year">' + s.year + '年</span>' : ''}
+        ${s.faceValue ? '<span class="sc-face">' + s.faceValue + '</span>' : ''}
+        <span class="sc-cond">${CONDITION_LABELS[s.condition] || s.condition}</span>
+        ${s.value ? '<span class="sc-value">¥' + s.value.toLocaleString() + '</span>' : ''}
+      </div>
+      ${s.memo ? '<div class="sc-memo">' + s.memo + '</div>' : ''}
+      <button class="sc-del-btn" onclick="removeStamp(${s.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  const el = document.getElementById('statsContent');
+  if (!stamps.length) { el.innerHTML = '<div class="sc-empty">切手を登録してください</div>'; return; }
+
+  const byCountry = {};
+  const byCat = {};
+  stamps.forEach(s => {
+    byCountry[s.country] = (byCountry[s.country] || 0) + 1;
+    byCat[s.category] = (byCat[s.category] || 0) + 1;
+  });
+
+  const topCountries = Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const maxC = topCountries[0]?.[1] || 1;
+
+  const condStats = { mint: 0, fu: 0, vg: 0, g: 0, poor: 0 };
+  stamps.forEach(s => { if (condStats[s.condition] !== undefined) condStats[s.condition]++; });
+
+  el.innerHTML = `
+    <div class="sc-stats-section">
+      <div class="sc-section-title">国・地域別（上位8）</div>
+      ${topCountries.map(([name, count]) => `
+        <div class="sc-bar-row">
+          <span class="sc-bar-label">${name}</span>
+          <div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${Math.round(count/maxC*100)}%"></div></div>
+          <span class="sc-bar-val">${count}枚</span>
+        </div>`).join('')}
+    </div>
+    <div class="sc-stats-section">
+      <div class="sc-section-title">状態別内訳</div>
+      <div class="sc-cond-grid">
+        ${Object.entries(condStats).map(([k, v]) => `
+          <div class="sc-cond-box">
+            <div class="sc-cond-num">${v}</div>
+            <div class="sc-cond-label">${CONDITION_LABELS[k]}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="sc-stats-section">
+      <div class="sc-section-title">カテゴリ別</div>
+      ${Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([k, v]) => {
+        const cc = CAT_COLORS[k] || '#94a3b8';
+        return `<span class="sc-cat-chip" style="background:${cc}20;color:${cc}">${k}: ${v}枚</span>`;
+      }).join('')}
+    </div>`;
+}
+
+updateStats();
+</script>
+
+<style>
+.sc-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.sc-header { text-align: center; margin-bottom: 1.5rem; }
+.sc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.sc-sub { color: var(--gray-400); margin-top: .3rem; }
+.sc-stats-row { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.sc-stat-box { flex: 1; min-width: 100px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem; text-align: center; }
+.sc-stat-num { font-size: 1.5rem; font-weight: 800; color: var(--gray-0); }
+.sc-stat-label { font-size: .75rem; color: var(--gray-400); margin-top: .2rem; }
+.sc-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1.5px solid var(--gray-700); }
+.sc-tab { background: none; border: none; color: var(--gray-400); padding: .5rem 1rem; cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
+.sc-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.sc-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.sc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.sc-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+.sc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.sc-label { font-size: .75rem; color: var(--gray-400); }
+.sc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; width: 100%; box-sizing: border-box; }
+.sc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.sc-form-btns { display: flex; align-items: center; gap: 1rem; }
+.sc-check-label { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--gray-300); cursor: pointer; }
+.sc-btn { padding: .5rem 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.sc-btn.blue { background: #1d4ed8; color: #fff; }
+.sc-filter-row { display: flex; gap: .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.sc-filter-row .sc-input { flex: 1; min-width: 180px; }
+.sc-stamp-list { display: flex; flex-direction: column; gap: .4rem; }
+.sc-stamp-row { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .6rem .8rem; position: relative; }
+.sc-stamp-main { display: flex; align-items: center; gap: .4rem; margin-bottom: .3rem; flex-wrap: wrap; }
+.sc-cat-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 20px; }
+.sc-rare-badge { font-size: .72rem; font-weight: 800; padding: .15rem .5rem; border-radius: 20px; background: #fbbf2420; color: #fbbf24; }
+.sc-stamp-name { font-weight: 700; color: var(--gray-100); }
+.sc-stamp-detail { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .8rem; color: var(--gray-400); }
+.sc-value { color: #4ade80; font-weight: 700; }
+.sc-memo { font-size: .78rem; color: var(--gray-500); margin-top: .3rem; }
+.sc-del-btn { position: absolute; top: .5rem; right: .6rem; background: none; border: none; color: var(--gray-600); cursor: pointer; font-size: .78rem; }
+.sc-del-btn:hover { color: #ef4444; }
+.sc-stats-content { display: flex; flex-direction: column; gap: 1.2rem; }
+.sc-stats-section { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; }
+.sc-section-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.sc-bar-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .4rem; }
+.sc-bar-label { font-size: .82rem; color: var(--gray-300); min-width: 80px; }
+.sc-bar-bg { flex: 1; background: var(--gray-700); border-radius: 999px; height: 6px; overflow: hidden; }
+.sc-bar-fill { background: #60a5fa; height: 100%; border-radius: 999px; }
+.sc-bar-val { font-size: .8rem; color: var(--gray-400); min-width: 40px; text-align: right; }
+.sc-cond-grid { display: flex; gap: .6rem; flex-wrap: wrap; }
+.sc-cond-box { background: var(--gray-900); border-radius: 8px; padding: .6rem .8rem; text-align: center; min-width: 70px; }
+.sc-cond-num { font-size: 1.2rem; font-weight: 800; color: var(--gray-0); }
+.sc-cond-label { font-size: .72rem; color: var(--gray-400); margin-top: .2rem; }
+.sc-cat-chip { display: inline-block; font-size: .82rem; font-weight: 700; padding: .3rem .7rem; border-radius: 20px; margin: .2rem; }
+.sc-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

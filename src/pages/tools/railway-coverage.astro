@@ -1,0 +1,307 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="鉄道「乗りつぶし率」可視化" description="乗車済み路線を記録して乗りつぶし達成率を路線・会社別に可視化。">
+<main class="rc-wrap">
+  <div class="rc-header">
+    <div class="rc-title">🚃 鉄道乗りつぶし記録</div>
+    <div class="rc-sub">路線乗車記録と達成率の可視化</div>
+  </div>
+
+  <div class="rc-stats-row">
+    <div class="rc-stat-box">
+      <div class="rc-stat-num" id="totalRidden">0</div>
+      <div class="rc-stat-label">乗車済み路線</div>
+    </div>
+    <div class="rc-stat-box">
+      <div class="rc-stat-num" id="totalLines">0</div>
+      <div class="rc-stat-label">登録路線総数</div>
+    </div>
+    <div class="rc-stat-box">
+      <div class="rc-stat-num" id="coveragePct">0%</div>
+      <div class="rc-stat-label">達成率</div>
+    </div>
+    <div class="rc-stat-box">
+      <div class="rc-stat-num" id="totalKm">0</div>
+      <div class="rc-stat-label">乗車済みkm</div>
+    </div>
+  </div>
+
+  <div class="rc-progress-bar-wrap">
+    <div class="rc-progress-bar" id="mainProgressBar"></div>
+  </div>
+
+  <div class="rc-tabs">
+    <button class="rc-tab active" onclick="showTab('record')">路線記録</button>
+    <button class="rc-tab" onclick="showTab('company')">会社別</button>
+    <button class="rc-tab" onclick="showTab('history')">乗車履歴</button>
+  </div>
+
+  <div id="tab-record" class="rc-tab-content">
+    <div class="rc-card">
+      <div class="rc-card-title">路線を追加</div>
+      <div class="rc-form-row">
+        <div class="rc-fg">
+          <label class="rc-label">鉄道会社</label>
+          <input type="text" id="addCompany" class="rc-input" placeholder="例：JR東日本" list="companyList" />
+          <datalist id="companyList">
+            <option value="JR東日本"><option value="JR西日本"><option value="JR東海">
+            <option value="JR北海道"><option value="JR九州"><option value="JR四国">
+            <option value="東京メトロ"><option value="都営地下鉄"><option value="東急電鉄">
+            <option value="小田急電鉄"><option value="京王電鉄"><option value="西武鉄道">
+            <option value="東武鉄道"><option value="京浜急行電鉄"><option value="相模鉄道">
+            <option value="近畿日本鉄道"><option value="阪急電鉄"><option value="阪神電気鉄道">
+            <option value="南海電気鉄道"><option value="名古屋市交通局">
+          </datalist>
+        </div>
+        <div class="rc-fg">
+          <label class="rc-label">路線名</label>
+          <input type="text" id="addLine" class="rc-input" placeholder="例：山手線" />
+        </div>
+        <div class="rc-fg">
+          <label class="rc-label">距離(km)</label>
+          <input type="number" id="addKm" class="rc-input" placeholder="34.5" min="0.1" max="9999" step="0.1" style="max-width:90px" />
+        </div>
+        <div class="rc-fg">
+          <label class="rc-label">種別</label>
+          <select id="addType" class="rc-select">
+            <option value="幹線">幹線</option>
+            <option value="地方交通線">地方交通線</option>
+            <option value="地下鉄">地下鉄</option>
+            <option value="私鉄">私鉄</option>
+            <option value="新幹線">新幹線</option>
+            <option value="路面電車">路面電車</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <button class="rc-btn blue" onclick="addLine()">＋ 追加</button>
+      </div>
+    </div>
+
+    <div class="rc-search-row">
+      <input type="text" id="searchBox" class="rc-input" placeholder="会社名・路線名で検索..." oninput="renderLines()" />
+      <select id="filterRidden" class="rc-select" onchange="renderLines()">
+        <option value="all">すべて</option>
+        <option value="ridden">乗車済み</option>
+        <option value="not">未乗車</option>
+      </select>
+    </div>
+
+    <div id="lineList" class="rc-line-list"></div>
+  </div>
+
+  <div id="tab-company" class="rc-tab-content" style="display:none">
+    <div id="companyChart" class="rc-company-chart"></div>
+  </div>
+
+  <div id="tab-history" class="rc-tab-content" style="display:none">
+    <div id="historyList" class="rc-history-list"></div>
+  </div>
+</main>
+
+<script is:inline>
+let lines = [];
+try { lines = JSON.parse(localStorage.getItem('rc_lines') || '[]'); } catch(e) {}
+let rideHistory = [];
+try { rideHistory = JSON.parse(localStorage.getItem('rc_history') || '[]'); } catch(e) {}
+
+function save() {
+  try {
+    localStorage.setItem('rc_lines', JSON.stringify(lines));
+    localStorage.setItem('rc_history', JSON.stringify(rideHistory));
+  } catch(e) {}
+}
+
+function addLine() {
+  const company = document.getElementById('addCompany').value.trim();
+  const name = document.getElementById('addLine').value.trim();
+  const km = parseFloat(document.getElementById('addKm').value) || 0;
+  const type = document.getElementById('addType').value;
+  if (!company || !name) { alert('会社名と路線名を入力してください'); return; }
+  if (lines.find(l => l.company === company && l.name === name)) { alert('すでに登録済みです'); return; }
+  lines.push({ id: Date.now(), company, name, km, type, ridden: false, rideDate: null, memo: '' });
+  save();
+  document.getElementById('addLine').value = '';
+  document.getElementById('addKm').value = '';
+  renderAll();
+}
+
+function toggleRidden(id) {
+  const line = lines.find(l => l.id === id);
+  if (!line) return;
+  line.ridden = !line.ridden;
+  if (line.ridden) {
+    line.rideDate = new Date().toISOString().split('T')[0];
+    rideHistory.unshift({ id: Date.now(), lineId: id, company: line.company, name: line.name, date: line.rideDate, km: line.km });
+  } else {
+    line.rideDate = null;
+    rideHistory = rideHistory.filter(h => h.lineId !== id);
+  }
+  save();
+  renderAll();
+}
+
+function removeLine(id) {
+  if (!confirm('この路線を削除しますか？')) return;
+  lines = lines.filter(l => l.id !== id);
+  rideHistory = rideHistory.filter(h => h.lineId !== id);
+  save();
+  renderAll();
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.rc-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.rc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = '';
+  event.target.classList.add('active');
+  if (tab === 'company') renderCompanyChart();
+  if (tab === 'history') renderHistory();
+}
+
+function updateStats() {
+  const total = lines.length;
+  const ridden = lines.filter(l => l.ridden).length;
+  const km = lines.filter(l => l.ridden).reduce((s, l) => s + (l.km || 0), 0);
+  const pct = total > 0 ? Math.round(ridden / total * 100) : 0;
+  document.getElementById('totalLines').textContent = total;
+  document.getElementById('totalRidden').textContent = ridden;
+  document.getElementById('totalKm').textContent = km.toFixed(1);
+  document.getElementById('coveragePct').textContent = pct + '%';
+  document.getElementById('mainProgressBar').style.width = pct + '%';
+}
+
+function renderLines() {
+  const query = (document.getElementById('searchBox').value || '').toLowerCase();
+  const filter = document.getElementById('filterRidden').value;
+  const el = document.getElementById('lineList');
+
+  let filtered = lines.filter(l => {
+    const matchText = !query || l.company.toLowerCase().includes(query) || l.name.toLowerCase().includes(query);
+    const matchRide = filter === 'all' || (filter === 'ridden' && l.ridden) || (filter === 'not' && !l.ridden);
+    return matchText && matchRide;
+  });
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="rc-empty">路線を追加してください</div>';
+    return;
+  }
+
+  const TYPE_COLORS = { '幹線':'#60a5fa','地方交通線':'#4ade80','地下鉄':'#a78bfa','私鉄':'#fbbf24','新幹線':'#f97316','路面電車':'#f43f5e','その他':'#94a3b8' };
+
+  el.innerHTML = filtered.map(l => {
+    const tc = TYPE_COLORS[l.type] || '#94a3b8';
+    return `<div class="rc-line-row ${l.ridden ? 'ridden' : ''}">
+      <div class="rc-line-main">
+        <span class="rc-type-badge" style="background:${tc}20;color:${tc}">${l.type}</span>
+        <span class="rc-company-name">${l.company}</span>
+        <span class="rc-line-name">${l.name}</span>
+        ${l.km ? '<span class="rc-km">' + l.km + 'km</span>' : ''}
+      </div>
+      <div class="rc-line-actions">
+        ${l.ridden ? '<span class="rc-ride-date">✓ ' + l.rideDate + '</span>' : ''}
+        <button class="rc-ride-btn ${l.ridden ? 'done' : ''}" onclick="toggleRidden(${l.id})">${l.ridden ? '乗車済み' : '乗車済みにする'}</button>
+        <button class="rc-del-btn" onclick="removeLine(${l.id})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCompanyChart() {
+  const el = document.getElementById('companyChart');
+  const companies = {};
+  lines.forEach(l => {
+    if (!companies[l.company]) companies[l.company] = { total: 0, ridden: 0, km: 0 };
+    companies[l.company].total++;
+    if (l.ridden) { companies[l.company].ridden++; companies[l.company].km += l.km || 0; }
+  });
+
+  const sorted = Object.entries(companies).sort((a, b) => b[1].total - a[1].total);
+  if (!sorted.length) { el.innerHTML = '<div class="rc-empty">路線を登録してください</div>'; return; }
+
+  el.innerHTML = sorted.map(([name, d]) => {
+    const pct = Math.round(d.ridden / d.total * 100);
+    return `<div class="rc-company-row">
+      <div class="rc-company-info">
+        <span class="rc-company-label">${name}</span>
+        <span class="rc-company-count">${d.ridden}/${d.total}路線 ${d.km > 0 ? '(' + d.km.toFixed(1) + 'km)' : ''}</span>
+        <span class="rc-company-pct">${pct}%</span>
+      </div>
+      <div class="rc-bar-bg"><div class="rc-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!rideHistory.length) { el.innerHTML = '<div class="rc-empty">まだ乗車記録がありません</div>'; return; }
+  el.innerHTML = rideHistory.map(h => `
+    <div class="rc-hist-row">
+      <div class="rc-hist-date">${h.date}</div>
+      <div class="rc-hist-line">${h.company} ${h.name}</div>
+      ${h.km ? '<div class="rc-hist-km">' + h.km + 'km</div>' : ''}
+    </div>`).join('');
+}
+
+function renderAll() {
+  updateStats();
+  renderLines();
+}
+
+renderAll();
+</script>
+
+<style>
+.rc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.rc-header { text-align: center; margin-bottom: 1.5rem; }
+.rc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.rc-sub { color: var(--gray-400); margin-top: .3rem; }
+.rc-stats-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.rc-stat-box { flex: 1; min-width: 100px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem; text-align: center; }
+.rc-stat-num { font-size: 1.6rem; font-weight: 800; color: var(--gray-0); }
+.rc-stat-label { font-size: .75rem; color: var(--gray-400); margin-top: .2rem; }
+.rc-progress-bar-wrap { background: var(--gray-700); border-radius: 999px; height: 8px; margin-bottom: 1.5rem; overflow: hidden; }
+.rc-progress-bar { background: linear-gradient(90deg, #3b82f6, #60a5fa); height: 100%; border-radius: 999px; transition: width .4s; }
+.rc-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1.5px solid var(--gray-700); }
+.rc-tab { background: none; border: none; color: var(--gray-400); padding: .5rem 1rem; cursor: pointer; font-size: .9rem; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
+.rc-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.rc-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.rc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.rc-form-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.rc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.rc-label { font-size: .75rem; color: var(--gray-400); }
+.rc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; min-width: 120px; }
+.rc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.rc-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.rc-btn.blue { background: #1d4ed8; color: #fff; }
+.rc-search-row { display: flex; gap: .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.rc-search-row .rc-input { flex: 1; min-width: 200px; }
+.rc-line-list { display: flex; flex-direction: column; gap: .4rem; }
+.rc-line-row { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .6rem .8rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem; }
+.rc-line-row.ridden { border-color: #16a34a40; background: #16a34a08; }
+.rc-line-main { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.rc-type-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 20px; }
+.rc-company-name { font-size: .82rem; color: var(--gray-400); }
+.rc-line-name { font-weight: 700; color: var(--gray-100); }
+.rc-km { font-size: .78rem; color: var(--gray-400); }
+.rc-line-actions { display: flex; align-items: center; gap: .5rem; }
+.rc-ride-date { font-size: .75rem; color: #4ade80; }
+.rc-ride-btn { padding: .3rem .7rem; border: 1.5px solid var(--gray-600); background: none; color: var(--gray-300); border-radius: 6px; cursor: pointer; font-size: .78rem; }
+.rc-ride-btn.done { background: #16a34a20; border-color: #4ade80; color: #4ade80; }
+.rc-del-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .78rem; }
+.rc-del-btn:hover { color: #ef4444; }
+.rc-company-chart { display: flex; flex-direction: column; gap: .8rem; }
+.rc-company-row { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .8rem 1rem; }
+.rc-company-info { display: flex; align-items: center; gap: .6rem; margin-bottom: .4rem; flex-wrap: wrap; }
+.rc-company-label { font-weight: 700; color: var(--gray-100); }
+.rc-company-count { font-size: .8rem; color: var(--gray-400); }
+.rc-company-pct { font-weight: 700; color: #60a5fa; margin-left: auto; }
+.rc-bar-bg { background: var(--gray-700); border-radius: 999px; height: 6px; overflow: hidden; }
+.rc-bar-fill { background: linear-gradient(90deg, #3b82f6, #60a5fa); height: 100%; border-radius: 999px; transition: width .4s; }
+.rc-history-list { display: flex; flex-direction: column; gap: .4rem; }
+.rc-hist-row { display: flex; align-items: center; gap: 1rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .6rem 1rem; font-size: .85rem; }
+.rc-hist-date { color: var(--gray-400); min-width: 90px; }
+.rc-hist-line { flex: 1; font-weight: 700; color: var(--gray-100); }
+.rc-hist-km { color: #a78bfa; }
+.rc-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

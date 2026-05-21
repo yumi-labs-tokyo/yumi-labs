@@ -1,0 +1,289 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="編み物「目数カウンター」" description="段ごとの目数を記録、複雑なパターンの編み図進捗管理。">
+<main class="kc-wrap">
+  <div class="kc-header">
+    <div class="kc-title">🧶 編み物 目数カウンター</div>
+    <div class="kc-sub">段数・目数をカウントして編み図の進捗を管理</div>
+  </div>
+
+  <div class="kc-body">
+    <div class="kc-left">
+      <div class="kc-card">
+        <div class="kc-card-title">プロジェクト設定</div>
+        <div class="kc-fg">
+          <label class="kc-label">プロジェクト名</label>
+          <input type="text" id="projName" class="kc-input" placeholder="例：セーターの袖部分" />
+        </div>
+        <div class="kc-fg">
+          <label class="kc-label">目標段数</label>
+          <input type="number" id="targetRows" class="kc-input" value="50" min="1" max="999" />
+        </div>
+        <div class="kc-fg">
+          <label class="kc-label">基本目数（1段あたり）</label>
+          <input type="number" id="baseStitches" class="kc-input" value="30" min="1" max="999" />
+        </div>
+        <button class="kc-btn purple" onclick="saveProject()">プロジェクトを保存</button>
+      </div>
+
+      <div class="kc-saved-card">
+        <div class="kc-card-title">保存済みプロジェクト</div>
+        <div id="savedProjects" class="kc-saved-list"></div>
+      </div>
+    </div>
+
+    <div class="kc-center">
+      <div class="kc-counter-card">
+        <div class="kc-counter-main">
+          <div class="kc-counter-label">段数</div>
+          <div class="kc-counter-val" id="rowCount">0</div>
+          <div class="kc-counter-btns">
+            <button class="kc-cbtn minus" onclick="adjust('row', -1)">−</button>
+            <button class="kc-cbtn plus" onclick="adjust('row', 1)">＋</button>
+          </div>
+        </div>
+        <div class="kc-divider"></div>
+        <div class="kc-counter-main">
+          <div class="kc-counter-label">目数</div>
+          <div class="kc-counter-val" id="stitchCount">0</div>
+          <div class="kc-counter-btns">
+            <button class="kc-cbtn minus" onclick="adjust('stitch', -1)">−</button>
+            <button class="kc-cbtn plus" onclick="adjust('stitch', 1)">＋</button>
+          </div>
+        </div>
+        <div class="kc-counter-actions">
+          <button class="kc-btn green" onclick="logRow()">段を記録</button>
+          <button class="kc-btn red" onclick="resetCounters()">リセット</button>
+        </div>
+      </div>
+
+      <div class="kc-progress-card">
+        <div class="kc-card-title">進捗</div>
+        <div id="progressArea"></div>
+      </div>
+    </div>
+
+    <div class="kc-right">
+      <div class="kc-log-card">
+        <div class="kc-card-title">段別記録</div>
+        <div id="rowLog" class="kc-row-log"></div>
+      </div>
+
+      <div class="kc-pattern-card">
+        <div class="kc-card-title">📋 パターンメモ</div>
+        <div class="kc-pattern-list" id="patternList"></div>
+        <div class="kc-pattern-add">
+          <input type="number" id="patternRow" class="kc-input-sm" placeholder="段" min="1" />
+          <input type="text" id="patternNote" class="kc-input-sm" placeholder="例：増し目2目" style="flex:2" />
+          <button class="kc-btn purple sm" onclick="addPattern()">追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+let state = { rows: 0, stitches: 0, log: [], patterns: [], projectName: '', targetRows: 50, baseStitches: 30 };
+let projects = [];
+try { projects = JSON.parse(localStorage.getItem('kc_projects') || '[]'); } catch(e) {}
+
+function save() { try { localStorage.setItem('kc_projects', JSON.stringify(projects)); } catch(e) {} }
+
+function saveProject() {
+  const name = document.getElementById('projName').value.trim() || '無名プロジェクト';
+  const target = parseInt(document.getElementById('targetRows').value) || 50;
+  const base = parseInt(document.getElementById('baseStitches').value) || 30;
+  const existing = projects.find(p => p.name === name);
+  if (existing) {
+    existing.targetRows = target; existing.baseStitches = base;
+    existing.rows = state.rows; existing.stitches = state.stitches;
+    existing.log = state.log; existing.patterns = state.patterns;
+  } else {
+    projects.unshift({ id: Date.now(), name, targetRows: target, baseStitches: base, rows: state.rows, stitches: state.stitches, log: state.log, patterns: state.patterns });
+    if (projects.length > 20) projects.pop();
+  }
+  save();
+  state.projectName = name; state.targetRows = target; state.baseStitches = base;
+  renderSaved();
+  renderProgress();
+}
+
+function loadProject(id) {
+  const p = projects.find(p => p.id === id);
+  if (!p) return;
+  state = { rows: p.rows, stitches: p.stitches, log: p.log || [], patterns: p.patterns || [], projectName: p.name, targetRows: p.targetRows, baseStitches: p.baseStitches };
+  document.getElementById('projName').value = p.name;
+  document.getElementById('targetRows').value = p.targetRows;
+  document.getElementById('baseStitches').value = p.baseStitches;
+  document.getElementById('rowCount').textContent = state.rows;
+  document.getElementById('stitchCount').textContent = state.stitches;
+  renderLog(); renderProgress(); renderPatterns();
+}
+
+function deleteProject(id) {
+  projects = projects.filter(p => p.id !== id);
+  save(); renderSaved();
+}
+
+function renderSaved() {
+  const el = document.getElementById('savedProjects');
+  if (!projects.length) { el.innerHTML = '<div style="color:var(--gray-500);font-size:.8rem">なし</div>'; return; }
+  el.innerHTML = projects.map(p => `
+    <div class="sp-item">
+      <div class="sp-info" onclick="loadProject(${p.id})">
+        <div class="sp-name">${p.name}</div>
+        <div class="sp-meta">${p.rows}/${p.targetRows}段</div>
+      </div>
+      <button class="sp-del" onclick="deleteProject(${p.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function adjust(type, delta) {
+  if (type === 'row') state.rows = Math.max(0, state.rows + delta);
+  else state.stitches = Math.max(0, state.stitches + delta);
+  document.getElementById('rowCount').textContent = state.rows;
+  document.getElementById('stitchCount').textContent = state.stitches;
+  renderProgress();
+}
+
+function logRow() {
+  if (state.rows === 0) return;
+  const entry = { row: state.rows, stitches: state.stitches, time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) };
+  state.log = state.log.filter(l => l.row !== entry.row);
+  state.log.push(entry);
+  state.log.sort((a, b) => a.row - b.row);
+  renderLog();
+  autoSave();
+}
+
+function resetCounters() {
+  state.rows = 0; state.stitches = 0;
+  document.getElementById('rowCount').textContent = 0;
+  document.getElementById('stitchCount').textContent = 0;
+  renderProgress();
+}
+
+function renderLog() {
+  const el = document.getElementById('rowLog');
+  if (!state.log.length) { el.innerHTML = '<div style="color:var(--gray-500);font-size:.8rem;padding:.5rem">記録なし</div>'; return; }
+  el.innerHTML = [...state.log].reverse().slice(0, 20).map(l => {
+    const pattern = state.patterns.find(p => p.row === l.row);
+    return `<div class="rl-row">
+      <span class="rl-row-num">${l.row}段</span>
+      <span class="rl-stitches">${l.stitches}目</span>
+      ${pattern ? '<span class="rl-note">' + pattern.note + '</span>' : ''}
+      <span class="rl-time">${l.time}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderProgress() {
+  const target = state.targetRows;
+  const pct = target > 0 ? Math.min(100, Math.round(state.rows / target * 100)) : 0;
+  const remaining = Math.max(0, target - state.rows);
+  document.getElementById('progressArea').innerHTML = `
+    <div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+    <div class="prog-info">
+      <span>${state.rows} / ${target} 段 (${pct}%)</span>
+      <span>残り ${remaining} 段</span>
+    </div>
+  `;
+}
+
+function addPattern() {
+  const row = parseInt(document.getElementById('patternRow').value);
+  const note = document.getElementById('patternNote').value.trim();
+  if (!row || !note) return;
+  state.patterns = state.patterns.filter(p => p.row !== row);
+  state.patterns.push({ row, note });
+  state.patterns.sort((a, b) => a.row - b.row);
+  document.getElementById('patternRow').value = '';
+  document.getElementById('patternNote').value = '';
+  renderPatterns(); renderLog();
+}
+
+function removePattern(row) {
+  state.patterns = state.patterns.filter(p => p.row !== row);
+  renderPatterns(); renderLog();
+}
+
+function renderPatterns() {
+  const el = document.getElementById('patternList');
+  if (!state.patterns.length) { el.innerHTML = '<div style="color:var(--gray-500);font-size:.8rem;padding:.3rem 0">なし</div>'; return; }
+  el.innerHTML = state.patterns.map(p => `
+    <div class="pm-row">
+      <span class="pm-row-num">${p.row}段:</span>
+      <span class="pm-note">${p.note}</span>
+      <button class="pm-del" onclick="removePattern(${p.row})">×</button>
+    </div>
+  `).join('');
+}
+
+function autoSave() {
+  const name = document.getElementById('projName').value.trim();
+  if (!name) return;
+  const existing = projects.find(p => p.name === name);
+  if (existing) {
+    Object.assign(existing, { rows: state.rows, stitches: state.stitches, log: state.log, patterns: state.patterns });
+    save(); renderSaved();
+  }
+}
+
+renderSaved(); renderProgress(); renderLog(); renderPatterns();
+</script>
+
+<style>
+.kc-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.kc-header { text-align: center; margin-bottom: 2rem; }
+.kc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.kc-sub { color: var(--gray-400); margin-top: .3rem; }
+.kc-body { display: grid; grid-template-columns: 220px 1fr 240px; gap: 1rem; }
+@media (max-width: 800px) { .kc-body { grid-template-columns: 1fr; } }
+.kc-card, .kc-saved-card, .kc-counter-card, .kc-progress-card, .kc-log-card, .kc-pattern-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.1rem; margin-bottom: .8rem; }
+.kc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.kc-fg { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.kc-label { font-size: .75rem; color: var(--gray-400); }
+.kc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
+.kc-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; min-width: 50px; flex: 1; }
+.kc-btn { width: 100%; padding: .5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .85rem; margin-top: .3rem; }
+.kc-btn.purple { background: #7c3aed; color: #fff; }
+.kc-btn.green { background: #16a34a; color: #fff; }
+.kc-btn.red { background: #dc2626; color: #fff; }
+.kc-btn.sm { padding: .4rem .6rem; margin-top: 0; width: auto; }
+.kc-saved-list { display: flex; flex-direction: column; gap: .4rem; max-height: 200px; overflow-y: auto; }
+.sp-item { display: flex; align-items: center; gap: .4rem; padding: .4rem .6rem; background: var(--gray-900); border-radius: 8px; cursor: pointer; }
+.sp-info { flex: 1; }
+.sp-name { font-size: .82rem; font-weight: 700; color: var(--gray-200); }
+.sp-meta { font-size: .72rem; color: var(--gray-400); }
+.sp-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.sp-del:hover { color: #ef4444; }
+.kc-counter-main { display: flex; flex-direction: column; align-items: center; padding: 1rem 0; }
+.kc-counter-label { font-size: .8rem; color: var(--gray-400); margin-bottom: .3rem; }
+.kc-counter-val { font-size: 4rem; font-weight: 800; color: var(--gray-100); line-height: 1; margin-bottom: .6rem; }
+.kc-counter-btns { display: flex; gap: .8rem; }
+.kc-cbtn { width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.6rem; font-weight: 700; }
+.kc-cbtn.plus { background: #7c3aed; color: #fff; }
+.kc-cbtn.minus { background: var(--gray-700); color: var(--gray-200); }
+.kc-divider { height: 1px; background: var(--gray-700); margin: .5rem 0; }
+.kc-counter-actions { display: flex; gap: .5rem; margin-top: .8rem; }
+.kc-counter-actions .kc-btn { margin-top: 0; }
+.prog-bar-wrap { background: var(--gray-700); border-radius: 8px; height: 16px; margin-bottom: .5rem; overflow: hidden; }
+.prog-bar { background: #7c3aed; height: 100%; border-radius: 8px; transition: width .3s; }
+.prog-info { display: flex; justify-content: space-between; font-size: .82rem; color: var(--gray-300); }
+.kc-row-log { display: flex; flex-direction: column; gap: .3rem; max-height: 300px; overflow-y: auto; }
+.rl-row { display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; background: var(--gray-900); border-radius: 6px; font-size: .8rem; }
+.rl-row-num { font-weight: 700; color: var(--gray-200); min-width: 40px; }
+.rl-stitches { color: #a78bfa; min-width: 35px; }
+.rl-note { flex: 1; color: #fbbf24; font-size: .75rem; }
+.rl-time { color: var(--gray-500); font-size: .72rem; }
+.kc-pattern-list { display: flex; flex-direction: column; gap: .3rem; max-height: 200px; overflow-y: auto; margin-bottom: .6rem; }
+.kc-pattern-add { display: flex; gap: .4rem; align-items: center; }
+.pm-row { display: flex; align-items: center; gap: .4rem; padding: .3rem .5rem; background: var(--gray-900); border-radius: 6px; font-size: .8rem; }
+.pm-row-num { font-weight: 700; color: var(--gray-400); }
+.pm-note { flex: 1; color: #fbbf24; }
+.pm-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.pm-del:hover { color: #ef4444; }
+</style>
+</BaseLayout>

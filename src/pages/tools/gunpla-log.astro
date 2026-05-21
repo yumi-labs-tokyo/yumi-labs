@@ -1,0 +1,210 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="プラモデル「制作工程記録」" description="工程写真と所要時間を記録、完成までの累計時間を表示。">
+<main class="gl-wrap">
+  <div class="gl-header">
+    <div class="gl-title">🤖 プラモデル制作工程記録</div>
+    <div class="gl-sub">工程ごとの記録で制作時間と進捗を管理</div>
+  </div>
+
+  <div class="gl-add-kit">
+    <div class="gl-card">
+      <div class="gl-card-title">キットを登録</div>
+      <div class="gl-kit-form">
+        <div class="gl-fg">
+          <label class="gl-label">キット名</label>
+          <input type="text" id="kitName" class="gl-input" placeholder="例：RG νガンダム Ver.Ka" />
+        </div>
+        <div class="gl-fg">
+          <label class="gl-label">スケール</label>
+          <select id="kitScale" class="gl-select">
+            <option>1/144</option><option>1/100</option><option>1/60</option>
+            <option>1/35</option><option>1/72</option><option>1/24</option><option>その他</option>
+          </select>
+        </div>
+        <div class="gl-fg">
+          <label class="gl-label">グレード</label>
+          <select id="kitGrade" class="gl-select">
+            <option value="hg">HG</option><option value="rg">RG</option>
+            <option value="mg">MG</option><option value="pg">PG</option>
+            <option value="sd">SD</option><option value="other">その他</option>
+          </select>
+        </div>
+        <div class="gl-fg">
+          <label class="gl-label">メーカー</label>
+          <input type="text" id="kitMaker" class="gl-input" placeholder="例：BANDAI" value="BANDAI" />
+        </div>
+        <button class="gl-btn blue" onclick="addKit()">＋ キット登録</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kitList" class="gl-kit-list"></div>
+</main>
+
+<script is:inline>
+let kits = [];
+try { kits = JSON.parse(localStorage.getItem('gl_kits') || '[]'); } catch(e) {}
+
+const STEPS = ['ランナー確認・仮組み','ゲート処理・パーツ洗浄','下地塗装（サーフェイサー）','塗装','スミ入れ','デカール貼り','トップコート','組み立て','完成・撮影'];
+const GRADE_COLORS = { hg:'#60a5fa', rg:'#fbbf24', mg:'#4ade80', pg:'#f97316', sd:'#a78bfa', other:'#94a3b8' };
+
+function save() { try { localStorage.setItem('gl_kits', JSON.stringify(kits)); } catch(e) {} }
+
+function addKit() {
+  const name = document.getElementById('kitName').value.trim();
+  if (!name) { alert('キット名を入力してください'); return; }
+  kits.unshift({
+    id: Date.now(), name,
+    scale: document.getElementById('kitScale').value,
+    grade: document.getElementById('kitGrade').value,
+    maker: document.getElementById('kitMaker').value.trim(),
+    steps: [], totalMinutes: 0, status: 'building',
+    startDate: new Date().toISOString().split('T')[0]
+  });
+  save();
+  document.getElementById('kitName').value = '';
+  render();
+}
+
+function addStep(kitId) {
+  const kit = kits.find(k => k.id === kitId);
+  if (!kit) return;
+  const stepName = document.getElementById('step_name_' + kitId).value;
+  const minutes = parseInt(document.getElementById('step_min_' + kitId).value) || 0;
+  const note = document.getElementById('step_note_' + kitId).value.trim();
+  if (!stepName || minutes <= 0) { alert('工程と時間を入力してください'); return; }
+  kit.steps.push({ id: Date.now(), name: stepName, minutes, note, date: new Date().toISOString().split('T')[0] });
+  kit.totalMinutes = kit.steps.reduce((s, st) => s + st.minutes, 0);
+  save(); render();
+}
+
+function removeStep(kitId, stepId) {
+  const kit = kits.find(k => k.id === kitId);
+  if (!kit) return;
+  kit.steps = kit.steps.filter(s => s.id !== stepId);
+  kit.totalMinutes = kit.steps.reduce((s, st) => s + st.minutes, 0);
+  save(); render();
+}
+
+function toggleStatus(kitId) {
+  const kit = kits.find(k => k.id === kitId);
+  if (!kit) return;
+  const statuses = ['building', 'paused', 'completed'];
+  const idx = statuses.indexOf(kit.status);
+  kit.status = statuses[(idx + 1) % statuses.length];
+  if (kit.status === 'completed') kit.completeDate = new Date().toISOString().split('T')[0];
+  save(); render();
+}
+
+function removeKit(kitId) {
+  if (!confirm('このキットを削除しますか？')) return;
+  kits = kits.filter(k => k.id !== kitId);
+  save(); render();
+}
+
+function render() {
+  const el = document.getElementById('kitList');
+  if (!kits.length) {
+    el.innerHTML = '<div class="gl-empty">キットを登録してください</div>';
+    return;
+  }
+
+  el.innerHTML = kits.map(kit => {
+    const h = Math.floor(kit.totalMinutes / 60);
+    const m = kit.totalMinutes % 60;
+    const timeStr = h > 0 ? h + '時間' + (m > 0 ? m + '分' : '') : m + '分';
+    const statusInfo = { building:{ label:'制作中', color:'#fbbf24' }, paused:{ label:'一時停止', color:'#94a3b8' }, completed:{ label:'完成！', color:'#4ade80' } };
+    const st = statusInfo[kit.status];
+    const gradeColor = GRADE_COLORS[kit.grade] || '#94a3b8';
+
+    return `<div class="kit-card">
+      <div class="kit-header">
+        <div class="kit-badges">
+          <span class="kit-grade" style="background:${gradeColor}20;color:${gradeColor}">${kit.grade.toUpperCase()}</span>
+          <span class="kit-scale">${kit.scale}</span>
+        </div>
+        <div class="kit-name">${kit.name}</div>
+        <div class="kit-meta">${kit.maker} ／ 開始: ${kit.startDate}${kit.completeDate ? ' ／ 完成: ' + kit.completeDate : ''}</div>
+        <div class="kit-status-row">
+          <span class="kit-status" style="color:${st.color}">${st.label}</span>
+          <span class="kit-time">⏱️ ${kit.totalMinutes > 0 ? timeStr : '—'}</span>
+          <button class="kit-toggle-btn" onclick="toggleStatus(${kit.id})">${kit.status === 'completed' ? '↩️ 戻す' : kit.status === 'building' ? '⏸ 一時停止' : '▶ 再開'}</button>
+          <button class="kit-del-btn" onclick="removeKit(${kit.id})">削除</button>
+        </div>
+      </div>
+
+      <div class="kit-steps">
+        ${kit.steps.map(s => `
+          <div class="step-row">
+            <div class="step-name">${s.name}</div>
+            <div class="step-time">${s.minutes}分</div>
+            <div class="step-date">${s.date}</div>
+            <div class="step-note">${s.note || '—'}</div>
+            <button class="step-del" onclick="removeStep(${kit.id},${s.id})">×</button>
+          </div>
+        `).join('') || '<div class="step-empty">工程を追加してください</div>'}
+      </div>
+
+      <div class="kit-add-step">
+        <select id="step_name_${kit.id}" class="gl-select-sm">
+          ${STEPS.map(s => `<option value="${s}">${s}</option>`).join('')}
+          <option value="カスタム">カスタム工程</option>
+        </select>
+        <input type="number" id="step_min_${kit.id}" class="gl-input-sm" placeholder="時間(分)" min="1" max="9999" style="max-width:90px" />
+        <input type="text" id="step_note_${kit.id}" class="gl-input-sm" placeholder="メモ（任意）" style="flex:1" />
+        <button class="gl-btn green sm" onclick="addStep(${kit.id})">＋ 記録</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+
+<style>
+.gl-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.gl-header { text-align: center; margin-bottom: 2rem; }
+.gl-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.gl-sub { color: var(--gray-400); margin-top: .3rem; }
+.gl-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.gl-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.gl-kit-form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; }
+.gl-fg { display: flex; flex-direction: column; gap: .3rem; }
+.gl-label { font-size: .75rem; color: var(--gray-400); }
+.gl-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; flex: 1; min-width: 120px; }
+.gl-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .85rem; }
+.gl-select-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; flex: 1.5; }
+.gl-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; }
+.gl-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.gl-btn.blue { background: #1d4ed8; color: #fff; }
+.gl-btn.green { background: #16a34a; color: #fff; }
+.gl-btn.sm { padding: .4rem .7rem; font-size: .82rem; }
+.gl-kit-list { display: flex; flex-direction: column; gap: 1rem; }
+.kit-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.kit-header { margin-bottom: 1rem; }
+.kit-badges { display: flex; gap: .4rem; margin-bottom: .4rem; }
+.kit-grade { padding: .15rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: 800; }
+.kit-scale { font-size: .78rem; color: var(--gray-400); padding: .15rem .5rem; background: var(--gray-900); border-radius: 20px; }
+.kit-name { font-size: 1.1rem; font-weight: 800; color: var(--gray-100); margin: .3rem 0; }
+.kit-meta { font-size: .78rem; color: var(--gray-400); }
+.kit-status-row { display: flex; align-items: center; gap: .7rem; margin-top: .5rem; flex-wrap: wrap; }
+.kit-status { font-weight: 700; font-size: .9rem; }
+.kit-time { font-size: .85rem; color: var(--gray-300); }
+.kit-toggle-btn { padding: .3rem .7rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 6px; cursor: pointer; font-size: .8rem; }
+.kit-del-btn { margin-left: auto; background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .8rem; }
+.kit-del-btn:hover { color: #ef4444; }
+.kit-steps { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .8rem; }
+.step-row { display: flex; align-items: center; gap: .6rem; padding: .4rem .6rem; background: var(--gray-900); border-radius: 8px; font-size: .82rem; }
+.step-name { font-weight: 700; color: var(--gray-200); min-width: 140px; }
+.step-time { color: #a78bfa; min-width: 45px; font-weight: 700; }
+.step-date { color: var(--gray-400); min-width: 90px; }
+.step-note { flex: 1; color: var(--gray-400); }
+.step-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.step-del:hover { color: #ef4444; }
+.step-empty { font-size: .82rem; color: var(--gray-500); padding: .5rem; }
+.kit-add-step { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; border-top: 1px solid var(--gray-700); padding-top: .8rem; }
+.gl-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>
