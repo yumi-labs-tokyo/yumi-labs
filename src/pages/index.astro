@@ -188,14 +188,7 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 </script>
 
 <style>
-	/* Hero */
-	.hero {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 2rem;
-		padding-block: 4rem 2rem;
-	}
+	/* Hero (base — overridden by the responsive block below) */
 
 	.hero-text {
 		max-width: 56ch;
@@ -266,26 +259,51 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		font-size: var(--text-xl);
 	}
 
-	/* Hero photo */
-	.hero-visual {
-		display: none;
-		flex-shrink: 0;
+	/* Hero — mobile: 縦積み */
+	.hero {
+		display: flex;
+		align-items: flex-start;
+		gap: 1.5rem;
+		padding-block: 2.5rem 2rem;
+		flex-direction: column;
 	}
 
-	@media (min-width: 50em) {
-		.hero-visual {
-			display: block;
-		}
+	/* Hero photo — mobile: 小さく中央揃え */
+	.hero-visual {
+		flex-shrink: 0;
+		display: flex;
+		justify-content: center;
+		width: 100%;
 	}
 
 	.hero-photo {
-		width: 200px;
+		width: 110px;
 		height: auto;
-		border-radius: 2rem;
+		border-radius: 1.5rem;
 		object-fit: cover;
 		object-position: top;
 		border: 3px solid var(--accent-light);
 		box-shadow: var(--shadow-md);
+	}
+
+	/* Desktop: 元の横並びレイアウトに戻す */
+	@media (min-width: 50em) {
+		.hero {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			padding-block: 4rem 2rem;
+		}
+
+		.hero-visual {
+			display: block;
+			width: auto;
+		}
+
+		.hero-photo {
+			width: 200px;
+			border-radius: 2rem;
+		}
 	}
 
 	/* Search */
