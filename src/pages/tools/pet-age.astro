@@ -1,0 +1,217 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="ペット年齢人間換算（犬種別精密版）" description="犬種・年齢を入れると小型犬/大型犬で異なる正確な換算。猫にも対応。">
+<main class="pa-wrap">
+  <div class="pa-header">
+    <div class="pa-title">🐕 ペット年齢 人間換算</div>
+    <div class="pa-sub">犬種別・体格別の精密な年齢換算ツール</div>
+  </div>
+
+  <div class="pa-form-card">
+    <div class="pa-pet-tabs">
+      <button class="pa-tab active" onclick="selPet('dog',this)">🐕 犬</button>
+      <button class="pa-tab" onclick="selPet('cat',this)">🐈 猫</button>
+    </div>
+
+    <div id="dogOptions" class="pa-options">
+      <div class="pa-form-row">
+        <div class="pa-form-group">
+          <label class="pa-label">犬種サイズ</label>
+          <select id="dogSize" class="pa-select" onchange="calc()">
+            <option value="small">小型犬（〜10kg） チワワ・トイプードルなど</option>
+            <option value="medium">中型犬（10〜25kg）柴犬・ビーグルなど</option>
+            <option value="large">大型犬（25〜45kg）ラブラドール・ゴールデンなど</option>
+            <option value="giant">超大型犬（45kg〜）グレートデーン・マスティフなど</option>
+          </select>
+        </div>
+        <div class="pa-form-group">
+          <label class="pa-label">犬の年齢</label>
+          <div class="age-input-row">
+            <input type="number" id="dogAge" class="pa-input" value="3" min="0" max="25" oninput="calc()" />
+            <span class="age-unit">歳</span>
+            <input type="number" id="dogMonth" class="pa-input sm" value="0" min="0" max="11" oninput="calc()" />
+            <span class="age-unit">ヶ月</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="catOptions" class="pa-options" style="display:none">
+      <div class="pa-form-row">
+        <div class="pa-form-group">
+          <label class="pa-label">猫の年齢</label>
+          <div class="age-input-row">
+            <input type="number" id="catAge" class="pa-input" value="3" min="0" max="30" oninput="calc()" />
+            <span class="age-unit">歳</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pa-result" id="result"></div>
+
+  <div class="pa-chart-card">
+    <div class="chart-title">年齢換算チャート</div>
+    <div class="chart-table-wrap" id="chartTable"></div>
+  </div>
+
+  <div class="pa-facts" id="facts"></div>
+</main>
+
+<script is:inline>
+// Dog age conversion by size (approximate human age equivalent)
+// Source: American Veterinary Medical Association + breed-specific research
+const DOG_CONVERSION = {
+  small: [0,12,19,26,33,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120],
+  medium:[0,15,24,28,32,36,42,47,51,56,60,65,69,74,78,83,87,92,96,101,105,109,114,118,122,126],
+  large: [0,15,24,28,32,36,45,50,55,61,66,71,76,82,87,93,98,104,109,115,120,126,131,137,142,148],
+  giant: [0,12,22,31,38,45,49,56,64,71,79,87,94,102,109,117,122,128,134,140,146,152,158,164,170,176],
+};
+
+const CAT_CONVERSION = [0, 15, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136];
+
+const SIZE_LABELS = { small:'小型犬', medium:'中型犬', large:'大型犬', giant:'超大型犬' };
+const SIZE_LIFE = { small:'14〜16年', medium:'11〜13年', large:'9〜11年', giant:'7〜8年' };
+
+let petType = 'dog';
+
+function selPet(type, btn) {
+  petType = type;
+  document.querySelectorAll('.pa-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dogOptions').style.display = type === 'dog' ? 'block' : 'none';
+  document.getElementById('catOptions').style.display = type === 'cat' ? 'block' : 'none';
+  calc();
+}
+
+function getLifeStage(humanAge) {
+  if (humanAge < 15) return { stage:'子ども', color:'#60a5fa' };
+  if (humanAge < 25) return { stage:'青年', color:'#34d399' };
+  if (humanAge < 40) return { stage:'若年成人', color:'#a3e635' };
+  if (humanAge < 55) return { stage:'中年', color:'#fbbf24' };
+  if (humanAge < 70) return { stage:'初老', color:'#fb923c' };
+  if (humanAge < 85) return { stage:'高齢', color:'#f87171' };
+  return { stage:'超高齢', color:'#c084fc' };
+}
+
+function calc() {
+  let humanAge, petAge, sizeLabel, lifeExpect, tableData;
+
+  if (petType === 'dog') {
+    const size = document.getElementById('dogSize').value;
+    const years = parseInt(document.getElementById('dogAge').value) || 0;
+    const months = parseInt(document.getElementById('dogMonth').value) || 0;
+    petAge = years + months / 12;
+    const conv = DOG_CONVERSION[size];
+    // Interpolate
+    const floorAge = Math.min(Math.floor(petAge), conv.length - 2);
+    const frac = petAge - floorAge;
+    humanAge = Math.round(conv[floorAge] + frac * (conv[Math.min(floorAge+1, conv.length-1)] - conv[floorAge]));
+    sizeLabel = SIZE_LABELS[size];
+    lifeExpect = SIZE_LIFE[size];
+    tableData = conv.map((h, i) => ({ petYear: i, humanYear: h })).slice(0, 20);
+  } else {
+    petAge = parseInt(document.getElementById('catAge').value) || 0;
+    humanAge = CAT_CONVERSION[Math.min(petAge, CAT_CONVERSION.length - 1)];
+    sizeLabel = '猫';
+    lifeExpect = '13〜17年';
+    tableData = CAT_CONVERSION.map((h, i) => ({ petYear: i, humanYear: h })).slice(0, 20);
+  }
+
+  const ls = getLifeStage(humanAge);
+
+  document.getElementById('result').innerHTML = `
+    <div class="res-main">
+      <div class="res-pet">${petAge.toFixed(petAge % 1 ? 1 : 0)}歳 (${sizeLabel})</div>
+      <div class="res-arrow">≈</div>
+      <div class="res-human">
+        <div class="res-human-age">${humanAge}<span class="res-unit"> 歳</span></div>
+        <div class="res-stage" style="color:${ls.color}">${ls.stage}</div>
+      </div>
+    </div>
+    <div class="res-meta">
+      <span>平均寿命：${lifeExpect}</span>
+      <span>ライフステージ：<strong style="color:${ls.color}">${ls.stage}</strong></span>
+    </div>
+  `;
+
+  // Chart table
+  const tableEl = document.getElementById('chartTable');
+  const rows = tableData.map(d => {
+    const lsi = getLifeStage(d.humanYear);
+    const isNow = Math.floor(petAge) === d.petYear;
+    return `<tr class="${isNow ? 'now-row' : ''}">
+      <td>${d.petYear}歳</td>
+      <td><strong>${d.humanYear}</strong>歳</td>
+      <td><span style="color:${lsi.color}">${lsi.stage}</span></td>
+    </tr>`;
+  }).join('');
+
+  tableEl.innerHTML = `<table class="conv-table"><thead><tr><th>${sizeLabel}の年齢</th><th>人間換算</th><th>ステージ</th></tr></thead><tbody>${rows}</tbody></table>`;
+
+  // Fun facts
+  const factsEl = document.getElementById('facts');
+  const dogFacts = [
+    '犬は嗅覚が人間の約1万〜10万倍といわれています。',
+    '犬は色盲ではありませんが、人間より色の識別が少なく、青と黄色がよく見えます。',
+    '犬の鼻紋（鼻の模様）は人間の指紋のように個体識別に使えます。',
+    '大型犬は小型犬より老化が早く、寿命も短い傾向があります。',
+  ];
+  const catFacts = [
+    '猫は1日に16〜20時間眠ります（寿命の2/3以上を寝て過ごします）。',
+    '猫のひげは体の幅と同じ長さで、狭い場所が通れるか判断する感覚器官です。',
+    '猫は着地反射（ライティングリフレックス）で高所から落ちても足から着地できます。',
+    '猫の鳴き声「にゃー」は人間とコミュニケーションするために発達させたとされています。',
+  ];
+  const facts = petType === 'dog' ? dogFacts : catFacts;
+  factsEl.innerHTML = `
+    <div class="facts-card">
+      <div class="facts-title">豆知識</div>
+      ${facts.map(f => '<div class="fact-item">🐾 ' + f + '</div>').join('')}
+    </div>
+  `;
+}
+
+calc();
+</script>
+
+<style>
+.pa-wrap { max-width: 700px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.pa-header { text-align: center; margin-bottom: 2rem; }
+.pa-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.pa-sub { color: var(--gray-400); margin-top: .3rem; }
+.pa-form-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.pa-pet-tabs { display: flex; gap: .5rem; margin-bottom: 1.2rem; }
+.pa-tab { flex: 1; padding: .5rem; border: 1.5px solid var(--gray-700); border-radius: 8px; background: var(--gray-900); color: var(--gray-300); font-size: 1rem; cursor: pointer; }
+.pa-tab.active { background: #059669; border-color: #059669; color: #fff; }
+.pa-form-row { display: flex; flex-wrap: wrap; gap: 1rem; }
+.pa-form-group { flex: 1; min-width: 200px; }
+.pa-label { font-size: .8rem; color: var(--gray-400); display: block; margin-bottom: .4rem; }
+.pa-select { width: 100%; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; }
+.age-input-row { display: flex; align-items: center; gap: .4rem; }
+.pa-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: 1rem; width: 70px; }
+.pa-input.sm { width: 55px; }
+.age-unit { font-size: .85rem; color: var(--gray-400); }
+.pa-result { margin-bottom: 1.5rem; }
+.res-main { display: flex; align-items: center; justify-content: center; gap: 1.5rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 16px; padding: 2rem; margin-bottom: .8rem; }
+.res-pet { font-size: 1.3rem; font-weight: 700; color: var(--gray-300); }
+.res-arrow { font-size: 2rem; color: var(--gray-500); }
+.res-human-age { font-size: 3rem; font-weight: 800; color: var(--gray-100); line-height: 1; }
+.res-unit { font-size: 1.2rem; color: var(--gray-400); }
+.res-stage { font-size: 1rem; font-weight: 700; margin-top: .3rem; }
+.res-meta { display: flex; gap: 1.5rem; font-size: .85rem; color: var(--gray-400); background: var(--gray-800); border-radius: 10px; padding: .6rem 1rem; flex-wrap: wrap; }
+.pa-chart-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.chart-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.chart-table-wrap { max-height: 300px; overflow-y: auto; }
+.conv-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.conv-table th { background: var(--gray-700); padding: .4rem .7rem; text-align: left; color: var(--gray-200); position: sticky; top: 0; }
+.conv-table td { padding: .4rem .7rem; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.now-row td { background: #1a2a1a; color: #86efac; font-weight: 700; }
+.facts-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.facts-title { font-weight: 700; color: var(--gray-200); margin-bottom: .7rem; }
+.fact-item { font-size: .85rem; color: var(--gray-300); line-height: 1.6; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); }
+.fact-item:last-child { border-bottom: none; }
+</style>
+</BaseLayout>

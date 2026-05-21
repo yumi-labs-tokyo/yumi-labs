@@ -1,0 +1,248 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="子供の身長予測ツール" description="両親身長＋現在身長から最終身長を予測。成長曲線を表示。">
+<main class="hp-wrap">
+  <div class="hp-header">
+    <div class="hp-title">📏 子供の身長予測ツール</div>
+    <div class="hp-sub">両親の身長から子供の最終身長を予測</div>
+  </div>
+
+  <div class="hp-form-card">
+    <div class="hp-form-grid">
+      <div class="form-group">
+        <label class="form-label">子供の性別</label>
+        <div class="radio-row">
+          <label class="radio-opt"><input type="radio" name="gender" value="male" checked onchange="calc()"> 男の子</label>
+          <label class="radio-opt"><input type="radio" name="gender" value="female" onchange="calc()"> 女の子</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">父の身長 (cm)</label>
+        <input type="number" id="fatherH" class="hp-input" value="170" min="140" max="220" oninput="calc()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">母の身長 (cm)</label>
+        <input type="number" id="motherH" class="hp-input" value="158" min="130" max="200" oninput="calc()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">子供の現在の年齢</label>
+        <input type="number" id="childAge" class="hp-input" value="5" min="0" max="17" oninput="calc()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">子供の現在の身長 (cm)（任意）</label>
+        <input type="number" id="childH" class="hp-input" placeholder="例: 110" min="40" max="200" oninput="calc()" />
+      </div>
+    </div>
+  </div>
+
+  <div class="hp-result" id="result"></div>
+
+  <div class="hp-chart-card">
+    <div class="chart-title">成長曲線（予測）</div>
+    <div class="chart-area">
+      <svg id="growthChart" viewBox="0 0 500 300" preserveAspectRatio="xMidYMid meet" style="width:100%;max-height:300px"></svg>
+    </div>
+  </div>
+
+  <div class="hp-note">
+    ※予測値は統計的な推定であり、実際の身長はホルモン・栄養・運動・睡眠などの要因で大きく変わります。医学的なアドバイスは医師にご相談ください。
+  </div>
+</main>
+
+<script is:inline>
+// Midparent height formula and standard deviation
+// Male: (father + mother + 13) / 2 ± 8cm
+// Female: (father + mother - 13) / 2 ± 8cm
+
+// Average height percentiles (Japanese, approximate)
+const MALE_PERCENTILES = {
+  p3:  [49.0,74.0,81.8,88.6,95.2,101.8,108.1,114.3,120.4,126.5,133.1,139.7,147.3,155.6,162.2,166.7,169.0,170.0],
+  p50: [50.0,75.5,85.0,92.5,99.5,106.5,113.0,120.0,126.5,132.0,138.0,145.0,153.0,161.0,166.0,168.5,170.5,171.0],
+  p97: [51.5,77.5,88.5,96.5,104.0,111.0,118.0,125.5,132.5,138.5,145.5,153.5,163.0,170.5,174.0,175.5,177.5,178.0],
+};
+const FEMALE_PERCENTILES = {
+  p3:  [48.5,73.5,80.8,87.4,93.5,99.7,106.0,112.5,118.7,124.6,131.5,138.5,143.6,147.1,149.0,150.0,150.5,150.5],
+  p50: [49.5,74.5,84.5,91.5,98.0,104.5,111.5,118.0,124.5,130.5,137.5,144.5,150.5,154.0,156.0,157.0,157.5,157.5],
+  p97: [51.0,76.5,88.0,95.5,102.5,109.5,117.0,124.0,131.0,137.5,145.0,152.5,158.0,161.0,163.0,163.5,164.0,164.0],
+};
+
+function calc() {
+  const gender = document.querySelector('input[name="gender"]:checked').value;
+  const fH = parseFloat(document.getElementById('fatherH').value) || 170;
+  const mH = parseFloat(document.getElementById('motherH').value) || 158;
+  const age = parseInt(document.getElementById('childAge').value) || 0;
+  const currH = parseFloat(document.getElementById('childH').value) || null;
+
+  const isMale = gender === 'male';
+
+  // Midparent formula
+  const midparent = (fH + mH + (isMale ? 13 : -13)) / 2;
+  const sd = 8.5;
+  const pred = midparent;
+  const low = pred - sd;
+  const high = pred + sd;
+
+  const percentiles = isMale ? MALE_PERCENTILES : FEMALE_PERCENTILES;
+  const ages = Array.from({length:18}, (_, i) => i);
+
+  // Find percentile of prediction
+  const p50atAdult = percentiles.p50[17];
+  const diff = pred - p50atAdult;
+  let percentileLabel = '平均付近';
+  if (pred > percentiles.p97[17]) percentileLabel = '97パーセンタイル以上（非常に高め）';
+  else if (pred > percentiles.p50[17] + 5) percentileLabel = '75パーセンタイル付近（高め）';
+  else if (pred < percentiles.p3[17]) percentileLabel = '3パーセンタイル以下（非常に低め）';
+  else if (pred < percentiles.p50[17] - 5) percentileLabel = '25パーセンタイル付近（低め）';
+
+  // Current height percentile
+  let currPercentile = '';
+  if (currH && age <= 17) {
+    const p3 = percentiles.p3[age], p50 = percentiles.p50[age], p97 = percentiles.p97[age];
+    if (currH > p97) currPercentile = '現在の身長：97%タイル以上';
+    else if (currH > p50) currPercentile = '現在の身長：50〜97%タイル（平均以上）';
+    else if (currH > p3) currPercentile = '現在の身長：3〜50%タイル（平均以下）';
+    else currPercentile = '現在の身長：3%タイル以下';
+  }
+
+  document.getElementById('result').innerHTML = `
+    <div class="res-main">
+      <div class="res-block">
+        <div class="res-label">予測最終身長</div>
+        <div class="res-val">${pred.toFixed(1)} <span class="res-unit">cm</span></div>
+        <div class="res-range">範囲: ${low.toFixed(1)} 〜 ${high.toFixed(1)} cm</div>
+      </div>
+      <div class="res-block">
+        <div class="res-label">中間親身長</div>
+        <div class="res-val sm">${midparent.toFixed(1)} cm</div>
+      </div>
+      <div class="res-block">
+        <div class="res-label">参考百分位</div>
+        <div class="res-val sm pct">${percentileLabel}</div>
+      </div>
+    </div>
+    ${currPercentile ? '<div class="curr-pct">' + currPercentile + '</div>' : ''}
+  `;
+
+  drawChart(gender, pred, low, high, age, currH);
+}
+
+function drawChart(gender, pred, low, high, currAge, currH) {
+  const svg = document.getElementById('growthChart');
+  svg.innerHTML = '';
+  const W = 500, H = 300, PL = 50, PR = 20, PT = 20, PB = 40;
+  const cW = W - PL - PR, cH = H - PT - PB;
+
+  const percentiles = gender === 'male' ? MALE_PERCENTILES : FEMALE_PERCENTILES;
+  const ages = Array.from({length:18}, (_, i) => i);
+  const allVals = [...percentiles.p3, ...percentiles.p97];
+  const minH = Math.floor(Math.min(...allVals) / 10) * 10;
+  const maxH = Math.ceil(Math.max(...allVals) / 10) * 10;
+
+  function xPos(age) { return PL + (age / 17) * cW; }
+  function yPos(h) { return PT + cH - ((h - minH) / (maxH - minH)) * cH; }
+
+  function makePath(arr) {
+    return arr.map((v, i) => (i === 0 ? 'M' : 'L') + xPos(i) + ' ' + yPos(v)).join(' ');
+  }
+
+  // Grid lines
+  for (let h = minH; h <= maxH; h += 10) {
+    const y = yPos(h);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', PL); line.setAttribute('x2', W-PR);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#374151'); line.setAttribute('stroke-width', '0.5');
+    svg.appendChild(line);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', PL-4); t.setAttribute('y', y+4); t.setAttribute('font-size','9');
+    t.setAttribute('fill','#6b7280'); t.setAttribute('text-anchor','end');
+    t.textContent = h;
+    svg.appendChild(t);
+  }
+  for (let a = 0; a <= 17; a += 2) {
+    const x = xPos(a);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', PT); line.setAttribute('y2', H-PB);
+    line.setAttribute('stroke', '#374151'); line.setAttribute('stroke-width', '0.5');
+    svg.appendChild(line);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', x); t.setAttribute('y', H-PB+14); t.setAttribute('font-size','9');
+    t.setAttribute('fill','#6b7280'); t.setAttribute('text-anchor','middle');
+    t.textContent = a + '歳';
+    svg.appendChild(t);
+  }
+
+  // Shaded area (p3-p97)
+  const shadePath = makePath(percentiles.p97) + ' ' + [...percentiles.p3].reverse().map((v, i) => 'L' + xPos(17-i) + ' ' + yPos(v)).join(' ') + ' Z';
+  const shade = document.createElementNS('http://www.w3.org/2000/svg','path');
+  shade.setAttribute('d', shadePath);
+  shade.setAttribute('fill', gender === 'male' ? '#1e3a5f' : '#3d1a3d');
+  shade.setAttribute('opacity', '0.5');
+  svg.appendChild(shade);
+
+  // p50 line
+  const p50 = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p50.setAttribute('d', makePath(percentiles.p50));
+  p50.setAttribute('stroke', gender === 'male' ? '#60a5fa' : '#f472b6');
+  p50.setAttribute('stroke-width', '2'); p50.setAttribute('fill', 'none');
+  svg.appendChild(p50);
+
+  // Prediction line (horizontal at final height)
+  const predY = yPos(pred);
+  const predLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+  predLine.setAttribute('x1', PL); predLine.setAttribute('x2', W-PR);
+  predLine.setAttribute('y1', predY); predLine.setAttribute('y2', predY);
+  predLine.setAttribute('stroke', '#fbbf24'); predLine.setAttribute('stroke-width', '2');
+  predLine.setAttribute('stroke-dasharray', '6,3');
+  svg.appendChild(predLine);
+
+  // Label
+  const pLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+  pLabel.setAttribute('x', W-PR-2); pLabel.setAttribute('y', predY-4);
+  pLabel.setAttribute('font-size','10'); pLabel.setAttribute('fill','#fbbf24');
+  pLabel.setAttribute('text-anchor','end'); pLabel.textContent = pred.toFixed(1) + 'cm';
+  svg.appendChild(pLabel);
+
+  // Current height dot
+  if (currH && currAge <= 17) {
+    const cx = xPos(currAge), cy = yPos(currH);
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.setAttribute('r', '5');
+    dot.setAttribute('fill', '#f97316');
+    svg.appendChild(dot);
+  }
+}
+
+calc();
+</script>
+
+<style>
+.hp-wrap { max-width: 750px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.hp-header { text-align: center; margin-bottom: 2rem; }
+.hp-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.hp-sub { color: var(--gray-400); margin-top: .3rem; }
+.hp-form-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.hp-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.form-group { display: flex; flex-direction: column; gap: .4rem; }
+.form-label { font-size: .8rem; color: var(--gray-400); font-weight: 600; }
+.hp-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: 1rem; width: 100%; box-sizing: border-box; }
+.radio-row { display: flex; gap: 1rem; }
+.radio-opt { display: flex; align-items: center; gap: .4rem; font-size: .9rem; color: var(--gray-200); cursor: pointer; }
+.radio-opt input { accent-color: #2563eb; }
+.hp-result { margin-bottom: 1.5rem; }
+.res-main { display: flex; gap: 1rem; flex-wrap: wrap; }
+.res-block { flex: 1; min-width: 150px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; text-align: center; }
+.res-label { font-size: .75rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.res-val { font-size: 2.2rem; font-weight: 800; color: var(--gray-100); line-height: 1.1; }
+.res-val.sm { font-size: 1.5rem; }
+.res-val.pct { font-size: 1rem; color: #818cf8; }
+.res-unit { font-size: 1rem; color: var(--gray-400); }
+.res-range { font-size: .75rem; color: var(--gray-400); margin-top: .3rem; }
+.curr-pct { background: var(--gray-800); border: 1px solid var(--gray-700); border-radius: 8px; padding: .5rem .8rem; font-size: .85rem; color: var(--gray-300); margin-top: .5rem; }
+.hp-chart-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.chart-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.hp-note { font-size: .8rem; color: var(--gray-500); line-height: 1.6; background: var(--gray-900); border-radius: 8px; padding: .7rem 1rem; }
+</style>
+</BaseLayout>

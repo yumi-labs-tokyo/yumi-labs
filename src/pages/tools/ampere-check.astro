@@ -1,0 +1,222 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="電気代「契約アンペア」見直しシミュレーター" description="家電リストを入れると適正アンペアを提案。電気代節約に。">
+<main class="ac-wrap">
+  <div class="ac-header">
+    <div class="ac-title">⚡ 契約アンペア見直しシミュレーター</div>
+    <div class="ac-sub">同時に使う家電を選択して適正アンペアを計算</div>
+  </div>
+
+  <div class="ac-body">
+    <div class="ac-left">
+      <div class="ac-section">よく使う家電を選択</div>
+      <div class="ac-cats">
+        <button class="ac-cat active" onclick="selCat('全て',this)">全て</button>
+        <button class="ac-cat" onclick="selCat('キッチン',this)">キッチン</button>
+        <button class="ac-cat" onclick="selCat('リビング',this)">リビング</button>
+        <button class="ac-cat" onclick="selCat('冷暖房',this)">冷暖房</button>
+        <button class="ac-cat" onclick="selCat('浴室',this)">浴室・洗面</button>
+        <button class="ac-cat" onclick="selCat('その他',this)">その他</button>
+      </div>
+      <div class="appliance-grid" id="appGrid"></div>
+    </div>
+
+    <div class="ac-right">
+      <div class="ac-section">使用状況</div>
+      <div class="selected-apps" id="selApps">
+        <div class="empty-msg">家電を選択してください</div>
+      </div>
+
+      <div class="ac-result" id="result">
+        <div class="res-header">同時使用 合計電力</div>
+        <div class="res-watts" id="resWatts">0 W</div>
+        <div class="res-amps" id="resAmps">0 A</div>
+        <div class="rec-section">推奨契約アンペア</div>
+        <div class="rec-amp" id="recAmp">—</div>
+        <div class="amp-guide" id="ampGuide"></div>
+        <div class="warning-msg" id="warnMsg" style="display:none"></div>
+      </div>
+
+      <div class="ac-tip">
+        <div class="tip-title">💡 アンペアの目安</div>
+        <div class="tip-content">
+          <div class="tip-row"><span>10A</span><span>1人暮らし・最小限</span></div>
+          <div class="tip-row"><span>20A</span><span>1人暮らし・標準</span></div>
+          <div class="tip-row"><span>30A</span><span>2人暮らし</span></div>
+          <div class="tip-row"><span>40A</span><span>3〜4人家族・一般的</span></div>
+          <div class="tip-row"><span>50A</span><span>4〜5人家族</span></div>
+          <div class="tip-row"><span>60A</span><span>大家族・オール電化</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const APPLIANCES = [
+  // キッチン
+  {name:'電子レンジ',emoji:'📦',watts:1500,cat:'キッチン'},
+  {name:'電気ケトル',emoji:'🫖',watts:1000,cat:'キッチン'},
+  {name:'IHクッキングヒーター',emoji:'🍳',watts:3000,cat:'キッチン'},
+  {name:'電気炊飯器',emoji:'🍚',watts:500,cat:'キッチン'},
+  {name:'トースター',emoji:'🍞',watts:900,cat:'キッチン'},
+  {name:'冷蔵庫',emoji:'🧊',watts:50,cat:'キッチン'},
+  {name:'食洗機',emoji:'🍽️',watts:1200,cat:'キッチン'},
+  {name:'コーヒーメーカー',emoji:'☕',watts:700,cat:'キッチン'},
+  // リビング
+  {name:'テレビ(50型)',emoji:'📺',watts:200,cat:'リビング'},
+  {name:'照明(LED)',emoji:'💡',watts:30,cat:'リビング'},
+  {name:'パソコン(デスク)',emoji:'🖥️',watts:200,cat:'リビング'},
+  {name:'ノートPC',emoji:'💻',watts:60,cat:'リビング'},
+  {name:'ゲーム機',emoji:'🎮',watts:150,cat:'リビング'},
+  {name:'掃除機',emoji:'🫧',watts:1000,cat:'リビング'},
+  {name:'ドライヤー',emoji:'💨',watts:1200,cat:'リビング'},
+  {name:'アイロン',emoji:'🔲',watts:1000,cat:'リビング'},
+  // 冷暖房
+  {name:'エアコン(6畳冷房)',emoji:'❄️',watts:700,cat:'冷暖房'},
+  {name:'エアコン(10畳冷房)',emoji:'❄️',watts:1000,cat:'冷暖房'},
+  {name:'エアコン(暖房)',emoji:'🌡️',watts:1200,cat:'冷暖房'},
+  {name:'電気ストーブ',emoji:'🔥',watts:1200,cat:'冷暖房'},
+  {name:'電気カーペット',emoji:'🟥',watts:500,cat:'冷暖房'},
+  {name:'加湿器',emoji:'💧',watts:100,cat:'冷暖房'},
+  // 浴室
+  {name:'電気温水器',emoji:'🚿',watts:3000,cat:'浴室'},
+  {name:'洗濯機',emoji:'🔄',watts:450,cat:'浴室'},
+  {name:'乾燥機',emoji:'♨️',watts:1200,cat:'浴室'},
+  {name:'浴室乾燥機',emoji:'🚿',watts:1400,cat:'浴室'},
+  // その他
+  {name:'スマホ充電',emoji:'📱',watts:20,cat:'その他'},
+  {name:'プリンター',emoji:'🖨️',watts:200,cat:'その他'},
+  {name:'電動アシスト自転車充電',emoji:'🚲',watts:100,cat:'その他'},
+  {name:'EV充電',emoji:'🚗',watts:3000,cat:'その他'},
+];
+
+const VOLTAGE = 100;
+let selected = {};
+let currentCat = '全て';
+
+function selCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.ac-cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('appGrid');
+  const filtered = currentCat === '全て' ? APPLIANCES : APPLIANCES.filter(a => a.cat === currentCat);
+  grid.innerHTML = '';
+  filtered.forEach(app => {
+    const btn = document.createElement('button');
+    const cnt = selected[app.name] || 0;
+    btn.className = 'app-card' + (cnt > 0 ? ' selected' : '');
+    btn.innerHTML = '<span class="app-emoji">' + app.emoji + '</span><span class="app-name">' + app.name + '</span><span class="app-watts">' + app.watts + 'W</span>' + (cnt > 0 ? '<span class="app-cnt">' + cnt + '</span>' : '');
+    btn.onclick = () => toggleApp(app);
+    grid.appendChild(btn);
+  });
+}
+
+function toggleApp(app) {
+  const cnt = selected[app.name] || 0;
+  if (cnt === 0) selected[app.name] = 1;
+  else if (cnt === 1) selected[app.name] = 2;
+  else delete selected[app.name];
+  renderGrid();
+  updateResult();
+}
+
+function updateResult() {
+  const items = Object.entries(selected).map(([name, cnt]) => {
+    const app = APPLIANCES.find(a => a.name === name);
+    return { ...app, cnt };
+  }).filter(Boolean);
+
+  const totalW = items.reduce((s, a) => s + a.watts * a.cnt, 0);
+  const totalA = totalW / VOLTAGE;
+
+  const sa = document.getElementById('selApps');
+  if (!items.length) {
+    sa.innerHTML = '<div class="empty-msg">家電を選択してください</div>';
+  } else {
+    sa.innerHTML = items.map(a => `
+      <div class="sel-app-row">
+        <span>${a.emoji} ${a.name}${a.cnt > 1 ? ' ×' + a.cnt : ''}</span>
+        <span class="sa-w">${a.watts * a.cnt}W</span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('resWatts').textContent = totalW.toLocaleString() + ' W';
+  document.getElementById('resAmps').textContent = totalA.toFixed(1) + ' A';
+
+  // Recommend ampere
+  const AMPS = [10, 15, 20, 30, 40, 50, 60];
+  const buffer = 1.2;
+  const needed = totalA * buffer;
+  const rec = AMPS.find(a => a >= needed) || 60;
+  document.getElementById('recAmp').textContent = rec + 'A';
+
+  const guide = document.getElementById('ampGuide');
+  guide.innerHTML = AMPS.map(a => `<span class="amp-chip ${a === rec ? 'rec' : a < needed ? 'low' : ''}">${a}A</span>`).join('');
+
+  const warn = document.getElementById('warnMsg');
+  if (totalA > 60) {
+    warn.style.display = 'block';
+    warn.innerHTML = '⚠️ 同時使用量が60Aを超えています。分電盤の見直しや節電が必要です。';
+  } else if (totalA > 50) {
+    warn.style.display = 'block';
+    warn.innerHTML = '⚡ 使用量が多め。家電の同時使用を減らすことを検討してください。';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+renderGrid();
+updateResult();
+</script>
+
+<style>
+.ac-wrap { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.ac-header { text-align: center; margin-bottom: 2rem; }
+.ac-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.ac-sub { color: var(--gray-400); margin-top: .3rem; }
+.ac-body { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
+@media (max-width: 750px) { .ac-body { grid-template-columns: 1fr; } }
+.ac-section { font-weight: 700; color: var(--gray-200); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
+.ac-cats { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .8rem; }
+.ac-cat { padding: .25rem .65rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .8rem; cursor: pointer; }
+.ac-cat.active { background: #ca8a04; border-color: #ca8a04; color: #fff; }
+.appliance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .4rem; }
+.app-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; padding: .5rem .3rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .15rem; position: relative; transition: all .15s; }
+.app-card:hover { border-color: #ca8a04; }
+.app-card.selected { border-color: #f59e0b; background: #451a03; }
+.app-emoji { font-size: 1.3rem; }
+.app-name { font-size: .65rem; color: var(--gray-300); text-align: center; line-height: 1.2; }
+.app-watts { font-size: .6rem; color: var(--gray-500); }
+.app-cnt { position: absolute; top: 4px; right: 4px; background: #f59e0b; color: #000; border-radius: 8px; font-size: .65rem; font-weight: 800; padding: 0 .3rem; }
+.ac-right { }
+.selected-apps { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem; margin-bottom: 1rem; min-height: 80px; }
+.sel-app-row { display: flex; justify-content: space-between; font-size: .85rem; padding: .2rem 0; color: var(--gray-200); border-bottom: 1px solid var(--gray-700); }
+.sel-app-row:last-child { border-bottom: none; }
+.sa-w { color: #fbbf24; font-weight: 600; }
+.empty-msg { color: var(--gray-500); font-size: .85rem; }
+.ac-result { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; text-align: center; }
+.res-header { font-size: .75rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: .05em; }
+.res-watts { font-size: 2rem; font-weight: 800; color: #fbbf24; }
+.res-amps { font-size: 1rem; color: var(--gray-400); margin-bottom: .8rem; }
+.rec-section { font-size: .75rem; color: var(--gray-400); text-transform: uppercase; }
+.rec-amp { font-size: 2.5rem; font-weight: 800; color: #34d399; }
+.amp-guide { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; margin-top: .5rem; }
+.amp-chip { font-size: .75rem; padding: .2rem .5rem; border-radius: 20px; border: 1px solid var(--gray-700); color: var(--gray-400); }
+.amp-chip.rec { background: #065f46; border-color: #34d399; color: #34d399; font-weight: 800; }
+.amp-chip.low { opacity: .4; }
+.warning-msg { margin-top: .7rem; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; padding: .5rem .7rem; font-size: .8rem; color: #fca5a5; }
+.ac-tip { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; }
+.tip-title { font-weight: 700; color: var(--gray-200); margin-bottom: .6rem; font-size: .85rem; }
+.tip-row { display: flex; justify-content: space-between; font-size: .8rem; padding: .2rem 0; border-bottom: 1px solid var(--gray-700); }
+.tip-row:last-child { border-bottom: none; }
+.tip-row span:first-child { font-weight: 700; color: #fbbf24; }
+.tip-row span:last-child { color: var(--gray-300); }
+</style>
+</BaseLayout>

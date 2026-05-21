@@ -1,0 +1,218 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="引っ越し見積もり交渉用比較表" description="業者の見積もり額を入れると印刷可能な交渉資料化。値引き交渉に活用。">
+<main class="mq-wrap">
+  <div class="mq-header">
+    <div class="mq-title">🚚 引っ越し見積もり比較表</div>
+    <div class="mq-sub">複数業者の見積もりを比較して交渉に活用</div>
+  </div>
+
+  <div class="mq-info-form">
+    <div class="mq-info-title">引っ越し情報</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <label class="info-label">引越し日</label>
+        <input type="date" id="moveDate" class="mq-input" />
+      </div>
+      <div class="info-item">
+        <label class="info-label">現住所（都道府県）</label>
+        <input type="text" id="fromAddr" class="mq-input" placeholder="例：東京都渋谷区" />
+      </div>
+      <div class="info-item">
+        <label class="info-label">新住所（都道府県）</label>
+        <input type="text" id="toAddr" class="mq-input" placeholder="例：神奈川県横浜市" />
+      </div>
+      <div class="info-item">
+        <label class="info-label">家族構成</label>
+        <select id="familySize" class="mq-select">
+          <option value="1人">1人（単身）</option>
+          <option value="2人">2人</option>
+          <option value="3人">3人</option>
+          <option value="4人以上">4人以上</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="mq-quotes-section">
+    <div class="mq-quotes-title">業者見積もり入力</div>
+    <div id="quoteList"></div>
+    <button class="mq-btn add-btn" onclick="addQuote()">＋ 業者を追加</button>
+  </div>
+
+  <div class="mq-result" id="result" style="display:none">
+    <div class="mq-result-title">比較結果</div>
+    <div id="resultTable"></div>
+    <div class="mq-tips" id="negotiationTips"></div>
+    <button class="mq-btn print-btn" onclick="window.print()">🖨️ 印刷・PDF保存</button>
+  </div>
+</main>
+
+<script is:inline>
+let quotes = [
+  { name:'', price:'', options:[], note:'' },
+  { name:'', price:'', options:[], note:'' },
+  { name:'', price:'', options:[], note:'' },
+];
+
+const OPTIONS_LIST = ['エアコン移設','ピアノ輸送','養生代','梱包材','不用品処分','家電設置','クリーニング'];
+
+function renderQuotes() {
+  const el = document.getElementById('quoteList');
+  el.innerHTML = '';
+  quotes.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'quote-card';
+    card.innerHTML = `
+      <div class="qc-header">
+        <input class="mq-input" type="text" placeholder="業者名" value="${q.name}" oninput="quotes[${i}].name=this.value;updateResult()" />
+        <button class="del-q-btn" onclick="deleteQuote(${i})">×</button>
+      </div>
+      <div class="qc-price-row">
+        <label class="qc-label">基本料金</label>
+        <input class="mq-input price-input" type="number" placeholder="00000" value="${q.price}" oninput="quotes[${i}].price=this.value;updateResult()" />
+        <span class="yen">円</span>
+      </div>
+      <div class="qc-options-label">オプション</div>
+      <div class="qc-options">
+        ${OPTIONS_LIST.map(opt => `<label class="opt-chk"><input type="checkbox" ${q.options.includes(opt) ? 'checked' : ''} onchange="toggleOpt(${i},'${opt}')"> ${opt}</label>`).join('')}
+      </div>
+      <div class="qc-note-row">
+        <label class="qc-label">メモ</label>
+        <input class="mq-input" type="text" placeholder="担当者名・特記事項" value="${q.note}" oninput="quotes[${i}].note=this.value" />
+      </div>
+    `;
+    el.appendChild(card);
+  });
+  updateResult();
+}
+
+function toggleOpt(i, opt) {
+  const idx = quotes[i].options.indexOf(opt);
+  if (idx >= 0) quotes[i].options.splice(idx, 1);
+  else quotes[i].options.push(opt);
+  updateResult();
+}
+
+function addQuote() {
+  quotes.push({ name:'', price:'', options:[], note:'' });
+  renderQuotes();
+}
+
+function deleteQuote(i) {
+  quotes.splice(i, 1);
+  renderQuotes();
+}
+
+function updateResult() {
+  const filled = quotes.filter(q => q.name && q.price);
+  if (filled.length < 2) { document.getElementById('result').style.display = 'none'; return; }
+
+  const sorted = [...filled].sort((a, b) => parseInt(a.price) - parseInt(b.price));
+  const minPrice = parseInt(sorted[0].price);
+  const maxPrice = parseInt(sorted[sorted.length-1].price);
+  const diff = maxPrice - minPrice;
+
+  const moveDate = document.getElementById('moveDate').value;
+  const from = document.getElementById('fromAddr').value;
+  const to = document.getElementById('toAddr').value;
+  const family = document.getElementById('familySize').value;
+
+  const tableRows = sorted.map((q, rank) => {
+    const price = parseInt(q.price);
+    const pct = ((price - minPrice) / (maxPrice - minPrice || 1) * 100).toFixed(0);
+    return `<tr class="${rank === 0 ? 'best-row' : ''}">
+      <td>${rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : ''} ${q.name || '業者' + (rank+1)}</td>
+      <td class="price-cell">¥${price.toLocaleString()}</td>
+      <td>${rank === 0 ? '最安値' : '+¥' + (price-minPrice).toLocaleString()}</td>
+      <td>${q.options.length ? q.options.join('・') : '—'}</td>
+      <td>${q.note || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('resultTable').innerHTML = `
+    <div class="res-summary">
+      <div class="rs-item"><div class="rs-val">¥${minPrice.toLocaleString()}</div><div class="rs-label">最安値</div></div>
+      <div class="rs-item"><div class="rs-val">¥${maxPrice.toLocaleString()}</div><div class="rs-label">最高値</div></div>
+      <div class="rs-item diff"><div class="rs-val">¥${diff.toLocaleString()}</div><div class="rs-label">差額</div></div>
+    </div>
+    <div class="res-info">${moveDate ? moveDate + ' /' : ''} ${from ? from + ' → ' + to : ''} ${family}</div>
+    <div class="table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>業者</th><th>料金</th><th>差額</th><th>オプション</th><th>メモ</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  // Negotiation tips
+  const tips = [];
+  if (diff > 30000) tips.push('最安値と最高値の差が' + diff.toLocaleString() + '円。最高値の業者に「他社より安い見積もりをもらっている」と伝えると値引き交渉しやすい。');
+  if (diff > 0) tips.push('「' + sorted[0].name + 'さんが¥' + minPrice.toLocaleString() + 'です」と伝えることで、他社が値引きに応じる可能性があります。');
+  tips.push('引越しの繁忙期（3〜4月）は値引き交渉が難しい。平日・月末・梅雨時期はお得になりやすい。');
+  tips.push('「不用品の無料引き取り」「梱包材の提供」などサービスで差をつけてもらえるか交渉してみましょう。');
+
+  document.getElementById('negotiationTips').innerHTML = `
+    <div class="tip-title">💡 交渉のヒント</div>
+    ${tips.map(t => '<div class="tip-item">・' + t + '</div>').join('')}
+  `;
+
+  document.getElementById('result').style.display = 'block';
+}
+
+renderQuotes();
+</script>
+
+<style>
+.mq-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.mq-header { text-align: center; margin-bottom: 2rem; }
+.mq-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.mq-sub { color: var(--gray-400); margin-top: .3rem; }
+.mq-info-form { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.mq-info-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .8rem; }
+.info-item { display: flex; flex-direction: column; gap: .3rem; }
+.info-label { font-size: .75rem; color: var(--gray-400); }
+.mq-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
+.mq-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; width: 100%; }
+.mq-quotes-section { margin-bottom: 1.5rem; }
+.mq-quotes-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.quote-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; margin-bottom: .8rem; }
+.qc-header { display: flex; gap: .5rem; margin-bottom: .7rem; }
+.qc-header .mq-input { flex: 1; }
+.del-q-btn { background: var(--gray-700); border: none; color: var(--gray-300); border-radius: 6px; padding: 0 .5rem; cursor: pointer; font-size: 1rem; }
+.del-q-btn:hover { background: #dc2626; color: #fff; }
+.qc-price-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .6rem; }
+.qc-label { font-size: .75rem; color: var(--gray-400); white-space: nowrap; }
+.price-input { width: 150px; }
+.yen { color: var(--gray-300); }
+.qc-options-label { font-size: .75rem; color: var(--gray-400); margin-bottom: .3rem; }
+.qc-options { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+.opt-chk { display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--gray-300); cursor: pointer; }
+.opt-chk input { accent-color: #2563eb; }
+.qc-note-row { display: flex; align-items: center; gap: .5rem; }
+.qc-note-row .mq-input { flex: 1; }
+.mq-btn { padding: .55rem 1.1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .9rem; }
+.add-btn { width: 100%; background: var(--gray-700); color: var(--gray-200); }
+.mq-result { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.5rem; }
+.mq-result-title { font-size: 1.1rem; font-weight: 800; color: var(--gray-100); margin-bottom: 1rem; }
+.res-summary { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.rs-item { background: var(--gray-900); border-radius: 10px; padding: .6rem 1rem; text-align: center; }
+.rs-val { font-size: 1.3rem; font-weight: 800; color: var(--gray-100); }
+.rs-item.diff .rs-val { color: #f87171; }
+.rs-label { font-size: .7rem; color: var(--gray-400); }
+.res-info { font-size: .8rem; color: var(--gray-400); margin-bottom: .8rem; }
+.table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.cmp-table th { background: var(--gray-700); padding: .5rem .7rem; text-align: left; color: var(--gray-200); }
+.cmp-table td { padding: .5rem .7rem; border-bottom: 1px solid var(--gray-700); color: var(--gray-200); }
+.best-row td { color: #fbbf24; font-weight: 600; }
+.price-cell { font-weight: 800; font-size: 1rem; }
+.mq-tips { background: var(--gray-900); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+.tip-title { font-weight: 700; color: #fbbf24; margin-bottom: .5rem; }
+.tip-item { font-size: .85rem; color: var(--gray-300); line-height: 1.6; margin-bottom: .3rem; }
+.print-btn { background: #2563eb; color: #fff; width: 100%; padding: .7rem; font-size: 1rem; }
+@media print { .mq-quotes-section { display: none; } .mq-info-form { break-inside: avoid; } }
+</style>
+</BaseLayout>

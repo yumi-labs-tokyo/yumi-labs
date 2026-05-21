@@ -1,0 +1,228 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="家計簿「使途別」円グラフ可視化" description="支出を入力すると使途別の円グラフで可視化。データはブラウザ内のみ保持。">
+<main class="hb-wrap">
+  <div class="hb-header">
+    <div class="hb-title">💰 家計簿「使途別」円グラフ可視化</div>
+    <div class="hb-sub">支出データをブラウザ内で管理・可視化（データは外部に送信されません）</div>
+  </div>
+
+  <div class="hb-body">
+    <div class="hb-left">
+      <div class="hb-add-card">
+        <div class="hb-card-title">支出を追加</div>
+        <div class="hb-form">
+          <input id="amountInput" class="hb-input" type="number" placeholder="金額（円）" min="0" />
+          <select id="catInput" class="hb-select">
+            <option value="食費">🍽️ 食費</option>
+            <option value="住居">🏠 住居・家賃</option>
+            <option value="交通">🚃 交通・通勤</option>
+            <option value="光熱費">💡 光熱費</option>
+            <option value="通信">📱 通信費</option>
+            <option value="医療">🏥 医療・健康</option>
+            <option value="被服">👕 被服・美容</option>
+            <option value="娯楽">🎮 娯楽・趣味</option>
+            <option value="教育">📚 教育</option>
+            <option value="外食">🍜 外食</option>
+            <option value="日用品">🧴 日用品</option>
+            <option value="その他">📦 その他</option>
+          </select>
+          <input id="memoInput" class="hb-input" type="text" placeholder="メモ（任意）" />
+          <input id="dateInput2" class="hb-input" type="date" />
+          <button class="hb-btn green" onclick="addExpense()">＋ 追加</button>
+        </div>
+      </div>
+
+      <div class="hb-month-nav">
+        <button class="hb-btn sm gray" onclick="changeMonth(-1)">←</button>
+        <div class="month-label" id="monthLabel"></div>
+        <button class="hb-btn sm gray" onclick="changeMonth(1)">→</button>
+      </div>
+
+      <div class="hb-total" id="hbTotal"></div>
+      <div class="hb-list" id="expenseList"></div>
+    </div>
+
+    <div class="hb-right">
+      <div class="hb-card-title">支出内訳</div>
+      <svg id="pieChart" viewBox="-1 -1 2 2" style="width:100%;max-width:280px;display:block;margin:0 auto"></svg>
+      <div class="pie-legend" id="pieLegend"></div>
+      <div class="hb-cat-bars" id="catBars"></div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const CAT_COLORS = {
+  '食費':'#f97316','住居':'#0284c7','交通':'#7c3aed','光熱費':'#ca8a04','通信':'#0891b2',
+  '医療':'#dc2626','被服':'#db2777','娯楽':'#16a34a','教育':'#6d28d9','外食':'#d97706',
+  '日用品':'#059669','その他':'#6b7280',
+};
+const CAT_EMOJIS = {
+  '食費':'🍽️','住居':'🏠','交通':'🚃','光熱費':'💡','通信':'📱','医療':'🏥',
+  '被服':'👕','娯楽':'🎮','教育':'📚','外食':'🍜','日用品':'🧴','その他':'📦',
+};
+
+let expenses = [];
+try { expenses = JSON.parse(localStorage.getItem('hb_expenses') || '[]'); } catch(e) {}
+
+const now = new Date();
+let viewYear = now.getFullYear();
+let viewMonth = now.getMonth();
+
+document.getElementById('dateInput2').value = now.toISOString().split('T')[0];
+
+function save() { try { localStorage.setItem('hb_expenses', JSON.stringify(expenses)); } catch(e) {} }
+
+function addExpense() {
+  const amount = parseInt(document.getElementById('amountInput').value);
+  const cat = document.getElementById('catInput').value;
+  const memo = document.getElementById('memoInput').value.trim();
+  const date = document.getElementById('dateInput2').value;
+  if (!amount || amount <= 0 || !date) { alert('金額と日付を入力してください'); return; }
+  expenses.push({ id: Date.now(), amount, cat, memo, date });
+  save();
+  document.getElementById('amountInput').value = '';
+  document.getElementById('memoInput').value = '';
+  render();
+}
+
+function deleteExpense(id) {
+  expenses = expenses.filter(e => e.id !== id);
+  save();
+  render();
+}
+
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  render();
+}
+
+function getMonthExpenses() {
+  return expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
+  });
+}
+
+function render() {
+  const monthLabel = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('monthLabel').textContent = viewYear + '年 ' + monthLabel[viewMonth];
+
+  const monthExp = getMonthExpenses().sort((a, b) => b.date.localeCompare(a.date));
+  const total = monthExp.reduce((s, e) => s + e.amount, 0);
+
+  document.getElementById('hbTotal').innerHTML = `<span class="total-label">合計支出</span><span class="total-amount">¥${total.toLocaleString()}</span>`;
+
+  const list = document.getElementById('expenseList');
+  list.innerHTML = monthExp.length ? monthExp.map(e => `
+    <div class="exp-row">
+      <span class="exp-cat-dot" style="background:${CAT_COLORS[e.cat]}">${CAT_EMOJIS[e.cat]}</span>
+      <div class="exp-info">
+        <div class="exp-cat">${e.cat}${e.memo ? ' · ' + e.memo : ''}</div>
+        <div class="exp-date">${e.date}</div>
+      </div>
+      <div class="exp-amount">¥${e.amount.toLocaleString()}</div>
+      <button class="exp-del" onclick="deleteExpense(${e.id})">×</button>
+    </div>
+  `).join('') : '<div class="empty-msg">この月の支出はありません</div>';
+
+  // Build cat totals
+  const catTotals = {};
+  monthExp.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + e.amount; });
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+  // Pie chart
+  const svg = document.getElementById('pieChart');
+  svg.innerHTML = '';
+  if (total > 0) {
+    let startAngle = -Math.PI / 2;
+    sorted.forEach(([cat, amt]) => {
+      const angle = (amt / total) * 2 * Math.PI;
+      const endAngle = startAngle + angle;
+      const x1 = Math.cos(startAngle), y1 = Math.sin(startAngle);
+      const x2 = Math.cos(endAngle), y2 = Math.sin(endAngle);
+      const large = angle > Math.PI ? 1 : 0;
+      if (angle < 0.001) { startAngle = endAngle; return; }
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M 0 0 L ${x1} ${y1} A 1 1 0 ${large} 1 ${x2} ${y2} Z`);
+      path.setAttribute('fill', CAT_COLORS[cat] || '#6b7280');
+      path.setAttribute('stroke', '#1a1a2e');
+      path.setAttribute('stroke-width', '0.02');
+      svg.appendChild(path);
+      startAngle = endAngle;
+    });
+  } else {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx','0'); circle.setAttribute('cy','0'); circle.setAttribute('r','1');
+    circle.setAttribute('fill','#374151');
+    svg.appendChild(circle);
+  }
+
+  // Legend
+  document.getElementById('pieLegend').innerHTML = sorted.map(([cat, amt]) =>
+    `<div class="leg-item"><span class="leg-dot" style="background:${CAT_COLORS[cat]}"></span><span class="leg-cat">${CAT_EMOJIS[cat]} ${cat}</span><span class="leg-amt">¥${amt.toLocaleString()} (${total > 0 ? Math.round(amt/total*100) : 0}%)</span></div>`
+  ).join('');
+
+  // Category bars
+  document.getElementById('catBars').innerHTML = sorted.map(([cat, amt]) => {
+    const pct = total > 0 ? (amt / total * 100).toFixed(1) : 0;
+    return `<div class="cat-bar-row">
+      <div class="cbr-label">${CAT_EMOJIS[cat]} ${cat}</div>
+      <div class="cbr-track"><div class="cbr-fill" style="width:${pct}%;background:${CAT_COLORS[cat]}"></div></div>
+      <div class="cbr-amt">¥${amt.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('amountInput').addEventListener('keydown', e => { if (e.key === 'Enter') addExpense(); });
+render();
+</script>
+
+<style>
+.hb-wrap { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.hb-header { text-align: center; margin-bottom: 2rem; }
+.hb-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.hb-sub { color: var(--gray-400); margin-top: .3rem; font-size: .85rem; }
+.hb-body { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+@media (max-width: 750px) { .hb-body { grid-template-columns: 1fr; } }
+.hb-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.hb-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; }
+.hb-form { display: flex; flex-direction: column; gap: .5rem; }
+.hb-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; }
+.hb-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; }
+.hb-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.hb-btn.green { background: #16a34a; color: #fff; width: 100%; }
+.hb-btn.sm { font-size: .85rem; padding: .35rem .7rem; }
+.hb-btn.gray { background: var(--gray-700); color: var(--gray-200); }
+.hb-month-nav { display: flex; align-items: center; justify-content: space-between; background: var(--gray-800); border-radius: 10px; padding: .5rem .8rem; margin-bottom: .8rem; }
+.month-label { font-weight: 700; color: var(--gray-100); }
+.hb-total { display: flex; justify-content: space-between; align-items: baseline; padding: .5rem .2rem; margin-bottom: .5rem; }
+.total-label { font-size: .8rem; color: var(--gray-400); }
+.total-amount { font-size: 1.5rem; font-weight: 800; color: #34d399; }
+.hb-list { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: .3rem; }
+.exp-row { display: flex; align-items: center; gap: .5rem; background: var(--gray-800); border-radius: 8px; padding: .5rem .7rem; }
+.exp-cat-dot { font-size: 1rem; border-radius: 6px; padding: .1rem .3rem; }
+.exp-info { flex: 1; }
+.exp-cat { font-size: .85rem; color: var(--gray-100); }
+.exp-date { font-size: .7rem; color: var(--gray-500); }
+.exp-amount { font-weight: 700; color: var(--gray-100); white-space: nowrap; }
+.exp-del { background: none; border: none; color: var(--gray-500); cursor: pointer; padding: 0 .2rem; }
+.exp-del:hover { color: #dc2626; }
+.empty-msg { color: var(--gray-500); font-size: .85rem; text-align: center; padding: 1rem; }
+.hb-right { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.pie-legend { margin: .8rem 0; }
+.leg-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; margin-bottom: .25rem; }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.leg-cat { flex: 1; color: var(--gray-300); }
+.leg-amt { color: var(--gray-400); white-space: nowrap; }
+.cat-bar-row { display: flex; align-items: center; gap: .4rem; margin-bottom: .4rem; }
+.cbr-label { font-size: .75rem; color: var(--gray-300); width: 80px; flex-shrink: 0; }
+.cbr-track { flex: 1; height: 8px; background: var(--gray-700); border-radius: 4px; overflow: hidden; }
+.cbr-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.cbr-amt { font-size: .75rem; color: var(--gray-400); width: 65px; text-align: right; white-space: nowrap; }
+</style>
+</BaseLayout>
