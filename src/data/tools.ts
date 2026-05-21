@@ -233,7 +233,7 @@ export const tools: Tool[] = [
 		id: 34, slug: 'character-sheet',
 		name: 'キャラクター設定シートPDF',
 		description: '身長体重・趣味・口癖を入れると印刷可能な設定資料化。',
-		emoji: '🧑‍🎨', category: 'creator', badge: 'New', status: 'coming-soon',
+		emoji: '🧑‍🎨', category: 'creator', badge: 'New', status: 'available',
 	},
 	{
 		id: 35, slug: 'goods-size-preview',

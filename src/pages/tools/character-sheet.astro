@@ -1,0 +1,455 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="キャラクター設定シートPDF | yumi Labs">
+
+<style>
+  /* ── Character sheet styles ─────────────────────────── */
+  :root { --cs-accent: #7c3aed; --cs-accent-light: #ede9fe; --cs-accent-col: #7c3aed; }
+  .cs { background: white; color: #111; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; font-size: 13px; line-height: 1.55; padding: 20px 22px; }
+
+  /* Header */
+  .cs-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2.5px solid var(--cs-accent); padding-bottom: 5px; margin-bottom: 10px; }
+  .cs-work { font-size: 13px; font-weight: 700; color: var(--cs-accent); }
+  .cs-main-label { font-size: 9px; color: #aaa; letter-spacing: .1em; }
+
+  /* Top block: portrait + basic */
+  .cs-top { display: grid; grid-template-columns: 112px 1fr; gap: 10px; margin-bottom: 8px; }
+  .cs-portrait { border: 1.5px solid #ccc; background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 148px; overflow: hidden; position: relative; }
+  .cs-portrait img { width: 100%; height: 100%; object-fit: cover; display: none; }
+  .cs-portrait-ph { text-align: center; color: #bbb; font-size: 11px; pointer-events: none; user-select: none; }
+
+  /* Name & info */
+  .cs-furigana { font-size: 9px; color: #999; min-height: 13px; }
+  .cs-name { font-size: 22px; font-weight: 700; border-bottom: 2px solid var(--cs-accent); padding-bottom: 3px; margin-bottom: 6px; min-height: 30px; word-break: break-all; }
+  .cs-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .cs-info-row { display: flex; align-items: baseline; gap: 4px; border-bottom: 1px solid #eee; padding: 2px 0; font-size: 11px; }
+  .cs-info-row.full { grid-column: 1/-1; }
+  .cs-info-lbl { color: #888; min-width: 46px; flex-shrink: 0; font-size: 10px; }
+  .cs-info-val { color: #111; min-height: 14px; word-break: break-all; }
+
+  /* Section */
+  .cs-section { margin-bottom: 7px; }
+  .cs-sec-hd { background: var(--cs-accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; margin-bottom: 3px; }
+  .cs-sec-body { font-size: 12px; padding: 3px 6px; min-height: 20px; white-space: pre-wrap; word-break: break-all; }
+  .cs-catchphrase { border-left: 3px solid var(--cs-accent); font-style: italic; font-size: 12.5px; }
+  .cs-tall { min-height: 52px; }
+
+  /* 4-column grid */
+  .cs-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 7px; }
+  .cs-col-hd { background: var(--cs-accent-light); color: var(--cs-accent-col); font-size: 10px; font-weight: 700; padding: 2px 6px; margin-bottom: 3px; }
+  .cs-col-body { font-size: 11px; min-height: 44px; white-space: pre-wrap; word-break: break-all; padding: 0 2px; }
+
+  /* Footer */
+  .cs-footer { margin-top: 8px; padding-top: 5px; border-top: 1px solid #e5e5e5; text-align: right; font-size: 8px; color: #ccc; }
+
+  /* Themes */
+  .theme-purple { --cs-accent: #7c3aed; --cs-accent-light: #ede9fe; --cs-accent-col: #6d28d9; }
+  .theme-blue   { --cs-accent: #2563eb; --cs-accent-light: #dbeafe; --cs-accent-col: #1d4ed8; }
+  .theme-rose   { --cs-accent: #e11d48; --cs-accent-light: #ffe4e6; --cs-accent-col: #be123c; }
+  .theme-dark   { --cs-accent: #374151; --cs-accent-light: #f3f4f6; --cs-accent-col: #1f2937; }
+
+  /* Print */
+  @media print {
+    .no-print { display: none !important; }
+    html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
+    .cs-print-wrap { padding: 0 !important; box-shadow: none !important; border: none !important; background: white !important; }
+    .cs { padding: 0 !important; }
+    @page { size: A4; margin: 10mm 12mm; }
+  }
+</style>
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="text-center mb-8 no-print">
+    <div class="text-5xl mb-3">🧑‍🎨</div>
+    <div class="text-3xl font-bold text-white mb-2">キャラクター設定シートPDF</div>
+    <div class="text-gray-400 text-sm">情報を入力するとリアルタイムでプレビュー。印刷ボタンでPDF保存できます。</div>
+  </div>
+
+  <div class="flex flex-col xl:flex-row gap-6">
+
+    <!-- ── Left: Form (no-print) ───────────────────────── -->
+    <div class="xl:w-[360px] flex-shrink-0 space-y-4 no-print">
+
+      <!-- Theme color -->
+      <div class="bg-white/5 rounded-2xl p-4">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">テーマカラー</div>
+        <div class="flex gap-2">
+          <button onclick="setTheme('purple')" id="th-purple" class="theme-dot w-7 h-7 rounded-full ring-2 ring-purple-400 ring-offset-2 ring-offset-black transition-all" style="background:#7c3aed;"></button>
+          <button onclick="setTheme('blue')"   id="th-blue"   class="theme-dot w-7 h-7 rounded-full ring-0 transition-all" style="background:#2563eb;"></button>
+          <button onclick="setTheme('rose')"   id="th-rose"   class="theme-dot w-7 h-7 rounded-full ring-0 transition-all" style="background:#e11d48;"></button>
+          <button onclick="setTheme('dark')"   id="th-dark"   class="theme-dot w-7 h-7 rounded-full ring-0 transition-all" style="background:#374151;"></button>
+        </div>
+      </div>
+
+      <!-- Portrait upload -->
+      <div class="bg-white/5 rounded-2xl p-4">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">キャラクターイラスト（任意）</div>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <div class="w-14 h-14 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-2xl">📷</div>
+          <div>
+            <div class="text-sm text-gray-300">画像をアップロード</div>
+            <div class="text-xs text-gray-500">PNG / JPG / WEBP</div>
+          </div>
+          <input type="file" id="inPortrait" accept="image/*" class="hidden" onchange="handlePortrait(this)" />
+        </label>
+      </div>
+
+      <!-- 基本情報 -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">基本情報</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">キャラクター名 <span class="text-red-400">*</span></label>
+          <input id="inName" type="text" placeholder="例: 星野 あかり" maxlength="30"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">読み仮名</label>
+          <input id="inFurigana" type="text" placeholder="例: ほしの あかり" maxlength="40"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">作品名 / ジャンル</label>
+          <input id="inWork" type="text" placeholder="例: 魔法少女クロニクル" maxlength="40"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">年齢</label>
+            <input id="inAge" type="text" placeholder="例: 17歳" maxlength="10"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">誕生日</label>
+            <input id="inBirthday" type="text" placeholder="例: 3月7日" maxlength="15"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">性別</label>
+            <input id="inGender" type="text" placeholder="例: 女" maxlength="10"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">血液型</label>
+            <input id="inBlood" type="text" placeholder="例: A型" maxlength="5"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 外見 -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">外見</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">身長</label>
+            <input id="inHeight" type="text" placeholder="例: 158cm" maxlength="10"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">体重</label>
+            <input id="inWeight" type="text" placeholder="例: 48kg" maxlength="10"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">髪色</label>
+            <input id="inHair" type="text" placeholder="例: 桜ピンク" maxlength="15"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">瞳色</label>
+            <input id="inEyes" type="text" placeholder="例: 水色" maxlength="15"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">外見の特徴</label>
+          <input id="inFeature" type="text" placeholder="例: 左目の下にほくろ、右腕に傷" maxlength="60"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+      </div>
+
+      <!-- 設定 -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">背景設定</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">職業 / 所属</label>
+          <input id="inJob" type="text" placeholder="例: 魔法学院2年生、演劇部部長" maxlength="60"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">出身地</label>
+          <input id="inOrigin" type="text" placeholder="例: 北の王国・雪の都" maxlength="40"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">家族構成</label>
+          <input id="inFamily" type="text" placeholder="例: 父（行方不明）・母（魔法使い）" maxlength="60"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+      </div>
+
+      <!-- 性格・口癖 -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">性格・口癖</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">性格</label>
+          <textarea id="inPersonality" rows="2" placeholder="例: 天真爛漫で無邪気。人懐っこいが、秘密を抱えると急に口数が減る。" maxlength="200"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">口癖</label>
+          <input id="inCatchphrase" type="text" placeholder="例: 絶対に諦めないよ！" maxlength="60"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none" oninput="updatePreview()" />
+        </div>
+      </div>
+
+      <!-- 好み -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">好み・スキル</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">趣味</label>
+          <textarea id="inHobby" rows="2" placeholder="例: 星の観察、料理（失敗多め）、絵を描くこと" maxlength="120"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">好きなもの</label>
+            <textarea id="inLikes" rows="2" placeholder="例: 夜空、甘いもの、古い本" maxlength="100"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">嫌いなもの</label>
+            <textarea id="inDislikes" rows="2" placeholder="例: 裏切り、カエル、沈黙" maxlength="100"
+              class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">得意なこと / 苦手なこと</label>
+          <textarea id="inSkills" rows="2" placeholder="例: 得意: 剣術、暗記&#10;苦手: 数学、正直に感情を伝えること" maxlength="150"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+
+      <!-- ストーリー -->
+      <div class="bg-white/5 rounded-2xl p-4 space-y-3">
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">ストーリー・関係</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">バックストーリー</label>
+          <textarea id="inBackground" rows="4" placeholder="例: 幼少期に父が突如姿を消し…" maxlength="500"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">人物関係</label>
+          <textarea id="inRelations" rows="3" placeholder="例: 朝倉レン（幼馴染、ライバル）&#10;黒崎先生（師匠的存在）" maxlength="300"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">作者メモ</label>
+          <textarea id="inNotes" rows="2" placeholder="例: 3章から覚醒フラグ。秘密は最終章まで明かさない。" maxlength="300"
+            class="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none resize-none" oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+
+      <!-- Print button -->
+      <button onclick="window.print()"
+        class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all flex items-center justify-center gap-2"
+        style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+        🖨 印刷 / PDFで保存
+      </button>
+      <div class="text-xs text-gray-500 text-center">「PDFに保存」を選択するとPDFファイルになります</div>
+    </div>
+
+    <!-- ── Right: Character sheet preview ─────────────── -->
+    <div class="flex-1">
+      <div class="flex items-center justify-between mb-3 no-print">
+        <div class="text-xs text-gray-400">プレビュー（入力するとリアルタイム更新）</div>
+        <button onclick="window.print()"
+          class="px-4 py-1.5 rounded-lg text-xs font-medium text-white transition-all"
+          style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+          🖨 印刷 / PDF
+        </button>
+      </div>
+
+      <!-- The sheet itself -->
+      <div class="cs-print-wrap rounded-xl overflow-hidden shadow-2xl border border-white/10">
+        <div class="cs theme-purple" id="charSheet">
+
+          <!-- Header -->
+          <div class="cs-header">
+            <div class="cs-work" id="pvWork">作品名</div>
+            <div class="cs-main-label">キャラクター設定シート</div>
+          </div>
+
+          <!-- Top: portrait + info -->
+          <div class="cs-top">
+            <div class="cs-portrait">
+              <img id="pvPortrait" alt="portrait" />
+              <div id="pvPortraitPH" class="cs-portrait-ph">
+                <div style="font-size:22px;margin-bottom:4px;">🖼</div>
+                <div>イラスト</div>
+              </div>
+            </div>
+            <div class="cs-basic-col">
+              <div class="cs-furigana" id="pvFurigana">よみがな</div>
+              <div class="cs-name" id="pvName">キャラクター名</div>
+              <div class="cs-info-grid">
+                <div class="cs-info-row"><span class="cs-info-lbl">年齢</span><span class="cs-info-val" id="pvAge">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">誕生日</span><span class="cs-info-val" id="pvBirthday">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">性別</span><span class="cs-info-val" id="pvGender">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">血液型</span><span class="cs-info-val" id="pvBlood">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">身長</span><span class="cs-info-val" id="pvHeight">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">体重</span><span class="cs-info-val" id="pvWeight">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">髪色</span><span class="cs-info-val" id="pvHair">―</span></div>
+                <div class="cs-info-row"><span class="cs-info-lbl">瞳色</span><span class="cs-info-val" id="pvEyes">―</span></div>
+                <div class="cs-info-row full"><span class="cs-info-lbl">外見の特徴</span><span class="cs-info-val" id="pvFeature">―</span></div>
+                <div class="cs-info-row full"><span class="cs-info-lbl">職業/所属</span><span class="cs-info-val" id="pvJob">―</span></div>
+                <div class="cs-info-row full"><span class="cs-info-lbl">出身地</span><span class="cs-info-val" id="pvOrigin">―</span></div>
+                <div class="cs-info-row full"><span class="cs-info-lbl">家族構成</span><span class="cs-info-val" id="pvFamily">―</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 性格 -->
+          <div class="cs-section">
+            <div class="cs-sec-hd">性格</div>
+            <div class="cs-sec-body" id="pvPersonality">―</div>
+          </div>
+
+          <!-- 口癖 -->
+          <div class="cs-section">
+            <div class="cs-sec-hd">口癖</div>
+            <div class="cs-sec-body cs-catchphrase" id="pvCatchphrase">―</div>
+          </div>
+
+          <!-- 4-col grid -->
+          <div class="cs-4col">
+            <div>
+              <div class="cs-col-hd">趣味</div>
+              <div class="cs-col-body" id="pvHobby">―</div>
+            </div>
+            <div>
+              <div class="cs-col-hd">好きなもの</div>
+              <div class="cs-col-body" id="pvLikes">―</div>
+            </div>
+            <div>
+              <div class="cs-col-hd">嫌いなもの</div>
+              <div class="cs-col-body" id="pvDislikes">―</div>
+            </div>
+            <div>
+              <div class="cs-col-hd">得意・苦手</div>
+              <div class="cs-col-body" id="pvSkills">―</div>
+            </div>
+          </div>
+
+          <!-- バックストーリー -->
+          <div class="cs-section">
+            <div class="cs-sec-hd">バックストーリー</div>
+            <div class="cs-sec-body cs-tall" id="pvBackground">―</div>
+          </div>
+
+          <!-- 人物関係 -->
+          <div class="cs-section">
+            <div class="cs-sec-hd">人物関係</div>
+            <div class="cs-sec-body" id="pvRelations">―</div>
+          </div>
+
+          <!-- 作者メモ -->
+          <div class="cs-section">
+            <div class="cs-sec-hd">作者メモ</div>
+            <div class="cs-sec-body" id="pvNotes">―</div>
+          </div>
+
+          <div class="cs-footer">Created with yumi Labs / キャラクター設定シートPDF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</BaseLayout>
+
+<script is:inline>
+  const TEXT_FIELDS = [
+    ['inWork',        'pvWork',        '作品名'],
+    ['inFurigana',    'pvFurigana',    'よみがな'],
+    ['inAge',         'pvAge',         '―'],
+    ['inBirthday',    'pvBirthday',    '―'],
+    ['inGender',      'pvGender',      '―'],
+    ['inBlood',       'pvBlood',       '―'],
+    ['inHeight',      'pvHeight',      '―'],
+    ['inWeight',      'pvWeight',      '―'],
+    ['inHair',        'pvHair',        '―'],
+    ['inEyes',        'pvEyes',        '―'],
+    ['inFeature',     'pvFeature',     '―'],
+    ['inJob',         'pvJob',         '―'],
+    ['inOrigin',      'pvOrigin',      '―'],
+    ['inFamily',      'pvFamily',      '―'],
+    ['inPersonality', 'pvPersonality', '―'],
+    ['inHobby',       'pvHobby',       '―'],
+    ['inLikes',       'pvLikes',       '―'],
+    ['inDislikes',    'pvDislikes',    '―'],
+    ['inSkills',      'pvSkills',      '―'],
+    ['inBackground',  'pvBackground',  '―'],
+    ['inRelations',   'pvRelations',   '―'],
+    ['inNotes',       'pvNotes',       '―'],
+  ];
+
+  function updatePreview() {
+    // Name (special: larger placeholder)
+    const nameVal = document.getElementById('inName').value.trim();
+    document.getElementById('pvName').textContent = nameVal || 'キャラクター名';
+
+    // Catchphrase (add quotes)
+    const cp = document.getElementById('inCatchphrase').value.trim();
+    document.getElementById('pvCatchphrase').textContent = cp ? `「${cp}」` : '―';
+
+    // All other fields
+    TEXT_FIELDS.forEach(([inputId, previewId, placeholder]) => {
+      const val = document.getElementById(inputId)?.value.trim() || '';
+      const el = document.getElementById(previewId);
+      if (el) el.textContent = val || placeholder;
+    });
+  }
+
+  function handlePortrait(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('pvPortrait');
+      const ph  = document.getElementById('pvPortraitPH');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      if (ph) ph.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const THEMES = {
+    purple: { cls: 'theme-purple', accent: '#7c3aed' },
+    blue:   { cls: 'theme-blue',   accent: '#2563eb' },
+    rose:   { cls: 'theme-rose',   accent: '#e11d48' },
+    dark:   { cls: 'theme-dark',   accent: '#374151' },
+  };
+
+  function setTheme(name) {
+    const sheet = document.getElementById('charSheet');
+    Object.values(THEMES).forEach(t => sheet.classList.remove(t.cls));
+    sheet.classList.add(THEMES[name].cls);
+
+    // Update button ring
+    Object.keys(THEMES).forEach(k => {
+      const btn = document.getElementById('th-' + k);
+      if (!btn) return;
+      btn.style.outline = k === name ? `2px solid ${THEMES[k].accent}` : 'none';
+      btn.style.outlineOffset = k === name ? '2px' : '0';
+    });
+  }
+
+  // Init
+  setTheme('purple');
+  updatePreview();
+</script>
