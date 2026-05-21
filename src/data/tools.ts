@@ -325,7 +325,7 @@ export const tools: Tool[] = [
 		id: 49, slug: 'git-undo',
 		name: 'Git「やり直したい」逆引き辞典',
 		description: '「コミット取り消したい」などを自然言語で検索。',
-		emoji: '🔀', category: 'learning', badge: '人気', status: 'coming-soon',
+		emoji: '🔀', category: 'learning', badge: '人気', status: 'available',
 	},
 	{
 		id: 50, slug: 'sql-join-visual',

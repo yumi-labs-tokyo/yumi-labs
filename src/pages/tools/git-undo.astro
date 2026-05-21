@@ -1,0 +1,580 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Git「やり直したい」逆引き辞典" description="「コミット取り消したい」「ブランチ切り戻したい」を自然言語で検索してGitコマンドを逆引き。">
+<style>
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 28px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* search */
+  .search-wrap { position: relative; margin-bottom: 16px; }
+  .search-input {
+    width: 100%; box-sizing: border-box;
+    background: #1e293b; border: 2px solid #334155; border-radius: 14px;
+    color: #e2e8f0; font-size: 1.05rem; padding: 14px 48px 14px 18px;
+    outline: none; transition: border-color .2s;
+  }
+  .search-input:focus { border-color: #f97316; }
+  .search-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 1.1rem; pointer-events: none; }
+  .result-count { font-size: 0.8rem; color: #64748b; margin-bottom: 14px; text-align: right; }
+
+  /* category tabs */
+  .cat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .cat-btn {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid #334155;
+    background: #1e293b; color: #64748b; cursor: pointer; font-size: 0.8rem;
+    transition: all .15s;
+  }
+  .cat-btn.active { border-color: #f97316; background: #431407; color: #fb923c; }
+
+  /* cards */
+  .cards { display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+    padding: 18px 20px; cursor: pointer; transition: border-color .2s;
+  }
+  .card:hover { border-color: #f97316; }
+  .card.danger-card { border-left: 4px solid #f87171; }
+  .card.safe-card { border-left: 4px solid #4ade80; }
+  .card.caution-card { border-left: 4px solid #fbbf24; }
+  .card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+  .card-emoji { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+  .card-situation { font-size: 1rem; font-weight: 700; color: #e2e8f0; line-height: 1.4; }
+  .card-keywords { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+  .kw-chip {
+    padding: 2px 8px; border-radius: 99px; font-size: 0.7rem;
+    background: #0f172a; border: 1px solid #334155; color: #64748b;
+  }
+  .card-body { display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 14px; }
+  .card-body.open { display: block; }
+  .cmd-block {
+    background: #0f172a; border-radius: 10px; padding: 14px 16px;
+    font-family: 'Courier New', monospace; margin-bottom: 10px; position: relative;
+  }
+  .cmd-line { font-size: 0.95rem; color: #4ade80; margin-bottom: 4px; }
+  .cmd-comment { font-size: 0.8rem; color: #64748b; }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    padding: 3px 10px; border-radius: 6px; border: 1px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.72rem;
+    transition: all .15s;
+  }
+  .copy-btn:hover { border-color: #4ade80; color: #4ade80; }
+  .copy-btn.copied { border-color: #4ade80; color: #4ade80; }
+  .explain { color: #94a3b8; font-size: 0.85rem; line-height: 1.7; margin-bottom: 8px; }
+  .danger-label {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; margin-bottom: 8px;
+  }
+  .danger-label.danger { background: #450a0a; color: #f87171; border: 1px solid #f87171; }
+  .danger-label.safe { background: #052e16; color: #4ade80; border: 1px solid #4ade80; }
+  .danger-label.caution { background: #1c1407; color: #fbbf24; border: 1px solid #fbbf24; }
+  .alt-block { background: #0f172a; border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+  .alt-title { font-size: 0.75rem; color: #64748b; margin-bottom: 6px; }
+  .alt-cmd { font-family: 'Courier New', monospace; color: #94a3b8; font-size: 0.85rem; }
+
+  .no-result { text-align: center; padding: 40px; color: #475569; }
+  .no-result-emoji { font-size: 2.5rem; margin-bottom: 10px; }
+
+  /* popular tags */
+  .popular-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .popular-label { font-size: 0.75rem; color: #64748b; margin-bottom: 6px; }
+  .pop-btn {
+    padding: 5px 12px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 0.8rem;
+    transition: all .15s;
+  }
+  .pop-btn:hover { border-color: #f97316; color: #f97316; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">🔀 Git「やり直したい」逆引き辞典</div>
+    <div class="hero-sub">やりたいことを日本語で検索 → 正しいGitコマンドを即引き</div>
+  </div>
+
+  <!-- search -->
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="search-input"
+      placeholder="例：コミット取り消したい、push 間違えた、ブランチ戻したい..."
+      autocomplete="off" />
+    <span class="search-icon">🔍</span>
+  </div>
+
+  <!-- popular searches -->
+  <div class="popular-label">よく検索されるシーン：</div>
+  <div class="popular-row" id="popular-row"></div>
+
+  <!-- category tabs -->
+  <div class="cat-row" id="cat-row"></div>
+
+  <div class="result-count" id="result-count"></div>
+  <div class="cards" id="cards"></div>
+  <div class="no-result" id="no-result" style="display:none">
+    <div class="no-result-emoji">🤔</div>
+    <div>見つかりませんでした。別のキーワードで試してみてください。</div>
+  </div>
+</div>
+
+<script is:inline>
+const ENTRIES = [
+  // === COMMIT ===
+  {
+    id: 1, cat: 'commit',
+    emoji: '↩️',
+    situation: '直前のコミットを取り消したい（変更は残す）',
+    keywords: ['コミット', '取り消し', '元に戻す', 'undo', 'reset', 'soft'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git reset --soft HEAD~1', comment: '直前のコミットを取り消し、変更はステージに残る' },
+    ],
+    explain: 'HEAD~1 は「1つ前のコミット」を意味する。--soft はインデックス（ステージング）と作業ツリーは変更しない。コミットだけなかったことになる。',
+    alt: [
+      { cmd: 'git reset --mixed HEAD~1', desc: 'ステージも解除して作業ツリーに戻す（デフォルト）' },
+    ],
+  },
+  {
+    id: 2, cat: 'commit',
+    emoji: '💣',
+    situation: '直前のコミットを完全に消したい（変更も捨てる）',
+    keywords: ['コミット', '削除', '消す', '捨てる', 'hard', 'reset'],
+    risk: 'danger',
+    commands: [
+      { cmd: 'git reset --hard HEAD~1', comment: 'コミットも変更も完全に消える（復元困難）' },
+    ],
+    explain: '⚠️ --hard は作業ファイルの変更も消える。誤操作すると復旧が難しい。実行前に git stash や git diff で確認を。',
+    alt: [],
+  },
+  {
+    id: 3, cat: 'commit',
+    emoji: '✏️',
+    situation: 'コミットメッセージを書き間違えた',
+    keywords: ['メッセージ', '修正', 'amend', 'タイポ', '書き直し'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git commit --amend -m "正しいメッセージ"', comment: '直前のコミットメッセージを上書き' },
+    ],
+    explain: 'push 前なら安全。push 後に amend すると履歴が変わるので force push が必要になる。チームリポジトリでは要注意。',
+    alt: [
+      { cmd: 'git commit --amend --no-edit', desc: 'メッセージはそのまま、ファイルだけ追加したいとき' },
+    ],
+  },
+  {
+    id: 4, cat: 'commit',
+    emoji: '📁',
+    situation: 'コミットにファイルを追加し忘れた',
+    keywords: ['ファイル', '追加', 'amend', '忘れた', '修正'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git add 忘れたファイル.txt', comment: 'まず追加' },
+      { cmd: 'git commit --amend --no-edit', comment: '前のコミットに含める（メッセージはそのまま）' },
+    ],
+    explain: 'amend は直前のコミットを「修正」する。push 前のみ安全に使える。',
+    alt: [],
+  },
+  {
+    id: 5, cat: 'commit',
+    emoji: '🔙',
+    situation: '特定のコミットを打ち消すコミットを作りたい（履歴は残す）',
+    keywords: ['revert', '打ち消し', '特定', 'push済み', '安全'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git revert <コミットハッシュ>', comment: '逆の変更を新しいコミットとして作る' },
+    ],
+    explain: 'revert は履歴を書き換えない。push 済みのコミットを取り消す最も安全な方法。チーム開発では基本 revert を使う。',
+    alt: [
+      { cmd: 'git revert HEAD', desc: '直前のコミットを revert する' },
+      { cmd: 'git revert HEAD~3..HEAD', desc: '複数コミットを一括 revert' },
+    ],
+  },
+
+  // === PUSH ===
+  {
+    id: 6, cat: 'push',
+    emoji: '🚨',
+    situation: 'push したコミットを取り消したい',
+    keywords: ['push', '取り消し', 'リモート', '戻す', 'revert'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git revert <コミットハッシュ>', comment: '打ち消しコミットを作る（安全）' },
+      { cmd: 'git push origin main', comment: 'revert コミットを push' },
+    ],
+    explain: 'push 済みの履歴は書き換えない方が安全。revert で逆の変更をコミットし直す。',
+    alt: [
+      { cmd: 'git reset --hard HEAD~1 && git push --force', desc: '【危険】force push で強制削除。チーム開発では原則禁止' },
+    ],
+  },
+  {
+    id: 7, cat: 'push',
+    emoji: '🌿',
+    situation: '間違ったブランチに push してしまった',
+    keywords: ['push', 'ブランチ', '間違い', 'main', 'master'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git push origin :誤ったブランチ名', comment: 'リモートブランチを削除（慎重に）' },
+      { cmd: 'git checkout 正しいブランチ', comment: '正しいブランチに移動' },
+      { cmd: 'git push origin 正しいブランチ', comment: '正しいブランチに push' },
+    ],
+    explain: 'push先のブランチを削除するのは慎重に。他の人が使っていないか確認してから。',
+    alt: [],
+  },
+
+  // === BRANCH ===
+  {
+    id: 8, cat: 'branch',
+    emoji: '🔀',
+    situation: 'ブランチを間違えて作業してしまった（別ブランチに移したい）',
+    keywords: ['ブランチ', '間違い', '移動', '作業', 'stash', 'cherry-pick'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git stash', comment: '変更を一時退避' },
+      { cmd: 'git checkout 正しいブランチ', comment: '正しいブランチに移動' },
+      { cmd: 'git stash pop', comment: '変更を復元' },
+    ],
+    explain: 'stash で変更を一時退避してブランチを切り替える。コミット済みなら cherry-pick が使える。',
+    alt: [
+      { cmd: 'git cherry-pick <コミットハッシュ>', desc: 'コミット済みの変更を別ブランチに持っていく' },
+    ],
+  },
+  {
+    id: 9, cat: 'branch',
+    emoji: '🏷️',
+    situation: 'ブランチ名を変更したい',
+    keywords: ['ブランチ', '名前', 'rename', '変更', '名称'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git branch -m 旧名前 新名前', comment: 'ローカルのブランチ名を変更' },
+      { cmd: 'git push origin :旧名前 新名前', comment: 'リモートも更新（push して旧ブランチ削除）' },
+    ],
+    explain: '-m は --move の略。現在いるブランチ自体を変更する場合は git branch -m 新名前 でOK。',
+    alt: [],
+  },
+  {
+    id: 10, cat: 'branch',
+    emoji: '🗑️',
+    situation: 'ブランチを削除したい',
+    keywords: ['ブランチ', '削除', 'delete', '-d', '-D'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git branch -d ブランチ名', comment: 'マージ済みブランチを削除（安全）' },
+      { cmd: 'git branch -D ブランチ名', comment: 'マージ未済でも強制削除' },
+      { cmd: 'git push origin --delete ブランチ名', comment: 'リモートブランチも削除' },
+    ],
+    explain: '-d はマージ済みでないと削除できない安全設計。-D は強制削除で復元不可。',
+    alt: [],
+  },
+  {
+    id: 11, cat: 'branch',
+    emoji: '⏪',
+    situation: 'ブランチを特定のコミットまで巻き戻したい',
+    keywords: ['ブランチ', '巻き戻し', '切り戻し', 'reset', '特定コミット'],
+    risk: 'danger',
+    commands: [
+      { cmd: 'git log --oneline', comment: '戻りたいコミットのハッシュを確認' },
+      { cmd: 'git reset --hard <コミットハッシュ>', comment: 'そのコミットまで強制的に戻す' },
+    ],
+    explain: '--hard は作業ツリーの変更も消える。push済みなら force push が必要になり、チーム開発では危険。',
+    alt: [],
+  },
+
+  // === STAGE / WORKING TREE ===
+  {
+    id: 12, cat: 'stage',
+    emoji: '🧹',
+    situation: '特定のファイルをステージから取り消したい（unstage）',
+    keywords: ['ステージ', 'add', '取り消し', 'unstage', 'restore'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git restore --staged ファイル名', comment: 'ステージから外す（変更は残る）' },
+    ],
+    explain: 'git add したファイルをステージから外す。作業ツリーのファイルは変わらない。古いGitでは git reset HEAD ファイル名 を使う。',
+    alt: [
+      { cmd: 'git reset HEAD ファイル名', desc: 'Git 2.23以前の書き方' },
+    ],
+  },
+  {
+    id: 13, cat: 'stage',
+    emoji: '💧',
+    situation: 'ファイルの変更を元に戻したい（作業ツリーを戻す）',
+    keywords: ['変更', '取り消し', '元に戻す', 'restore', 'checkout', 'ファイル'],
+    risk: 'danger',
+    commands: [
+      { cmd: 'git restore ファイル名', comment: '作業ツリーの変更を直近コミットに戻す（消える）' },
+    ],
+    explain: '⚠️ 変更が完全に消える。git stash で退避してから実行することを推奨。',
+    alt: [
+      { cmd: 'git checkout -- ファイル名', desc: '古いGitでの書き方' },
+    ],
+  },
+  {
+    id: 14, cat: 'stage',
+    emoji: '📦',
+    situation: '変更を一時退避したい（stash）',
+    keywords: ['退避', 'stash', '一時', '保存', 'ブランチ切り替え'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git stash push -m "説明"', comment: '変更を名前付きで退避' },
+      { cmd: 'git stash list', comment: '退避リストを確認' },
+      { cmd: 'git stash pop', comment: '最新の退避を復元して削除' },
+    ],
+    explain: 'stash はコミットせずに変更を一時保存できる。ブランチ切り替え前によく使う。stash apply は削除せずに復元。',
+    alt: [
+      { cmd: 'git stash apply stash@{2}', desc: '特定の stash を復元' },
+      { cmd: 'git stash drop stash@{0}', desc: '特定の stash を削除' },
+    ],
+  },
+
+  // === MERGE / REBASE ===
+  {
+    id: 15, cat: 'merge',
+    emoji: '💥',
+    situation: 'マージを取り消したい（マージコミット前）',
+    keywords: ['マージ', '取り消し', 'abort', 'コンフリクト', '中断'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git merge --abort', comment: 'マージを中断して元の状態に戻す' },
+    ],
+    explain: 'コンフリクト解消中でも --abort で安全に中断できる。マージ前の状態に戻る。',
+    alt: [],
+  },
+  {
+    id: 16, cat: 'merge',
+    emoji: '↩️',
+    situation: 'マージコミットを取り消したい（push前）',
+    keywords: ['マージ', 'コミット', '取り消し', 'reset'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git reset --hard ORIG_HEAD', comment: 'マージ直前の状態に戻る' },
+    ],
+    explain: 'ORIG_HEAD はマージ前の HEAD を指す特殊変数。マージ直後であれば有効。時間が経つと使えなくなる。',
+    alt: [],
+  },
+  {
+    id: 17, cat: 'merge',
+    emoji: '🔁',
+    situation: 'rebase を途中でやめたい',
+    keywords: ['rebase', '中断', 'abort', 'やめる'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git rebase --abort', comment: 'rebase を中断して元の状態に戻す' },
+    ],
+    explain: 'コンフリクトなどで rebase が止まった場合に使う。--abort で完全に元に戻る。',
+    alt: [
+      { cmd: 'git rebase --continue', desc: 'コンフリクト解消後に rebase を再開' },
+      { cmd: 'git rebase --skip', desc: '現在のコミットをスキップ' },
+    ],
+  },
+
+  // === REMOTE ===
+  {
+    id: 18, cat: 'remote',
+    emoji: '📡',
+    situation: 'リモートの変更を取り込みたい（fetch + merge）',
+    keywords: ['リモート', 'pull', 'fetch', '取り込む', '同期'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git fetch origin', comment: 'リモートの変更を取得（マージしない）' },
+      { cmd: 'git merge origin/main', comment: 'ローカルにマージ' },
+    ],
+    explain: 'git pull は fetch + merge を一度にやる。fetch 先に確認してからマージする方が安全。',
+    alt: [
+      { cmd: 'git pull --rebase', desc: 'pull して rebase（履歴をきれいに保てる）' },
+    ],
+  },
+  {
+    id: 19, cat: 'remote',
+    emoji: '🗑️',
+    situation: 'リモートで削除されたブランチをローカルから消したい',
+    keywords: ['リモート', 'ブランチ', '削除', 'prune', '掃除'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git fetch --prune', comment: 'リモートで削除されたブランチのローカル追跡を削除' },
+      { cmd: 'git branch -vv | grep "gone"', comment: '削除対象のブランチを確認' },
+    ],
+    explain: '--prune でリモートに存在しないブランチへの追跡参照を削除する。git remote prune origin でも同じ。',
+    alt: [],
+  },
+
+  // === MISC ===
+  {
+    id: 20, cat: 'misc',
+    emoji: '🕵️',
+    situation: '削除したコミットを復元したい（reflog）',
+    keywords: ['復元', 'reflog', '削除', '消えた', 'hard reset後'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git reflog', comment: 'HEAD の移動履歴をすべて表示' },
+      { cmd: 'git reset --hard <消えたコミットのハッシュ>', comment: 'そのコミットを復元' },
+    ],
+    explain: 'reflog はローカルの操作履歴を保持。--hard reset やブランチ削除後でも約30日間は復元できる。git で最後の砦。',
+    alt: [],
+  },
+  {
+    id: 21, cat: 'misc',
+    emoji: '🏷️',
+    situation: 'タグを間違えて付けた／削除したい',
+    keywords: ['タグ', 'tag', '削除', '修正', 'release'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git tag -d v1.0.0', comment: 'ローカルのタグを削除' },
+      { cmd: 'git push origin :refs/tags/v1.0.0', comment: 'リモートのタグも削除' },
+      { cmd: 'git tag v1.0.0 <正しいコミットハッシュ>', comment: '正しいコミットにタグを付け直す' },
+    ],
+    explain: 'タグ削除はリモートとローカル別々に行う必要がある。annotated tag なら -a オプションも確認。',
+    alt: [],
+  },
+  {
+    id: 22, cat: 'misc',
+    emoji: '🔍',
+    situation: 'バグがいつ入ったか調べたい（bisect）',
+    keywords: ['バグ', 'bisect', '調査', 'いつ', '二分探索'],
+    risk: 'safe',
+    commands: [
+      { cmd: 'git bisect start', comment: '二分探索開始' },
+      { cmd: 'git bisect bad', comment: '現在のコミットがバグあり' },
+      { cmd: 'git bisect good <正常だったコミット>', comment: '正常だったコミットを指定' },
+      { cmd: 'git bisect reset', comment: '探索終了して元のブランチへ戻る' },
+    ],
+    explain: 'Gitが自動的に中間コミットをcheckoutしてくれる。good/badを繰り返すことでバグ導入コミットを二分探索で特定できる。',
+    alt: [],
+  },
+  {
+    id: 23, cat: 'misc',
+    emoji: '📂',
+    situation: '.gitignore に追加したのに無視されない',
+    keywords: ['gitignore', '無視', 'キャッシュ', '追跡', 'rm'],
+    risk: 'caution',
+    commands: [
+      { cmd: 'git rm -r --cached .', comment: '追跡をすべてリセット（ファイルは消えない）' },
+      { cmd: 'git add .', comment: '再度 add（.gitignore が反映される）' },
+      { cmd: 'git commit -m "fix: .gitignore 反映"', comment: 'コミット' },
+    ],
+    explain: '一度 git に追跡されたファイルは .gitignore を後から追加しても無視されない。--cached でインデックスのみ削除する。',
+    alt: [],
+  },
+];
+
+const CATEGORIES = [
+  { id: 'all', label: 'すべて' },
+  { id: 'commit', label: '💾 コミット' },
+  { id: 'push', label: '📤 push' },
+  { id: 'branch', label: '🌿 ブランチ' },
+  { id: 'stage', label: '📋 ステージ' },
+  { id: 'merge', label: '🔀 マージ' },
+  { id: 'remote', label: '📡 リモート' },
+  { id: 'misc', label: '🔧 その他' },
+];
+
+const POPULAR = [
+  'コミット取り消し', 'push 間違い', 'ブランチ間違い', '変更を退避', '削除コミット復元', 'stash', 'rebase やめたい',
+];
+
+let currentCat = 'all';
+let currentQuery = '';
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCats() {
+  document.getElementById('cat-row').innerHTML = CATEGORIES.map(c =>
+    `<button class="cat-btn${c.id === currentCat ? ' active' : ''}" onclick="setCat('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+
+function buildPopular() {
+  document.getElementById('popular-row').innerHTML = POPULAR.map(p =>
+    `<button class="pop-btn" onclick="applyPopular('${escHtml(p)}')">${escHtml(p)}</button>`
+  ).join('');
+}
+
+function setCat(cat) {
+  currentCat = cat;
+  buildCats();
+  render();
+}
+
+function applyPopular(q) {
+  document.getElementById('search-input').value = q;
+  currentQuery = q;
+  render();
+}
+
+function matches(entry, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return entry.situation.toLowerCase().includes(q) ||
+    entry.keywords.some(k => k.toLowerCase().includes(q));
+}
+
+function render() {
+  const filtered = ENTRIES.filter(e =>
+    (currentCat === 'all' || e.cat === currentCat) && matches(e, currentQuery)
+  );
+  document.getElementById('result-count').textContent =
+    currentQuery ? `「${currentQuery}」の検索結果: ${filtered.length}件` : `${filtered.length}件表示中`;
+  document.getElementById('no-result').style.display = filtered.length === 0 ? '' : 'none';
+  document.getElementById('cards').innerHTML = filtered.map(e => renderCard(e)).join('');
+}
+
+function renderCard(e) {
+  const riskClass = e.risk === 'danger' ? 'danger-card' : e.risk === 'safe' ? 'safe-card' : 'caution-card';
+  const riskLabel = e.risk === 'danger' ? '⚠️ 危険（データ消失の可能性）' : e.risk === 'safe' ? '✅ 安全' : '⚡ 要注意（push済みなら慎重に）';
+  const cmdsHtml = e.commands.map((c, ci) =>
+    `<div class="cmd-block">
+      <button class="copy-btn" onclick="copyCmd(this, '${escHtml(c.cmd)}')">コピー</button>
+      <div class="cmd-line">$ ${escHtml(c.cmd)}</div>
+      ${c.comment ? `<div class="cmd-comment"># ${escHtml(c.comment)}</div>` : ''}
+    </div>`
+  ).join('');
+  const altHtml = e.alt && e.alt.length > 0 ? `
+    <div class="alt-block">
+      <div class="alt-title">代替コマンド・補足：</div>
+      ${e.alt.map(a => `<div class="alt-cmd">$ ${escHtml(a.cmd)}<span style="color:#64748b;font-family:inherit"> — ${escHtml(a.desc)}</span></div>`).join('')}
+    </div>` : '';
+  return `
+  <div class="card ${riskClass}" onclick="toggleCard(${e.id})">
+    <div class="card-header">
+      <div class="card-emoji">${e.emoji}</div>
+      <div class="card-situation">${escHtml(e.situation)}</div>
+    </div>
+    <div class="card-keywords">
+      ${e.keywords.slice(0,4).map(k => `<span class="kw-chip">${escHtml(k)}</span>`).join('')}
+    </div>
+    <div class="card-body" id="card-body-${e.id}">
+      <div class="danger-label ${e.risk}">${riskLabel}</div>
+      ${cmdsHtml}
+      <div class="explain">${escHtml(e.explain)}</div>
+      ${altHtml}
+    </div>
+  </div>`;
+}
+
+function toggleCard(id) {
+  const body = document.getElementById('card-body-' + id);
+  if (body) body.classList.toggle('open');
+}
+
+function copyCmd(btn, cmd) {
+  navigator.clipboard.writeText(cmd).then(() => {
+    btn.textContent = '✓ コピー済';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1500);
+  }).catch(() => {
+    btn.textContent = 'コピー失敗';
+    setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+  });
+}
+
+document.getElementById('search-input').addEventListener('input', e => {
+  currentQuery = e.target.value.trim();
+  render();
+});
+
+buildCats();
+buildPopular();
+render();
+</script>
+</BaseLayout>
