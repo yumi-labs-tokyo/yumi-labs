@@ -245,7 +245,7 @@ export const tools: Tool[] = [
 		id: 36, slug: 'event-schedule',
 		name: '同人イベント当日タイムスケジュール',
 		description: 'イベント名・場所を入れると始発計算＋設営手順まで自動化。',
-		emoji: '🗓️', category: 'creator', badge: '人気', status: 'coming-soon',
+		emoji: '🗓️', category: 'creator', badge: '人気', status: 'available',
 	},
 	{
 		id: 37, slug: 'vtuber-announce',

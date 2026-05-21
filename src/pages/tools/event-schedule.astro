@@ -1,0 +1,524 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="同人イベント当日タイムスケジュール | yumi Labs">
+  <style>
+    .timeline-item {
+      position: relative;
+      padding-left: 2rem;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 0.45rem;
+      top: 1.5rem;
+      bottom: -0.5rem;
+      width: 2px;
+      background: rgba(255,255,255,0.1);
+    }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot {
+      position: absolute;
+      left: 0;
+      top: 0.35rem;
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      background: #0a0a0f;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .print-card { border: 1px solid #ddd !important; background: white !important; }
+    }
+  </style>
+
+  <div class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">🗓️</div>
+      <div class="text-3xl font-bold text-white mb-2">同人イベント当日タイムスケジュール</div>
+      <div class="text-gray-400 text-sm">イベント情報を入れるだけで、始発・設営・昼食まで含む当日スケジュールを自動生成</div>
+    </div>
+
+    <!-- Form -->
+    <div class="no-print bg-white/5 rounded-2xl p-5 mb-6 space-y-4">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- イベント名 -->
+        <div class="sm:col-span-2">
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">イベント名</div>
+          <input id="inEventName" type="text" placeholder="例：コミックマーケット104" maxlength="60"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+
+        <!-- 会場 -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">会場</div>
+          <select id="inVenue" class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm appearance-none">
+            <option value="tokyo-big-sight">東京ビッグサイト</option>
+            <option value="makuhari">幕張メッセ</option>
+            <option value="pacifico">パシフィコ横浜</option>
+            <option value="osaka">インテックス大阪</option>
+            <option value="nagoya">ポートメッセなごや</option>
+            <option value="custom">カスタム入力</option>
+          </select>
+        </div>
+
+        <!-- 搬入口開場時刻 -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">搬入口開場</div>
+          <input id="inSetupOpen" type="time" value="07:00"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+
+        <!-- 一般開場時刻 -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">一般開場</div>
+          <input id="inOpen" type="time" value="10:00"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+
+        <!-- 閉場時刻 -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">閉場</div>
+          <input id="inClose" type="time" value="16:00"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+      </div>
+
+      <!-- 参加形態 -->
+      <div>
+        <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">参加形態</div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="setRole('circle')" data-role="circle"
+            class="role-btn px-4 py-2 rounded-xl text-sm font-medium border border-purple-400/60 bg-purple-500/20 text-white transition-all">
+            🎨 サークル参加
+          </button>
+          <button onclick="setRole('general')" data-role="general"
+            class="role-btn px-4 py-2 rounded-xl text-sm font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">
+            🛍️ 一般参加
+          </button>
+        </div>
+      </div>
+
+      <!-- サークル参加オプション -->
+      <div id="circleOptions" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">スペース番号</div>
+            <input id="inSpaceNo" type="text" placeholder="例：東5ホール あ-12a" maxlength="30"
+              class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+          </div>
+          <div>
+            <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">スペース数</div>
+            <select id="inSpaces" class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm appearance-none">
+              <option value="1">1スペース</option>
+              <option value="2">2スペース（合体）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 搬入方法 -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">搬入方法</div>
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="setCarry('hand')" data-carry="hand"
+              class="carry-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-purple-400/60 bg-purple-500/20 text-white transition-all">
+              🎒 手持ち
+            </button>
+            <button onclick="setCarry('cart')" data-carry="cart"
+              class="carry-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">
+              🛒 台車あり
+            </button>
+            <button onclick="setCarry('delivery')" data-carry="delivery"
+              class="carry-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">
+              📦 宅配便搬入済
+            </button>
+          </div>
+        </div>
+
+        <!-- 設営内容チェック -->
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">設営アイテム（該当するものを選択）</div>
+          <div class="grid grid-cols-2 gap-2" id="setupItems">
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="tablecloth" checked /> テーブルクロス
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="display" checked /> ディスプレイ什器
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="poster" /> ポスター・タペストリー
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="pop" /> POP・値札
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="change" /> 釣り銭準備
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="sample" /> サンプル配置
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="pay" /> キャッシュレス端末
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" class="setup-check accent-purple-400" value="photo" /> 写真撮影OK表示
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 一般参加オプション -->
+      <div id="generalOptions" class="hidden space-y-4">
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">入場方法</div>
+          <div class="flex gap-2">
+            <button onclick="setEntry('line')" data-entry="line"
+              class="entry-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-purple-400/60 bg-purple-500/20 text-white transition-all">
+              🎫 整理券・事前当選
+            </button>
+            <button onclick="setEntry('free')" data-entry="free"
+              class="entry-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 text-gray-300 transition-all">
+              🚶 当日自由入場
+            </button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">目当てサークル数（優先回り）</div>
+          <select id="inTargetCount" class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm appearance-none">
+            <option value="3">〜3サークル（のんびり）</option>
+            <option value="10">4〜10サークル（普通）</option>
+            <option value="20">11〜20サークル（多め）</option>
+            <option value="50">21サークル以上（過密）</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- その他設定 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">自宅〜最寄り駅（分）</div>
+          <input id="inHomeToStation" type="number" min="0" max="120" value="15" placeholder="15"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+        <div>
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">最寄り駅〜会場（分）</div>
+          <input id="inStationToVenue" type="number" min="0" max="120" value="20" placeholder="20"
+            class="w-full bg-white/10 rounded-xl px-4 py-2.5 text-white border border-white/10 focus:border-purple-400 focus:outline-none text-sm" />
+        </div>
+      </div>
+
+      <button onclick="generate()"
+        class="w-full py-3 rounded-xl font-bold text-white text-sm transition-all"
+        style="background: linear-gradient(135deg, #9333ea, #ec4899);">
+        スケジュールを生成
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div id="result" class="hidden">
+      <!-- Header card -->
+      <div class="print-card bg-white/5 rounded-2xl p-5 mb-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-lg font-bold text-white" id="resEventName"></div>
+            <div class="text-sm text-gray-400 mt-1" id="resVenue"></div>
+          </div>
+          <button onclick="window.print()" class="no-print px-3 py-1.5 rounded-lg text-xs bg-white/10 text-gray-300 hover:bg-white/20 transition-all flex-shrink-0 ml-3">
+            🖨 印刷
+          </button>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2" id="resBadges"></div>
+      </div>
+
+      <!-- Checklist before leaving -->
+      <div class="print-card bg-white/5 rounded-2xl p-5 mb-4" id="checklistCard">
+        <div class="text-sm font-semibold text-purple-300 mb-3">📋 出発前チェックリスト</div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5" id="checklist"></div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="print-card bg-white/5 rounded-2xl p-5 mb-4">
+        <div class="text-sm font-semibold text-purple-300 mb-4">⏰ 当日タイムライン</div>
+        <div id="timeline" class="space-y-3"></div>
+      </div>
+
+      <!-- Tips -->
+      <div class="print-card bg-white/5 rounded-2xl p-5 mb-4" id="tipsCard">
+        <div class="text-sm font-semibold text-purple-300 mb-3">💡 当日の注意点</div>
+        <ul class="space-y-1.5" id="tips"></ul>
+      </div>
+
+      <button onclick="document.getElementById('result').classList.add('hidden')" class="no-print w-full py-2 rounded-xl text-xs text-gray-500 hover:text-gray-300 border border-white/5 hover:border-white/10 transition-all mt-2">
+        条件を変更する
+      </button>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  let role = 'circle';
+  let carryMethod = 'hand';
+  let entryMethod = 'line';
+
+  const VENUE_NAMES = {
+    'tokyo-big-sight': '東京ビッグサイト（りんかい線 国際展示場駅 徒歩7分）',
+    'makuhari': '幕張メッセ（JR海浜幕張駅 徒歩5分）',
+    'pacifico': 'パシフィコ横浜（みなとみらい線 みなとみらい駅 徒歩3分）',
+    'osaka': 'インテックス大阪（ニュートラム 中ふ頭駅 徒歩5分）',
+    'nagoya': 'ポートメッセなごや（あおなみ線 野跡駅 徒歩15分）',
+    'custom': '',
+  };
+
+  const SETUP_LABELS = {
+    tablecloth: 'テーブルクロス敷き',
+    display: '什器・ディスプレイ組み立て',
+    poster: 'ポスター・タペストリー設置',
+    pop: 'POP・値札セット',
+    change: '釣り銭・お金の準備',
+    sample: 'サンプル・見本誌配置',
+    pay: 'キャッシュレス端末起動確認',
+    photo: '写真撮影OK表示設置',
+  };
+
+  const SETUP_TIMES = {
+    tablecloth: 5, display: 15, poster: 10, pop: 5,
+    change: 5, sample: 5, pay: 5, photo: 3,
+  };
+
+  function setRole(r) {
+    role = r;
+    document.querySelectorAll('.role-btn').forEach(b => {
+      const active = b.dataset.role === r;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(209,213,219)';
+    });
+    document.getElementById('circleOptions').style.display  = r === 'circle'  ? '' : 'none';
+    document.getElementById('generalOptions').style.display = r === 'general' ? '' : 'none';
+  }
+
+  function setCarry(m) {
+    carryMethod = m;
+    document.querySelectorAll('.carry-btn').forEach(b => {
+      const active = b.dataset.carry === m;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(209,213,219)';
+    });
+  }
+
+  function setEntry(e) {
+    entryMethod = e;
+    document.querySelectorAll('.entry-btn').forEach(b => {
+      const active = b.dataset.entry === e;
+      b.style.borderColor = active ? 'rgba(147,51,234,0.6)' : 'rgba(255,255,255,0.1)';
+      b.style.background  = active ? 'rgba(147,51,234,0.2)' : 'rgba(255,255,255,0.05)';
+      b.style.color = active ? 'white' : 'rgb(209,213,219)';
+    });
+  }
+
+  function parseTime(str) {
+    const [h, m] = str.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function formatTime(minutes) {
+    const h = Math.floor(((minutes % 1440) + 1440) % 1440 / 60);
+    const m = ((minutes % 1440) + 1440) % 1440 % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+
+  function addMinutes(str, delta) {
+    return formatTime(parseTime(str) + delta);
+  }
+
+  function generate() {
+    const eventName = document.getElementById('inEventName').value.trim() || 'イベント';
+    const venueKey  = document.getElementById('inVenue').value;
+    const setupOpen = document.getElementById('inSetupOpen').value;
+    const openTime  = document.getElementById('inOpen').value;
+    const closeTime = document.getElementById('inClose').value;
+    const homeToSt  = parseInt(document.getElementById('inHomeToStation').value) || 15;
+    const stToVenue = parseInt(document.getElementById('inStationToVenue').value) || 20;
+    const spaceNo   = document.getElementById('inSpaceNo').value.trim();
+    const spaces    = parseInt(document.getElementById('inSpaces').value) || 1;
+    const targetCount = parseInt(document.getElementById('inTargetCount').value) || 10;
+
+    const venueName = VENUE_NAMES[venueKey] || venueKey;
+
+    // -- Calculate times --
+    let arriveVenueTime, setupStartTime, setupEndTime;
+    const setupChecked = [...document.querySelectorAll('.setup-check:checked')].map(c => c.value);
+    const totalSetupMin = setupChecked.reduce((s, k) => s + SETUP_TIMES[k], 0) + (carryMethod === 'delivery' ? 5 : carryMethod === 'cart' ? 20 : 10) + (spaces === 2 ? 15 : 0);
+    const bufferMin = 15;
+
+    if (role === 'circle') {
+      setupEndTime   = addMinutes(openTime, -5);
+      setupStartTime = addMinutes(setupEndTime, -totalSetupMin - bufferMin);
+      // must be at/after setupOpen
+      if (parseTime(setupStartTime) < parseTime(setupOpen)) setupStartTime = setupOpen;
+      arriveVenueTime = addMinutes(setupStartTime, -10);
+    } else {
+      const headStart = entryMethod === 'line' ? 90 : 30;
+      arriveVenueTime = addMinutes(openTime, -headStart);
+    }
+
+    // transit = homeToSt + travel + stToVenue + buffer(10)
+    const transitMin  = homeToSt + stToVenue + 10;
+    const leaveHomeTime = addMinutes(arriveVenueTime, -transitMin);
+    // wake up = leave - 60min prep
+    const wakeTime = addMinutes(leaveHomeTime, -60);
+    // departure alarm = leave - 5
+    const alarmTime = addMinutes(leaveHomeTime, -5);
+
+    // lunch: 30min after open or midpoint, whichever is quieter
+    const openMin  = parseTime(openTime);
+    const closeMin = parseTime(closeTime);
+    const midMin   = Math.round((openMin + closeMin) / 2);
+    const lunchTargetMin = role === 'circle' ? midMin : openMin + 90;
+    const lunchTime = formatTime(lunchTargetMin);
+    const lunchEndTime = formatTime(lunchTargetMin + 30);
+
+    //撤収
+    const packStart = addMinutes(closeTime, 0);
+    const packEnd   = addMinutes(closeTime, role === 'circle' ? (carryMethod === 'cart' ? 30 : 20) : 10);
+
+    // -- Build timeline --
+    const events = [];
+
+    events.push({ time: wakeTime,     icon: '☀️', color: '#facc15', label: '起床', desc: '前日に荷造り・着替え準備を済ませておくとスムーズ' });
+    events.push({ time: alarmTime,    icon: '⏰', color: '#fb923c', label: '出発アラーム', desc: '忘れ物チェックリストを確認！' });
+    events.push({ time: leaveHomeTime,icon: '🚪', color: '#f97316', label: '自宅出発', desc: `最寄り駅まで約${homeToSt}分` });
+    events.push({ time: arriveVenueTime, icon: '🏢', color: '#60a5fa', label: '会場到着', desc: venueName });
+
+    if (role === 'circle') {
+      if (carryMethod !== 'delivery') {
+        events.push({ time: arriveVenueTime, icon: '📦', color: '#a78bfa', label: '荷物搬入', desc: carryMethod === 'cart' ? '台車で搬入列へ（混雑注意）' : '手持ちで直接スペースへ' });
+      }
+      events.push({ time: setupStartTime, icon: '🛠️', color: '#c084fc', label: '設営開始', desc: spaceNo ? `スペース ${spaceNo}` : 'スペース確認後すぐ設営開始' });
+      setupChecked.forEach((k, i) => {
+        let t = parseTime(setupStartTime);
+        for (let j = 0; j < i; j++) t += SETUP_TIMES[setupChecked[j]];
+        events.push({ time: formatTime(t + 5), icon: '✅', color: '#34d399', label: SETUP_LABELS[k], desc: '' });
+      });
+      events.push({ time: setupEndTime, icon: '✨', color: '#4ade80', label: '設営完了・開場待機', desc: 'スペース写真を撮っておくと記録になる' });
+    } else {
+      if (entryMethod === 'line') {
+        events.push({ time: arriveVenueTime, icon: '🎫', color: '#a78bfa', label: '入場列・整理待機', desc: '整理券の番号・時間を再確認' });
+      }
+      events.push({ time: openTime, icon: '🚪', color: '#4ade80', label: '一般開場', desc: targetCount > 10 ? '優先サークルから素早く回る' : 'のんびりと会場を楽しもう' });
+    }
+
+    events.push({ time: openTime, icon: '🎉', color: '#f472b6', label: '開場！', desc: role === 'circle' ? '笑顔で接客！釣り銭・端末の最終確認' : '目当てサークルへGO' });
+    events.push({ time: lunchTime, icon: '🍱', color: '#fbbf24', label: '昼食タイム', desc: `${lunchTime}〜${lunchEndTime}（混雑が落ち着く時間帯）` });
+    events.push({ time: lunchEndTime, icon: '🔄', color: '#60a5fa', label: '昼食後再開', desc: role === 'circle' ? '午後は買い物タイムにも' : '見逃しサークルを回る' });
+    events.push({ time: closeTime, icon: '🔔', color: '#fb923c', label: '閉場', desc: role === 'circle' ? '「ありがとうございました！」' : '最後の買い物チャンス' });
+    events.push({ time: packStart, icon: '📦', color: '#a78bfa', label: '撤収・梱包開始', desc: role === 'circle' ? `搬出：${carryMethod === 'cart' ? '台車搬出列へ' : '手持ちでまとめて'}` : '忘れ物チェック' });
+    events.push({ time: packEnd, icon: '🏠', color: '#34d399', label: '帰宅へ', desc: 'お疲れさまでした！レポートを書こう' });
+
+    events.sort((a, b) => parseTime(a.time) - parseTime(b.time));
+
+    // -- Checklist --
+    const baseChecklist = [
+      '参加証・サークルチケット',
+      '会場地図・配置図',
+      '財布・交通系ICカード',
+      'スマホ・モバイルバッテリー',
+      '飲み物・軽食',
+      '雨具（折り畳み傘）',
+    ];
+    const circleChecklist = [
+      '頒布物（全種類）',
+      '釣り銭（小銭・千円札）',
+      'テーブルクロス・什器',
+      'POP・値札・サンプル',
+      'キャッシュレス端末',
+      '筆記具・ガムテープ',
+      'お品書き・価格表',
+      'ゴミ袋・エコバッグ',
+    ];
+    const generalChecklist = [
+      'お目当てサークルリスト',
+      'エコバッグ・大きめ袋',
+      '優先度リスト（欲しい順）',
+      '予算管理メモ',
+    ];
+    const allCheck = [...baseChecklist, ...(role === 'circle' ? circleChecklist : generalChecklist)];
+
+    // -- Tips --
+    const tips = [];
+    if (role === 'circle') {
+      tips.push('設営写真は開場前に忘れずに！後でSNS報告に使えます');
+      tips.push('釣り銭は5,000円分（500円玉・100円玉中心）が安心');
+      if (carryMethod === 'cart') tips.push('台車は搬入終了後すぐに所定の場所に返却を');
+      tips.push('昼食は交代制で。無理せずコンビニ食も活用');
+      tips.push('閉場30分前から撤収準備を始めると余裕ができます');
+    } else {
+      tips.push('人気サークルは開場直後が最も混雑します');
+      if (entryMethod === 'line') tips.push('整理券の番号・入場時刻を必ず事前確認');
+      tips.push('昼12〜13時は混雑ピーク。この時間に昼食にするのがコツ');
+      tips.push(`目当て${targetCount}サークルを優先度A/B/Cでランク分けしておくと動きやすい`);
+      tips.push('閉場1時間前は狙いサークルが残っていることも');
+    }
+    tips.push('体調第一！水分補給と休憩を忘れずに');
+
+    // -- Render --
+    document.getElementById('resEventName').textContent = eventName;
+    document.getElementById('resVenue').textContent = venueName || '会場';
+
+    const badges = document.getElementById('resBadges');
+    badges.innerHTML = '';
+    [
+      { label: role === 'circle' ? 'サークル参加' : '一般参加', color: '#9333ea' },
+      { label: `開場 ${openTime}〜${closeTime}`, color: '#2563eb' },
+      ...(role === 'circle' && spaceNo ? [{ label: spaceNo, color: '#059669' }] : []),
+    ].forEach(b => {
+      const span = document.createElement('span');
+      span.textContent = b.label;
+      span.style.cssText = `background:${b.color}33;border:1px solid ${b.color}66;color:white;padding:2px 10px;border-radius:999px;font-size:11px;`;
+      badges.appendChild(span);
+    });
+
+    const cl = document.getElementById('checklist');
+    cl.innerHTML = allCheck.map(item =>
+      `<label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+        <input type="checkbox" class="accent-purple-400 flex-shrink-0" /> ${item}
+       </label>`
+    ).join('');
+
+    const tl = document.getElementById('timeline');
+    tl.innerHTML = events.map(ev => `
+      <div class="timeline-item">
+        <div class="timeline-dot" style="color:${ev.color};border-color:${ev.color};background:#0a0a0f;"></div>
+        <div class="flex items-start gap-3">
+          <div class="text-xs font-mono text-gray-400 w-10 flex-shrink-0 pt-0.5">${ev.time}</div>
+          <div class="flex-1">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span>${ev.icon}</span>
+              <span class="text-sm font-semibold text-white">${ev.label}</span>
+            </div>
+            ${ev.desc ? `<div class="text-xs text-gray-500 leading-relaxed">${ev.desc}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    const tipsList = document.getElementById('tips');
+    tipsList.innerHTML = tips.map(t => `<li class="text-xs text-gray-400 flex gap-2"><span class="text-purple-400 flex-shrink-0">•</span><span>${t}</span></li>`).join('');
+
+    document.getElementById('result').classList.remove('hidden');
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // init
+  setRole('circle');
+  setCarry('hand');
+  setEntry('line');
+</script>
