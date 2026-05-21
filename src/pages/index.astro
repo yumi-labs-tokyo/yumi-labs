@@ -336,8 +336,15 @@ const availableTools = tools.filter((t) => t.status === 'available').length;
 		outline: none;
 		background: transparent;
 		font-family: var(--font-body);
-		font-size: var(--text-md);
+		font-size: var(--text-sm);
 		color: var(--gray-100);
+		min-width: 0;
+	}
+
+	@media (min-width: 50em) {
+		.search-box input {
+			font-size: var(--text-md);
+		}
 	}
 
 	.search-box input::placeholder {
