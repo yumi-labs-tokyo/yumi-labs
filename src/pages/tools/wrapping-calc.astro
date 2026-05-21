@@ -1,0 +1,238 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="包装紙必要サイズ計算機" description="箱のサイズを入れると必要な包装紙寸法＋斜め包みの折り方図解。">
+<main class="wc-wrap">
+  <div class="wc-header">
+    <div class="wc-title">🎁 包装紙必要サイズ計算機</div>
+    <div class="wc-sub">箱のサイズを入力して必要な包装紙のサイズを計算</div>
+  </div>
+
+  <div class="wc-body">
+    <div class="wc-left">
+      <div class="wc-form-card">
+        <div class="wc-card-title">箱のサイズ（cm）</div>
+        <div class="wc-form-grid">
+          <div class="wc-fg">
+            <label class="wc-label">縦（奥行き）</label>
+            <input type="number" id="boxD" class="wc-input" value="20" min="1" step="0.5" oninput="calc()" />
+          </div>
+          <div class="wc-fg">
+            <label class="wc-label">横（幅）</label>
+            <input type="number" id="boxW" class="wc-input" value="30" min="1" step="0.5" oninput="calc()" />
+          </div>
+          <div class="wc-fg">
+            <label class="wc-label">高さ</label>
+            <input type="number" id="boxH" class="wc-input" value="10" min="1" step="0.5" oninput="calc()" />
+          </div>
+        </div>
+
+        <div class="wc-method-sel">
+          <div class="wc-card-title">包み方</div>
+          <div class="method-tabs">
+            <button class="method-tab active" onclick="selMethod('diagonal',this)">斜め包み</button>
+            <button class="method-tab" onclick="selMethod('standard',this)">合わせ包み（百貨店式）</button>
+            <button class="method-tab" onclick="selMethod('envelope',this)">キャラメル包み</button>
+          </div>
+        </div>
+
+        <div class="wc-extra">
+          <label class="wc-label">余白（重なり代）: <span id="overlapVal">3</span>cm</label>
+          <input type="range" id="overlapSlider" min="2" max="6" value="3" step="0.5" oninput="updateOverlap();calc()" />
+        </div>
+      </div>
+
+      <div class="wc-quick-sizes">
+        <div class="wc-card-title">よくある箱サイズ</div>
+        <div class="quick-grid">
+          <button class="quick-btn" onclick="setBox(30,40,10)">A4ファイル箱<br><small>30×40×10</small></button>
+          <button class="quick-btn" onclick="setBox(25,35,10)">B5書籍<br><small>25×35×10</small></button>
+          <button class="quick-btn" onclick="setBox(15,15,15)">サイコロ型<br><small>15×15×15</small></button>
+          <button class="quick-btn" onclick="setBox(20,30,8)">ハンカチ等<br><small>20×30×8</small></button>
+          <button class="quick-btn" onclick="setBox(10,10,5)">小物<br><small>10×10×5</small></button>
+          <button class="quick-btn" onclick="setBox(40,50,20)">大型ギフト<br><small>40×50×20</small></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wc-right">
+      <div class="wc-result-card" id="resultCard">
+        <div class="wc-card-title">必要な包装紙のサイズ</div>
+        <div class="res-main" id="resMain"></div>
+        <div class="res-detail" id="resDetail"></div>
+      </div>
+
+      <div class="wc-preview-card">
+        <div class="wc-card-title">折り方図解</div>
+        <svg id="previewSvg" viewBox="0 0 300 300" style="width:100%;max-height:300px;background:var(--gray-900);border-radius:8px"></svg>
+        <div class="method-desc" id="methodDesc"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+let method = 'diagonal';
+
+function selMethod(m, btn) {
+  method = m;
+  document.querySelectorAll('.method-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  calc();
+}
+
+function updateOverlap() {
+  document.getElementById('overlapVal').textContent = document.getElementById('overlapSlider').value;
+}
+
+function setBox(d, w, h) {
+  document.getElementById('boxD').value = d;
+  document.getElementById('boxW').value = w;
+  document.getElementById('boxH').value = h;
+  calc();
+}
+
+function calc() {
+  const D = parseFloat(document.getElementById('boxD').value) || 20;
+  const W = parseFloat(document.getElementById('boxW').value) || 30;
+  const H = parseFloat(document.getElementById('boxH').value) || 10;
+  const overlap = parseFloat(document.getElementById('overlapSlider').value) || 3;
+
+  let paperW, paperH, desc;
+
+  if (method === 'diagonal') {
+    // Diagonal wrapping: paper size is approximately diagonal of box + margins
+    // For a box rotated 45°, paper diagonal = (W + D + 2H) * sqrt(2) + margin
+    // Simplified formula: paper should be square with side = (W + D + 2*H) * 0.85 + margin*2
+    const side = (W + D + 2 * H) * 0.85 + overlap * 2;
+    paperW = Math.ceil(side);
+    paperH = Math.ceil(side);
+    desc = '斜め包み（対角線包み）';
+  } else if (method === 'standard') {
+    // Standard wrapping: W × 2 + D × 2 + overlap (length), D + 2*H + overlap × 2 (width)
+    paperW = Math.ceil(W * 2 + D + overlap * 2);
+    paperH = Math.ceil(D + H * 2 + overlap * 2);
+    desc = '合わせ包み（百貨店式）';
+  } else {
+    // Caramel wrapping: (W + 2H + overlap) × (D + 2H + overlap)
+    paperW = Math.ceil(W + H * 2 + overlap * 2);
+    paperH = Math.ceil(D + H * 2 + overlap * 2);
+    desc = 'キャラメル包み';
+  }
+
+  document.getElementById('resMain').innerHTML = `
+    <div class="res-size">${paperW} cm × ${paperH} cm</div>
+    <div class="res-area">面積: ${(paperW * paperH / 10000).toFixed(2)} ㎡</div>
+  `;
+
+  document.getElementById('resDetail').innerHTML = `
+    <div class="res-row"><span>包み方</span><span>${desc}</span></div>
+    <div class="res-row"><span>箱サイズ</span><span>${D}×${W}×${H} cm</span></div>
+    <div class="res-row"><span>重なり代</span><span>${overlap} cm</span></div>
+    <div class="res-row"><span>推奨紙サイズ</span><span class="res-highlight">${paperW}×${paperH} cm</span></div>
+  `;
+
+  drawPreview(D, W, H, paperW, paperH);
+  showMethodDesc(method, D, W, H, overlap);
+}
+
+function drawPreview(D, W, H, paperW, paperH) {
+  const svg = document.getElementById('previewSvg');
+  svg.innerHTML = '';
+  const vW = 300, vH = 300, pad = 20;
+  const scale = Math.min((vW - 2*pad) / paperW, (vH - 2*pad) / paperH);
+  const pw = paperW * scale, ph = paperH * scale;
+  const ox = (vW - pw) / 2, oy = (vH - ph) / 2;
+
+  // Paper background
+  const paper = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  paper.setAttribute('x',ox); paper.setAttribute('y',oy);
+  paper.setAttribute('width',pw); paper.setAttribute('height',ph);
+  paper.setAttribute('fill','#fef9c3'); paper.setAttribute('stroke','#ca8a04');
+  paper.setAttribute('stroke-width','2');
+  svg.appendChild(paper);
+
+  // Dimensions label
+  const wLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+  wLabel.setAttribute('x',ox+pw/2); wLabel.setAttribute('y',oy-6);
+  wLabel.setAttribute('font-size','11'); wLabel.setAttribute('fill','#fbbf24');
+  wLabel.setAttribute('text-anchor','middle');
+  wLabel.textContent = paperW + ' cm';
+  svg.appendChild(wLabel);
+
+  const hLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+  hLabel.setAttribute('x',ox+pw+4); hLabel.setAttribute('y',oy+ph/2+4);
+  hLabel.setAttribute('font-size','11'); hLabel.setAttribute('fill','#fbbf24');
+  hLabel.setAttribute('text-anchor','start');
+  hLabel.textContent = paperH + ' cm';
+  svg.appendChild(hLabel);
+
+  // Box position
+  const bScale = Math.min(pw * 0.5 / W, ph * 0.5 / D);
+  const bw = W * bScale, bd = D * bScale;
+  if (method === 'diagonal') {
+    // Draw box rotated 45°
+    const cx = ox + pw/2, cy = oy + ph/2;
+    const r45 = Math.PI/4;
+    const corners = [[-bw/2,-bd/2],[bw/2,-bd/2],[bw/2,bd/2],[-bw/2,bd/2]].map(([x,y]) => [
+      cx + x*Math.cos(r45) - y*Math.sin(r45),
+      cy + x*Math.sin(r45) + y*Math.cos(r45)
+    ]);
+    const box = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    box.setAttribute('points', corners.map(([x,y]) => x+','+y).join(' '));
+    box.setAttribute('fill','#bfdbfe'); box.setAttribute('stroke','#2563eb'); box.setAttribute('stroke-width','2');
+    svg.appendChild(box);
+  } else {
+    const bx = ox + (pw-bw)/2, by = oy + (ph-bd)/2;
+    const box = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    box.setAttribute('x',bx); box.setAttribute('y',by);
+    box.setAttribute('width',bw); box.setAttribute('height',bd);
+    box.setAttribute('fill','#bfdbfe'); box.setAttribute('stroke','#2563eb'); box.setAttribute('stroke-width','2');
+    svg.appendChild(box);
+  }
+}
+
+function showMethodDesc(m, D, W, H, overlap) {
+  const descs = {
+    diagonal: `<strong>斜め包みの手順</strong><br>1. 包装紙を菱形に置く<br>2. 箱を45°に回転させて中央に置く<br>3. 手前の角を箱の上まで折り返す<br>4. 左右の角を折り込む<br>5. 奥の角を折り返して仕上げる<br>6. テープで固定する`,
+    standard: `<strong>合わせ包みの手順</strong><br>1. 包装紙を横長に置く<br>2. 箱を紙の左端寄りに置く<br>3. 右端の紙を箱の上に乗せる<br>4. 左端の紙を上に重ねて合わせる<br>5. 両端を三角形に折り込む<br>6. テープで固定する`,
+    envelope: `<strong>キャラメル包みの手順</strong><br>1. 包装紙を広げ中央に箱を置く<br>2. 長辺の紙を上下に折り上げる<br>3. 短辺の紙を三角に折って両脇に折り込む<br>4. 折り込んだ端を箱の底に折って固定<br>5. テープで仕上げる`,
+  };
+  document.getElementById('methodDesc').innerHTML = `<div class="method-steps">${descs[m]}</div>`;
+}
+
+calc();
+</script>
+
+<style>
+.wc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.wc-header { text-align: center; margin-bottom: 2rem; }
+.wc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.wc-sub { color: var(--gray-400); margin-top: .3rem; }
+.wc-body { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; }
+@media (max-width: 750px) { .wc-body { grid-template-columns: 1fr; } }
+.wc-form-card, .wc-quick-sizes { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.wc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
+.wc-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: 1rem; }
+.wc-fg { display: flex; flex-direction: column; gap: .3rem; }
+.wc-label { font-size: .75rem; color: var(--gray-400); }
+.wc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: 1rem; width: 100%; box-sizing: border-box; }
+.method-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.method-tab { padding: .3rem .7rem; border-radius: 8px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .8rem; cursor: pointer; }
+.method-tab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.wc-extra { display: flex; flex-direction: column; gap: .3rem; }
+input[type=range] { accent-color: #7c3aed; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.quick-btn { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; padding: .4rem .3rem; font-size: .75rem; cursor: pointer; color: var(--gray-300); line-height: 1.4; }
+.quick-btn:hover { border-color: #7c3aed; }
+.quick-btn small { color: var(--gray-500); }
+.wc-result-card, .wc-preview-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.res-main { text-align: center; margin-bottom: .8rem; }
+.res-size { font-size: 2rem; font-weight: 800; color: #fbbf24; }
+.res-area { font-size: .8rem; color: var(--gray-400); }
+.res-row { display: flex; justify-content: space-between; font-size: .85rem; padding: .3rem 0; border-bottom: 1px solid var(--gray-700); color: var(--gray-300); }
+.res-row:last-child { border-bottom: none; }
+.res-highlight { font-weight: 700; color: #fbbf24; }
+.method-steps { font-size: .82rem; color: var(--gray-300); line-height: 2; margin-top: .8rem; }
+</style>
+</BaseLayout>

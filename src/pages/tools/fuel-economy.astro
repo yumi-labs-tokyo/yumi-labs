@@ -1,0 +1,237 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="燃費計算ツール（給油記録蓄積式）" description="給油日・走行距離・金額を記録、月別/年間燃費グラフ化。">
+<main class="fe-wrap">
+  <div class="fe-header">
+    <div class="fe-title">⛽ 燃費計算ツール</div>
+    <div class="fe-sub">給油記録を蓄積して燃費を分析</div>
+  </div>
+
+  <div class="fe-add-card">
+    <div class="fe-card-title">給油記録を追加</div>
+    <div class="fe-form">
+      <div class="fe-form-row">
+        <div class="fe-form-group">
+          <label class="fe-label">日付</label>
+          <input type="date" id="fuelDate" class="fe-input" />
+        </div>
+        <div class="fe-form-group">
+          <label class="fe-label">給油量（L）</label>
+          <input type="number" id="fuelLiters" class="fe-input" placeholder="40.0" step="0.1" min="0" />
+        </div>
+        <div class="fe-form-group">
+          <label class="fe-label">単価（円/L）</label>
+          <input type="number" id="fuelPrice" class="fe-input" placeholder="165" min="0" />
+        </div>
+        <div class="fe-form-group">
+          <label class="fe-label">走行距離（km）</label>
+          <input type="number" id="fuelKm" class="fe-input" placeholder="500" step="0.1" min="0" />
+        </div>
+        <div class="fe-form-group">
+          <label class="fe-label">ODO計（km・任意）</label>
+          <input type="number" id="fuelOdo" class="fe-input" placeholder="例:32500" min="0" />
+        </div>
+        <div class="fe-form-group">
+          <label class="fe-label">メモ</label>
+          <input type="text" id="fuelMemo" class="fe-input" placeholder="高速利用等" />
+        </div>
+      </div>
+      <button class="fe-btn green" onclick="addRecord()">＋ 記録追加</button>
+    </div>
+  </div>
+
+  <div id="statsArea" style="display:none">
+    <div class="fe-stats-row" id="statsRow"></div>
+    <div class="fe-chart-card">
+      <div class="fe-chart-title">月別燃費推移</div>
+      <svg id="fuelChart" viewBox="0 0 600 200" style="width:100%;max-height:200px"></svg>
+    </div>
+    <div class="fe-records-card">
+      <div class="fe-card-title">給油履歴</div>
+      <div class="fe-record-list" id="recordList"></div>
+    </div>
+  </div>
+
+  <div id="emptyMsg" class="fe-empty">給油記録を追加すると燃費グラフが表示されます</div>
+</main>
+
+<script is:inline>
+let records = [];
+try { records = JSON.parse(localStorage.getItem('fuel_records') || '[]'); } catch(e) {}
+
+document.getElementById('fuelDate').value = new Date().toISOString().split('T')[0];
+
+function save() { try { localStorage.setItem('fuel_records', JSON.stringify(records)); } catch(e) {} }
+
+function addRecord() {
+  const date = document.getElementById('fuelDate').value;
+  const liters = parseFloat(document.getElementById('fuelLiters').value);
+  const price = parseFloat(document.getElementById('fuelPrice').value);
+  const km = parseFloat(document.getElementById('fuelKm').value);
+  const odo = parseFloat(document.getElementById('fuelOdo').value) || null;
+  const memo = document.getElementById('fuelMemo').value.trim();
+
+  if (!date || !liters || !km) { alert('日付・給油量・走行距離は必須です'); return; }
+
+  const economy = (km / liters).toFixed(2);
+  const cost = price ? (price * liters).toFixed(0) : null;
+
+  records.push({ id: Date.now(), date, liters, price: price || null, km, odo, memo, economy: parseFloat(economy), cost: cost ? parseInt(cost) : null });
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  save();
+
+  document.getElementById('fuelLiters').value = '';
+  document.getElementById('fuelKm').value = '';
+  document.getElementById('fuelOdo').value = '';
+  document.getElementById('fuelMemo').value = '';
+
+  render();
+}
+
+function deleteRecord(id) {
+  records = records.filter(r => r.id !== id);
+  save();
+  render();
+}
+
+function render() {
+  if (!records.length) {
+    document.getElementById('statsArea').style.display = 'none';
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+  document.getElementById('statsArea').style.display = 'block';
+  document.getElementById('emptyMsg').style.display = 'none';
+
+  // Stats
+  const avgEconomy = (records.reduce((s, r) => s + r.economy, 0) / records.length).toFixed(2);
+  const totalKm = records.reduce((s, r) => s + r.km, 0).toFixed(0);
+  const totalLiters = records.reduce((s, r) => s + r.liters, 0).toFixed(1);
+  const totalCost = records.filter(r => r.cost).reduce((s, r) => s + r.cost, 0);
+  const best = Math.max(...records.map(r => r.economy)).toFixed(2);
+  const worst = Math.min(...records.map(r => r.economy)).toFixed(2);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${avgEconomy}</div><div class="stat-label">平均燃費 (km/L)</div></div>
+    <div class="stat-card"><div class="stat-val">${totalKm}</div><div class="stat-label">総走行距離 (km)</div></div>
+    <div class="stat-card"><div class="stat-val">${totalLiters}</div><div class="stat-label">総給油量 (L)</div></div>
+    ${totalCost ? '<div class="stat-card"><div class="stat-val">¥' + totalCost.toLocaleString() + '</div><div class="stat-label">総燃料費</div></div>' : ''}
+    <div class="stat-card good"><div class="stat-val">${best}</div><div class="stat-label">最高燃費 (km/L)</div></div>
+    <div class="stat-card bad"><div class="stat-val">${worst}</div><div class="stat-label">最低燃費 (km/L)</div></div>
+  `;
+
+  // Monthly chart
+  const monthly = {};
+  records.forEach(r => {
+    const ym = r.date.slice(0, 7);
+    if (!monthly[ym]) monthly[ym] = { sum: 0, cnt: 0 };
+    monthly[ym].sum += r.economy;
+    monthly[ym].cnt++;
+  });
+  const months = Object.entries(monthly).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+  drawChart(months.map(([ym, d]) => ({ label: ym.slice(5) + '月', val: d.sum / d.cnt })));
+
+  // Record list
+  const list = document.getElementById('recordList');
+  list.innerHTML = [...records].reverse().map(r => `
+    <div class="rec-row">
+      <div class="rec-date">${r.date}</div>
+      <div class="rec-economy">${r.economy} km/L</div>
+      <div class="rec-detail">${r.liters}L / ${r.km}km${r.price ? ' / ¥' + (r.price * r.liters).toFixed(0) : ''}${r.memo ? ' / ' + r.memo : ''}</div>
+      <button class="rec-del" onclick="deleteRecord(${r.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function drawChart(data) {
+  const svg = document.getElementById('fuelChart');
+  svg.innerHTML = '';
+  if (!data.length) return;
+  const W = 600, H = 200, PL = 40, PR = 20, PT = 20, PB = 35;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const vals = data.map(d => d.val);
+  const minV = Math.floor(Math.min(...vals) - 2);
+  const maxV = Math.ceil(Math.max(...vals) + 2);
+
+  function x(i) { return PL + (i / (data.length - 1 || 1)) * cW; }
+  function y(v) { return PT + cH - ((v - minV) / (maxV - minV)) * cH; }
+
+  // Grid
+  for (let v = minV; v <= maxV; v += 2) {
+    const yy = y(v);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',PL); line.setAttribute('x2',W-PR);
+    line.setAttribute('y1',yy); line.setAttribute('y2',yy);
+    line.setAttribute('stroke','#374151'); line.setAttribute('stroke-width','0.5');
+    svg.appendChild(line);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',PL-4); t.setAttribute('y',yy+4);
+    t.setAttribute('font-size','9'); t.setAttribute('fill','#6b7280'); t.setAttribute('text-anchor','end');
+    t.textContent = v;
+    svg.appendChild(t);
+  }
+
+  if (data.length > 1) {
+    const path = data.map((d, i) => (i===0?'M':'L') + x(i) + ' ' + y(d.val)).join(' ');
+    const el = document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d', path); el.setAttribute('stroke','#34d399');
+    el.setAttribute('stroke-width','2'); el.setAttribute('fill','none');
+    svg.appendChild(el);
+  }
+
+  data.forEach((d, i) => {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx',x(i)); dot.setAttribute('cy',y(d.val)); dot.setAttribute('r','4');
+    dot.setAttribute('fill','#34d399');
+    svg.appendChild(dot);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x(i)); t.setAttribute('y',H-PB+14);
+    t.setAttribute('font-size','9'); t.setAttribute('fill','#6b7280'); t.setAttribute('text-anchor','middle');
+    t.textContent = d.label;
+    svg.appendChild(t);
+    const vt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    vt.setAttribute('x',x(i)); vt.setAttribute('y',y(d.val)-7);
+    vt.setAttribute('font-size','9'); vt.setAttribute('fill','#86efac'); vt.setAttribute('text-anchor','middle');
+    vt.textContent = d.val.toFixed(1);
+    svg.appendChild(vt);
+  });
+}
+
+render();
+</script>
+
+<style>
+.fe-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.fe-header { text-align: center; margin-bottom: 2rem; }
+.fe-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.fe-sub { color: var(--gray-400); margin-top: .3rem; }
+.fe-add-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.fe-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.fe-form-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+.fe-form-group { display: flex; flex-direction: column; gap: .3rem; }
+.fe-label { font-size: .75rem; color: var(--gray-400); }
+.fe-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; }
+.fe-btn { width: 100%; padding: .6rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.fe-btn.green { background: #16a34a; color: #fff; }
+.fe-stats-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-bottom: 1.5rem; }
+.stat-card { flex: 1; min-width: 120px; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .8rem; text-align: center; }
+.stat-card.good { border-color: #16a34a; }
+.stat-card.bad { border-color: #dc2626; }
+.stat-val { font-size: 1.5rem; font-weight: 800; color: var(--gray-100); }
+.stat-card.good .stat-val { color: #34d399; }
+.stat-card.bad .stat-val { color: #f87171; }
+.stat-label { font-size: .7rem; color: var(--gray-400); margin-top: .2rem; }
+.fe-chart-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.5rem; }
+.fe-chart-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.fe-records-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.fe-record-list { display: flex; flex-direction: column; gap: .4rem; max-height: 400px; overflow-y: auto; }
+.rec-row { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; background: var(--gray-900); border-radius: 8px; font-size: .85rem; }
+.rec-date { color: var(--gray-400); white-space: nowrap; min-width: 90px; }
+.rec-economy { font-weight: 800; color: #34d399; white-space: nowrap; min-width: 80px; }
+.rec-detail { flex: 1; color: var(--gray-300); }
+.rec-del { background: none; border: none; color: var(--gray-500); cursor: pointer; }
+.rec-del:hover { color: #dc2626; }
+.fe-empty { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border: 1.5px dashed var(--gray-700); border-radius: 12px; }
+</style>
+</BaseLayout>

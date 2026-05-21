@@ -1,0 +1,266 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="レンタカー「保険プラン」比較フロー" description="利用条件で必要な補償を判定。免責補償・対物超過の要否を可視化。">
+<main class="ri-wrap">
+  <div class="ri-header">
+    <div class="ri-title">🚗 レンタカー保険プラン 比較フロー</div>
+    <div class="ri-sub">質問に答えて最適な保険プランを確認</div>
+  </div>
+
+  <div class="ri-body">
+    <div class="ri-quiz-area" id="quizArea"></div>
+    <div class="ri-result-area" id="resultArea" style="display:none"></div>
+  </div>
+
+  <div class="ri-reference">
+    <div class="ref-title">📋 保険の種類と補償内容</div>
+    <div class="ref-grid">
+      <div class="ref-card mandatory">
+        <div class="ref-name">対人賠償（自賠責）</div>
+        <div class="ref-type">基本補償・必須</div>
+        <div class="ref-desc">相手方への死傷補償。限度額：死亡3,000万円/傷害120万円。すべてのレンタカーに含まれる。</div>
+      </div>
+      <div class="ref-card mandatory">
+        <div class="ref-name">対人賠償（任意）</div>
+        <div class="ref-type">基本補償・必須</div>
+        <div class="ref-desc">自賠責を超える人身損害を補償。レンタカー料金に含まれることが多い。</div>
+      </div>
+      <div class="ref-card mandatory">
+        <div class="ref-name">対物賠償</div>
+        <div class="ref-type">基本補償・必須</div>
+        <div class="ref-desc">他人の財物への損害を補償。限度額は会社により異なる（500万〜無制限）。</div>
+      </div>
+      <div class="ref-card optional">
+        <div class="ref-name">免責補償（CDW）</div>
+        <div class="ref-type">オプション</div>
+        <div class="ref-desc">事故時の自己負担額（免責額）を0にする。1日500〜1,500円程度。</div>
+      </div>
+      <div class="ref-card optional">
+        <div class="ref-name">対物超過補償（NOC）</div>
+        <div class="ref-type">オプション</div>
+        <div class="ref-desc">相手への対物補償が限度額を超えた分を補償。高額事故で有効。</div>
+      </div>
+      <div class="ref-card optional">
+        <div class="ref-name">車両補償（自損）</div>
+        <div class="ref-type">基本含む場合も</div>
+        <div class="ref-desc">自損事故でのレンタカーへのダメージ補償。免責額あり（1〜10万円）。</div>
+      </div>
+      <div class="ref-card optional">
+        <div class="ref-name">搭乗者傷害補償</div>
+        <div class="ref-type">基本含む場合も</div>
+        <div class="ref-desc">乗車中の事故による怪我を補償。任意保険に付帯している場合はダブリに注意。</div>
+      </div>
+      <div class="ref-card optional">
+        <div class="ref-name">ロードサービス</div>
+        <div class="ref-type">多くに含まれる</div>
+        <div class="ref-desc">パンク・バッテリー上がり・鍵閉じ込めなどの緊急対応。</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const QUESTIONS = [
+  { id:'purpose', question:'レンタカーの主な用途は？', options:[
+    {label:'観光・レジャー', value:'leisure'},
+    {label:'帰省・長距離移動', value:'trip'},
+    {label:'日常の代車', value:'substitute'},
+    {label:'仕事・出張', value:'business'},
+  ]},
+  { id:'experience', question:'普段の運転経験は？', options:[
+    {label:'週1回以上乗っている', value:'regular'},
+    {label:'月数回程度', value:'occasional'},
+    {label:'あまり乗らない（年数回以下）', value:'rare'},
+    {label:'久しぶり・不安あり', value:'nervous'},
+  ]},
+  { id:'own_car', question:'自家用車の任意保険に加入していますか？', options:[
+    {label:'はい（対人・対物無制限に加入）', value:'full'},
+    {label:'はい（一般的なプランに加入）', value:'basic'},
+    {label:'いいえ・不明', value:'none'},
+  ]},
+  { id:'passengers', question:'同乗者はいますか？', options:[
+    {label:'なし（一人）', value:'solo'},
+    {label:'家族（子供含む）', value:'family'},
+    {label:'友人・知人', value:'friends'},
+  ]},
+  { id:'area', question:'走行予定のエリアは？', options:[
+    {label:'市街地（都市部）', value:'city'},
+    {label:'郊外・地方道路', value:'suburban'},
+    {label:'山間部・離島・狭路あり', value:'mountain'},
+    {label:'高速道路中心', value:'highway'},
+  ]},
+];
+
+let answers = {};
+let currentQ = 0;
+
+function renderQuiz() {
+  const area = document.getElementById('quizArea');
+  if (currentQ >= QUESTIONS.length) {
+    showResult();
+    return;
+  }
+
+  const q = QUESTIONS[currentQ];
+  const progress = Math.round((currentQ / QUESTIONS.length) * 100);
+
+  area.innerHTML = `
+    <div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${progress}%"></div></div>
+    <div class="quiz-step">${currentQ + 1} / ${QUESTIONS.length}</div>
+    <div class="quiz-question">${q.question}</div>
+    <div class="quiz-options">
+      ${q.options.map(o => `<button class="quiz-opt" onclick="answer('${q.id}','${o.value}')">${o.label}</button>`).join('')}
+    </div>
+    ${currentQ > 0 ? '<button class="quiz-back" onclick="goBack()">← 前の質問へ</button>' : ''}
+  `;
+}
+
+function answer(id, value) {
+  answers[id] = value;
+  currentQ++;
+  renderQuiz();
+}
+
+function goBack() {
+  if (currentQ > 0) {
+    currentQ--;
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('quizArea').style.display = 'block';
+    renderQuiz();
+  }
+}
+
+function showResult() {
+  document.getElementById('quizArea').style.display = 'none';
+  const result = document.getElementById('resultArea');
+  result.style.display = 'block';
+
+  // Calculate recommendations
+  const { purpose, experience, own_car, passengers, area } = answers;
+
+  const recs = {
+    cdw: { need: false, reason:[] },
+    noc: { need: false, reason:[] },
+    passenger: { need: false, reason:[] },
+  };
+
+  // CDW recommendation
+  if (experience === 'rare' || experience === 'nervous') { recs.cdw.need = true; recs.cdw.reason.push('運転に不慣れな場合は万一の事故リスクに備えて加入推奨'); }
+  if (area === 'mountain') { recs.cdw.need = true; recs.cdw.reason.push('狭路・山道は接触事故リスクが高い'); }
+  if (area === 'city') { recs.cdw.need = true; recs.cdw.reason.push('市街地は駐車場の接触など小事故が多い'); }
+  if (purpose === 'leisure') { recs.cdw.need = true; recs.cdw.reason.push('旅行中の事故精神的負担を減らすためにも推奨'); }
+  if (!recs.cdw.reason.length) recs.cdw.reason.push('任意保険が充実しており免責補償は任意で可');
+
+  // NOC recommendation
+  if (own_car === 'none') { recs.noc.need = true; recs.noc.reason.push('自家用車の任意保険なしの場合、超過損害リスクに備えて推奨'); }
+  if (area === 'highway') { recs.noc.need = true; recs.noc.reason.push('高速での事故は対物損害額が高額になりやすい'); }
+  if (purpose === 'business') { recs.noc.need = true; recs.noc.reason.push('業務使用での事故は会社への影響も考慮して加入推奨'); }
+  if (!recs.noc.reason.length) recs.noc.reason.push('既存の任意保険でカバーできる可能性あり（保険会社に確認）');
+
+  // Passenger recommendation
+  if (passengers === 'family') { recs.passenger.need = true; recs.passenger.reason.push('子供を含む家族が同乗する場合は搭乗者補償の確認を'); }
+  if (passengers === 'friends') { recs.passenger.need = true; recs.passenger.reason.push('友人が同乗する際は第三者への補償確認が必要'); }
+  if (!recs.passenger.reason.length) recs.passenger.reason.push('一人乗りの場合は搭乗者補償の優先度は低い');
+
+  const riskLevel = (recs.cdw.need ? 1 : 0) + (recs.noc.need ? 1 : 0) + (recs.passenger.need ? 1 : 0);
+  const riskLabel = riskLevel === 0 ? { label:'低リスク', color:'#34d399' } : riskLevel === 1 ? { label:'中リスク', color:'#fbbf24' } : { label:'要注意', color:'#f87171' };
+
+  result.innerHTML = `
+    <div class="res-risk" style="border-color:${riskLabel.color}">
+      <div class="risk-level" style="color:${riskLabel.color}">${riskLabel.label}</div>
+      <div class="risk-desc">あなたの条件での保険リスク評価</div>
+    </div>
+
+    <div class="rec-card ${recs.cdw.need ? 'need' : 'optional'}">
+      <div class="rec-header">
+        <span class="rec-name">免責補償（CDW）</span>
+        <span class="rec-badge ${recs.cdw.need ? 'need' : 'opt'}">${recs.cdw.need ? '加入推奨' : '任意'}</span>
+      </div>
+      <ul class="rec-reasons">${recs.cdw.reason.map(r => '<li>' + r + '</li>').join('')}</ul>
+    </div>
+
+    <div class="rec-card ${recs.noc.need ? 'need' : 'optional'}">
+      <div class="rec-header">
+        <span class="rec-name">対物超過補償（NOC）</span>
+        <span class="rec-badge ${recs.noc.need ? 'need' : 'opt'}">${recs.noc.need ? '加入推奨' : '任意'}</span>
+      </div>
+      <ul class="rec-reasons">${recs.noc.reason.map(r => '<li>' + r + '</li>').join('')}</ul>
+    </div>
+
+    <div class="rec-card ${recs.passenger.need ? 'need' : 'optional'}">
+      <div class="rec-header">
+        <span class="rec-name">搭乗者傷害補償</span>
+        <span class="rec-badge ${recs.passenger.need ? 'need' : 'opt'}">${recs.passenger.need ? '確認推奨' : '任意'}</span>
+      </div>
+      <ul class="rec-reasons">${recs.passenger.reason.map(r => '<li>' + r + '</li>').join('')}</ul>
+    </div>
+
+    <div class="res-advice">
+      <div class="advice-title">💡 総合アドバイス</div>
+      <div class="advice-body">
+        ${own_car === 'full' ? '自家用車の任意保険（対人対物無制限）に加入済みの場合、レンタカーに補償が適用されるか保険会社に確認してください。適用される場合、一部オプションは不要になる可能性があります。' : ''}
+        ${own_car === 'none' ? 'ご自身の任意保険がない場合、万一の大事故では補償が不十分になるリスクがあります。CDW・NOCへの加入を強く推奨します。' : ''}
+        日本国内でのレンタカーは基本料金に対人・対物賠償が含まれていますが、自己負担額（免責額）が残る場合がほとんどです。CDWを追加することで自己負担を0にできます。
+      </div>
+    </div>
+
+    <button class="retry-btn" onclick="retry()">↩ もう一度診断する</button>
+  `;
+}
+
+function retry() {
+  answers = {};
+  currentQ = 0;
+  document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('quizArea').style.display = 'block';
+  renderQuiz();
+}
+
+renderQuiz();
+</script>
+
+<style>
+.ri-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.ri-header { text-align: center; margin-bottom: 2rem; }
+.ri-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.ri-sub { color: var(--gray-400); margin-top: .3rem; }
+.ri-body { margin-bottom: 2rem; }
+.quiz-progress-bar { height: 6px; background: var(--gray-700); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
+.quiz-progress-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #7c3aed); transition: width .3s; }
+.quiz-step { font-size: .8rem; color: var(--gray-400); margin-bottom: .5rem; }
+.quiz-question { font-size: 1.2rem; font-weight: 700; color: var(--gray-100); margin-bottom: 1.2rem; }
+.quiz-options { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
+.quiz-opt { text-align: left; padding: .9rem 1.2rem; background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 10px; color: var(--gray-200); font-size: .95rem; cursor: pointer; transition: all .15s; }
+.quiz-opt:hover { border-color: #2563eb; background: #1e3a5f; color: #bfdbfe; }
+.quiz-back { font-size: .8rem; color: var(--gray-400); background: none; border: none; cursor: pointer; padding: 0; }
+.res-risk { border: 2px solid; border-radius: 14px; padding: 1.2rem; text-align: center; margin-bottom: 1.2rem; }
+.risk-level { font-size: 1.8rem; font-weight: 800; }
+.risk-desc { font-size: .8rem; color: var(--gray-400); margin-top: .2rem; }
+.rec-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; margin-bottom: .8rem; }
+.rec-card.need { border-color: #dc2626; }
+.rec-card.optional { border-color: var(--gray-700); }
+.rec-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+.rec-name { font-weight: 700; color: var(--gray-100); }
+.rec-badge { font-size: .75rem; padding: .2rem .6rem; border-radius: 20px; font-weight: 700; }
+.rec-badge.need { background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; }
+.rec-badge.opt { background: var(--gray-900); color: var(--gray-400); border: 1px solid var(--gray-700); }
+.rec-reasons { list-style: none; padding: 0; margin: 0; }
+.rec-reasons li { font-size: .85rem; color: var(--gray-300); padding: .2rem 0; padding-left: .8rem; position: relative; }
+.rec-reasons li::before { content:'・'; position: absolute; left: 0; }
+.res-advice { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+.advice-title { font-weight: 700; color: #fbbf24; margin-bottom: .5rem; }
+.advice-body { font-size: .85rem; color: var(--gray-300); line-height: 1.7; }
+.retry-btn { width: 100%; padding: .65rem; background: var(--gray-700); color: var(--gray-200); border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
+.ri-reference { margin-top: 2rem; }
+.ref-title { font-weight: 700; color: var(--gray-200); margin-bottom: 1rem; }
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .7rem; }
+.ref-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: .9rem; }
+.ref-card.mandatory { border-color: #1d4ed8; }
+.ref-card.optional { border-color: var(--gray-700); }
+.ref-name { font-weight: 700; color: var(--gray-100); margin-bottom: .2rem; font-size: .9rem; }
+.ref-type { font-size: .7rem; color: #60a5fa; margin-bottom: .4rem; }
+.ref-card.optional .ref-type { color: var(--gray-400); }
+.ref-desc { font-size: .78rem; color: var(--gray-300); line-height: 1.5; }
+</style>
+</BaseLayout>

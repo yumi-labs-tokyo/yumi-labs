@@ -1,0 +1,242 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="服のサイズ国別変換チャート" description="日本M→US/EU/UK表示。海外通販前に1秒確認。">
+<main class="sc-wrap">
+  <div class="sc-header">
+    <div class="sc-title">🌍 服のサイズ国別変換チャート</div>
+    <div class="sc-sub">海外通販・旅行前にサイズを素早く確認</div>
+  </div>
+
+  <div class="sc-tabs">
+    <button class="sc-tab active" onclick="selCat('tops',this)">トップス・アウター</button>
+    <button class="sc-tab" onclick="selCat('bottoms',this)">ボトムス（ウエスト）</button>
+    <button class="sc-tab" onclick="selCat('shoes',this)">靴（シューズ）</button>
+    <button class="sc-tab" onclick="selCat('bra',this)">ブラサイズ</button>
+  </div>
+
+  <div class="sc-gender-tabs" id="genderTabs">
+    <button class="sc-gender active" onclick="selGender('women',this)">レディース</button>
+    <button class="sc-gender" onclick="selGender('men',this)">メンズ</button>
+  </div>
+
+  <div class="sc-table-wrap">
+    <div id="sizeTable"></div>
+  </div>
+
+  <div class="sc-finder">
+    <div class="finder-title">サイズ検索</div>
+    <div class="finder-row">
+      <select id="fromCountry" class="sc-select" onchange="findSize()">
+        <option value="jp">日本</option>
+        <option value="us">US（アメリカ）</option>
+        <option value="eu">EU（ヨーロッパ）</option>
+        <option value="uk">UK（イギリス）</option>
+        <option value="it">イタリア</option>
+        <option value="fr">フランス</option>
+      </select>
+      <select id="fromSize" class="sc-select" onchange="findSize()"></select>
+      <div class="finder-arrow">→</div>
+      <div class="finder-result" id="finderResult">サイズを選択してください</div>
+    </div>
+  </div>
+</main>
+
+<script is:inline>
+const DATA = {
+  tops: {
+    women: {
+      headers: ['日本','US','EU','UK','Italy','France','胸囲(cm)'],
+      rows: [
+        ['XS','0','32','4','32','34','76-79'],['S','2','34','6','34','36','80-83'],
+        ['M','4-6','36','8-10','36','38','84-87'],['L','8-10','38','12','38','40','88-92'],
+        ['XL','12','40','14','40','42','92-96'],['XXL','14','42','16','42','44','97-101'],
+        ['3XL','16','44','18','44','46','102-106'],
+      ],
+    },
+    men: {
+      headers: ['日本','US','EU','UK','胸囲(cm)','首回り(cm)'],
+      rows: [
+        ['XS','XS','44','34','83-87','36-37'],['S','S','46','36','88-92','37-38'],
+        ['M','M','48','38','93-97','38-39'],['L','L','50','40','98-102','39-40'],
+        ['XL','XL','52','42','103-107','41-42'],['XXL','XXL','54','44','108-112','43-44'],
+        ['3XL','3XL','56','46','113-117','45-46'],
+      ],
+    },
+  },
+  bottoms: {
+    women: {
+      headers: ['日本','US','EU','UK','ウエスト(cm)'],
+      rows: [
+        ['5号','0','32','4','58-60'],['7号','2','34','6','63-65'],
+        ['9号','4-6','36','8-10','68-70'],['11号','6-8','38','10-12','73-75'],
+        ['13号','10','40','14','78-80'],['15号','12','42','16','83-85'],
+        ['17号','14','44','18','88-92'],
+      ],
+    },
+    men: {
+      headers: ['ウエスト(cm)','US(インチ)','EU','UK(インチ)'],
+      rows: [
+        ['71-73','28','36','28'],['74-77','29-30','38','30'],['78-81','31-32','40','32'],
+        ['82-85','33-34','42','34'],['86-89','35-36','44','36'],['90-93','37-38','46','38'],
+        ['94-97','39-40','48','40'],['98-101','41-42','50','42'],
+      ],
+    },
+  },
+  shoes: {
+    women: {
+      headers: ['日本(cm)','US','EU','UK','足長(mm)'],
+      rows: [
+        ['22.0','5','35','2.5','215-220'],['22.5','5.5','35.5','3','220-225'],
+        ['23.0','6','36','3.5','225-230'],['23.5','6.5','37','4','230-235'],
+        ['24.0','7','37.5','4.5','235-240'],['24.5','8','38','5','240-245'],
+        ['25.0','8.5','39','5.5','245-250'],['25.5','9','39.5','6','250-255'],
+        ['26.0','9.5','40','6.5','255-260'],
+      ],
+    },
+    men: {
+      headers: ['日本(cm)','US','EU','UK','足長(mm)'],
+      rows: [
+        ['24.0','6','38','5.5','235-240'],['24.5','6.5','38.5','6','240-245'],
+        ['25.0','7','39','6.5','245-250'],['25.5','7.5','40','7','250-255'],
+        ['26.0','8','41','7.5','255-260'],['26.5','8.5','41.5','8','260-265'],
+        ['27.0','9','42','8.5','265-270'],['27.5','9.5','43','9','270-275'],
+        ['28.0','10','44','9.5','275-280'],['28.5','10.5','44.5','10','280-285'],
+        ['29.0','11','45','10.5','285-290'],['30.0','12','46','11','295-300'],
+      ],
+    },
+  },
+  bra: {
+    women: {
+      headers: ['日本','US','EU','UK','アンダー(cm)'],
+      rows: [
+        ['A65','30A','65A','30A','65-68'],['A70','32A','70A','32A','69-72'],
+        ['A75','34A','75A','34A','73-77'],['A80','36A','80A','36A','78-82'],
+        ['B65','30B','65B','30B','65-68'],['B70','32B','70B','32B','69-72'],
+        ['B75','34B','75B','34B','73-77'],['B80','36B','80B','36B','78-82'],
+        ['C70','32C','70C','32C','69-72'],['C75','34C','75C','34C','73-77'],
+        ['C80','36C','80C','36C','78-82'],
+      ],
+    },
+    men: { headers:[], rows:[] },
+  },
+};
+
+let currentCat = 'tops';
+let currentGender = 'women';
+
+function selCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.sc-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Bra is women only
+  const gt = document.getElementById('genderTabs');
+  gt.style.display = cat === 'bra' ? 'none' : 'flex';
+  if (cat === 'bra') currentGender = 'women';
+  renderTable();
+  updateFinderOptions();
+}
+
+function selGender(gender, btn) {
+  currentGender = gender;
+  document.querySelectorAll('.sc-gender').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+  updateFinderOptions();
+}
+
+function renderTable() {
+  const d = DATA[currentCat]?.[currentGender];
+  if (!d || !d.rows.length) {
+    document.getElementById('sizeTable').innerHTML = '<div style="color:var(--gray-400);padding:1rem">このカテゴリは対象外です</div>';
+    return;
+  }
+  const rows = d.rows.map((row, ri) =>
+    '<tr>' + row.map((cell, ci) => `<td class="${ci===0?'first-col':''}">${cell}</td>`).join('') + '</tr>'
+  ).join('');
+  document.getElementById('sizeTable').innerHTML = `
+    <table class="size-table">
+      <thead><tr>${d.headers.map(h => '<th>' + h + '</th>').join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  // Add row click highlight
+  document.querySelectorAll('.size-table tbody tr').forEach(tr => {
+    tr.onclick = () => {
+      document.querySelectorAll('.size-table tbody tr').forEach(r => r.classList.remove('selected'));
+      tr.classList.add('selected');
+    };
+  });
+}
+
+function updateFinderOptions() {
+  const d = DATA[currentCat]?.[currentGender];
+  const fromCountry = document.getElementById('fromCountry').value;
+  const sel = document.getElementById('fromSize');
+  sel.innerHTML = '';
+  if (!d || !d.rows.length) return;
+
+  const countryIdx = { jp:0, us:1, eu:2, uk:3, it:4, fr:5 };
+  const idx = countryIdx[fromCountry] ?? 0;
+  const maxIdx = d.headers.length - 1;
+  const safeIdx = Math.min(idx, maxIdx - 1);
+
+  d.rows.forEach(row => {
+    const opt = document.createElement('option');
+    opt.value = row[safeIdx];
+    opt.textContent = row[safeIdx];
+    sel.appendChild(opt);
+  });
+  findSize();
+}
+
+function findSize() {
+  const d = DATA[currentCat]?.[currentGender];
+  if (!d || !d.rows.length) return;
+  const fromCountry = document.getElementById('fromCountry').value;
+  const fromSize = document.getElementById('fromSize').value;
+  const countryIdx = { jp:0, us:1, eu:2, uk:3, it:4, fr:5 };
+  const idx = Math.min(countryIdx[fromCountry] ?? 0, d.headers.length - 1);
+
+  const row = d.rows.find(r => r[idx] === fromSize);
+  if (!row) { document.getElementById('finderResult').textContent = '該当なし'; return; }
+
+  const result = d.headers.map((h, i) => `<span class="fr-item"><span class="fr-country">${h}</span><span class="fr-size">${row[i]}</span></span>`).join('');
+  document.getElementById('finderResult').innerHTML = result;
+}
+
+document.getElementById('fromCountry').addEventListener('change', updateFinderOptions);
+renderTable();
+updateFinderOptions();
+</script>
+
+<style>
+.sc-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.sc-header { text-align: center; margin-bottom: 2rem; }
+.sc-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.sc-sub { color: var(--gray-400); margin-top: .3rem; }
+.sc-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.sc-tab { padding: .4rem .9rem; border-radius: 20px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .85rem; cursor: pointer; }
+.sc-tab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.sc-gender-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
+.sc-gender { padding: .3rem .8rem; border-radius: 8px; border: 1.5px solid var(--gray-700); background: var(--gray-900); color: var(--gray-300); font-size: .85rem; cursor: pointer; }
+.sc-gender.active { background: #db2777; border-color: #db2777; color: #fff; }
+.sc-table-wrap { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1rem; margin-bottom: 1.5rem; overflow-x: auto; }
+.size-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.size-table th { background: var(--gray-700); padding: .5rem .7rem; text-align: center; color: var(--gray-200); font-size: .8rem; white-space: nowrap; }
+.size-table td { padding: .45rem .7rem; border-bottom: 1px solid var(--gray-700); text-align: center; color: var(--gray-200); }
+.size-table .first-col { font-weight: 800; color: var(--gray-100); }
+.size-table tbody tr:hover { background: var(--gray-700); cursor: pointer; }
+.size-table tbody tr.selected { background: #1e1b4b; }
+.sc-finder { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; }
+.finder-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.finder-row { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.sc-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .6rem; font-size: .85rem; }
+.finder-arrow { font-size: 1.2rem; color: var(--gray-400); }
+.finder-result { display: flex; flex-wrap: wrap; gap: .5rem; }
+.fr-item { background: var(--gray-900); border: 1px solid var(--gray-700); border-radius: 8px; padding: .3rem .7rem; text-align: center; }
+.fr-country { display: block; font-size: .65rem; color: var(--gray-500); }
+.fr-size { display: block; font-size: 1rem; font-weight: 700; color: #818cf8; }
+</style>
+</BaseLayout>

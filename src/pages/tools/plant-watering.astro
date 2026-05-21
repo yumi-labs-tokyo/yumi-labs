@@ -1,0 +1,203 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="観葉植物「水やりカレンダー」" description="植物種類を選ぶと季節別水やり頻度を計算。通知でリマインド。">
+<main class="pw-wrap">
+  <div class="pw-header">
+    <div class="pw-title">🪴 観葉植物 水やりカレンダー</div>
+    <div class="pw-sub">植物を登録して水やりのタイミングを管理</div>
+  </div>
+
+  <div class="pw-add-form">
+    <div class="pw-form-title">植物を追加</div>
+    <div class="pw-form-row">
+      <select id="plantType" class="pw-select" onchange="updatePlantInfo()">
+        <option value="pothos">ポトス</option>
+        <option value="monstera">モンステラ</option>
+        <option value="rubber">ゴムの木</option>
+        <option value="sansevieria">サンスベリア</option>
+        <option value="pachira">パキラ</option>
+        <option value="ficus">フィカス・リラータ</option>
+        <option value="orchid">胡蝶蘭</option>
+        <option value="cactus">サボテン</option>
+        <option value="succulent">多肉植物</option>
+        <option value="peace_lily">スパティフィラム</option>
+        <option value="aloe">アロエ</option>
+        <option value="aglaonema">アグラオネマ</option>
+        <option value="custom">カスタム</option>
+      </select>
+      <input id="plantName" class="pw-input" type="text" placeholder="ニックネーム（例：リビングのポトス）" />
+      <button class="pw-btn green" onclick="addPlant()">＋ 追加</button>
+    </div>
+    <div class="plant-info-card" id="plantInfoCard"></div>
+  </div>
+
+  <div class="pw-season-note" id="seasonNote"></div>
+
+  <div id="plantList" class="pw-plant-list"></div>
+</main>
+
+<script is:inline>
+const PLANTS = {
+  pothos: { name:'ポトス', emoji:'🌿', diff:'★☆☆', light:'半日陰〜明るい日陰', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'根腐れに注意。土が完全に乾いてから水やり。' },
+  monstera: { name:'モンステラ', emoji:'🌱', diff:'★☆☆', light:'明るい日陰', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'葉が黄色くなったら水やりしすぎのサイン。葉水も効果的。' },
+  rubber: { name:'ゴムの木', emoji:'🌳', diff:'★☆☆', light:'明るい間接光', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'葉の埃を拭くと光合成が活発になる。直射日光は葉焼けの原因。' },
+  sansevieria: { name:'サンスベリア', emoji:'🌵', diff:'★☆☆', light:'半日陰〜明るい場所', watering: { spring:[14,21], summer:[10,14], fall:[21,30], winter:[30,45] }, tips:'非常に乾燥に強い。冬は断水に近い状態でも可。過湿に弱い。' },
+  pachira: { name:'パキラ', emoji:'🌴', diff:'★☆☆', light:'明るい日陰', watering: { spring:[7,14], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'幹に水分を蓄えるので乾燥に比較的強い。鉢底から水が出るまでたっぷり。' },
+  ficus: { name:'フィカス・リラータ', emoji:'🍃', diff:'★★☆', light:'明るい間接光', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'場所を移動させると葉を落としやすい。一定の場所に置くと安定する。' },
+  orchid: { name:'胡蝶蘭', emoji:'🌸', diff:'★★★', light:'間接光', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'根が銀色になったら水やりのタイミング。バークが乾いたら水やり。' },
+  cactus: { name:'サボテン', emoji:'🌵', diff:'★☆☆', light:'直射日光OK', watering: { spring:[14,21], summer:[14,21], fall:[21,30], winter:[30,45] }, tips:'冬は完全断水でOK。通気性の良い土を使用。' },
+  succulent: { name:'多肉植物', emoji:'🌱', diff:'★☆☆', light:'明るい場所', watering: { spring:[10,14], summer:[7,14], fall:[14,21], winter:[21,30] }, tips:'土が完全に乾いて2〜3日後に水やり。蒸れに注意。' },
+  peace_lily: { name:'スパティフィラム', emoji:'🌺', diff:'★★☆', light:'半日陰', watering: { spring:[5,7], summer:[3,5], fall:[7,10], winter:[10,14] }, tips:'葉が少し垂れてきたら水やりの合図。乾燥に弱く葉水が効果的。' },
+  aloe: { name:'アロエ', emoji:'🌿', diff:'★☆☆', light:'明るい場所', watering: { spring:[14,21], summer:[10,14], fall:[21,30], winter:[30,45] }, tips:'乾燥に非常に強い。冬は1ヶ月に1回程度でOK。' },
+  aglaonema: { name:'アグラオネマ', emoji:'🍀', diff:'★☆☆', light:'半日陰〜日陰OK', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'低光量でも育てやすい。定期的な葉水で葉がきれいになる。' },
+  custom: { name:'カスタム', emoji:'🌱', diff:'—', light:'—', watering: { spring:[7,10], summer:[5,7], fall:[10,14], winter:[14,21] }, tips:'植物に合わせて水やり頻度を調整してください。' },
+};
+
+const SEASONS = {
+  spring: { label:'春（3〜5月）', emoji:'🌸' },
+  summer: { label:'夏（6〜8月）', emoji:'☀️' },
+  fall: { label:'秋（9〜11月）', emoji:'🍂' },
+  winter: { label:'冬（12〜2月）', emoji:'❄️' },
+};
+
+let myPlants = [];
+try { myPlants = JSON.parse(localStorage.getItem('pw_plants') || '[]'); } catch(e) {}
+
+function getCurrentSeason() {
+  const m = new Date().getMonth() + 1;
+  if (m >= 3 && m <= 5) return 'spring';
+  if (m >= 6 && m <= 8) return 'summer';
+  if (m >= 9 && m <= 11) return 'fall';
+  return 'winter';
+}
+
+function updatePlantInfo() {
+  const type = document.getElementById('plantType').value;
+  const p = PLANTS[type];
+  const season = getCurrentSeason();
+  const [minD, maxD] = p.watering[season];
+  document.getElementById('plantInfoCard').innerHTML = `
+    <div class="pic-row">
+      <span>${p.emoji}</span>
+      <div>
+        <div class="pic-name">${p.name}</div>
+        <div class="pic-meta">難易度: ${p.diff} ・ 光: ${p.light}</div>
+        <div class="pic-water">現在（${SEASONS[season].label}）の水やり: <strong>毎${minD}〜${maxD}日</strong></div>
+        <div class="pic-tips">💡 ${p.tips}</div>
+      </div>
+    </div>
+  `;
+}
+
+function addPlant() {
+  const type = document.getElementById('plantType').value;
+  const nickname = document.getElementById('plantName').value.trim();
+  const p = PLANTS[type];
+  myPlants.push({ id: Date.now(), type, nickname: nickname || p.name, lastWatered: new Date().toISOString().split('T')[0] });
+  save();
+  document.getElementById('plantName').value = '';
+  renderPlants();
+}
+
+function waterPlant(id) {
+  const p = myPlants.find(p => p.id === id);
+  if (p) { p.lastWatered = new Date().toISOString().split('T')[0]; save(); renderPlants(); }
+}
+
+function deletePlant(id) {
+  myPlants = myPlants.filter(p => p.id !== id);
+  save();
+  renderPlants();
+}
+
+function save() { try { localStorage.setItem('pw_plants', JSON.stringify(myPlants)); } catch(e) {} }
+
+function getDaysLeft(lastWatered, type) {
+  const season = getCurrentSeason();
+  const [minD] = PLANTS[type]?.watering?.[season] || [7, 10];
+  const last = new Date(lastWatered); last.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysSince = Math.round((today - last) / 86400000);
+  return minD - daysSince;
+}
+
+function renderPlants() {
+  const season = getCurrentSeason();
+  document.getElementById('seasonNote').innerHTML = `<span>${SEASONS[season].emoji} 現在の季節：${SEASONS[season].label}</span>`;
+
+  const list = document.getElementById('plantList');
+  if (!myPlants.length) {
+    list.innerHTML = '<div class="empty-msg">植物を追加してください</div>';
+    return;
+  }
+
+  const sorted = [...myPlants].sort((a, b) => getDaysLeft(a.lastWatered, a.type) - getDaysLeft(b.lastWatered, b.type));
+
+  list.innerHTML = sorted.map(plant => {
+    const p = PLANTS[plant.type] || PLANTS.custom;
+    const daysLeft = getDaysLeft(plant.lastWatered, plant.type);
+    const [minD, maxD] = p.watering[season];
+    let status, statusColor;
+    if (daysLeft <= 0) { status = '今日水やりを！'; statusColor = '#ef4444'; }
+    else if (daysLeft <= 1) { status = '明日水やり'; statusColor = '#f97316'; }
+    else if (daysLeft <= 3) { status = daysLeft + '日後'; statusColor = '#fbbf24'; }
+    else { status = daysLeft + '日後'; statusColor = '#34d399'; }
+
+    return `<div class="plant-card" style="border-color:${statusColor}20">
+      <div class="pc-left">
+        <div class="pc-emoji">${p.emoji}</div>
+        <div class="pc-info">
+          <div class="pc-name">${plant.nickname}</div>
+          <div class="pc-type">${p.name} ・ 毎${minD}〜${maxD}日</div>
+          <div class="pc-last">最後の水やり: ${plant.lastWatered}</div>
+        </div>
+      </div>
+      <div class="pc-right">
+        <div class="pc-status" style="color:${statusColor}">${status}</div>
+        <button class="water-btn" onclick="waterPlant(${plant.id})">💧 水やり</button>
+        <button class="del-btn" onclick="deletePlant(${plant.id})">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+updatePlantInfo();
+renderPlants();
+</script>
+
+<style>
+.pw-wrap { max-width: 750px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.pw-header { text-align: center; margin-bottom: 2rem; }
+.pw-title { font-size: 1.8rem; font-weight: 800; color: var(--gray-0); }
+.pw-sub { color: var(--gray-400); margin-top: .3rem; }
+.pw-add-form { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+.pw-form-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; }
+.pw-form-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
+.pw-select { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .85rem; }
+.pw-input { flex: 1; min-width: 150px; background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .7rem; font-size: .9rem; }
+.pw-btn { padding: .5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.pw-btn.green { background: #16a34a; color: #fff; }
+.plant-info-card { background: var(--gray-900); border-radius: 10px; padding: .8rem; }
+.pic-row { display: flex; gap: .8rem; align-items: flex-start; }
+.pic-row > span { font-size: 2rem; }
+.pic-name { font-weight: 700; color: var(--gray-100); }
+.pic-meta { font-size: .78rem; color: var(--gray-400); margin: .2rem 0; }
+.pic-water { font-size: .85rem; color: var(--gray-200); margin-bottom: .3rem; }
+.pic-tips { font-size: .78rem; color: #fbbf24; }
+.pw-season-note { background: var(--gray-800); border-radius: 8px; padding: .5rem .9rem; font-size: .85rem; color: var(--gray-300); margin-bottom: 1rem; }
+.empty-msg { text-align: center; color: var(--gray-400); padding: 2rem; background: var(--gray-800); border-radius: 12px; }
+.pw-plant-list { display: flex; flex-direction: column; gap: .7rem; }
+.plant-card { background: var(--gray-800); border: 1.5px solid; border-radius: 12px; padding: .9rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: .7rem; }
+.pc-left { display: flex; align-items: center; gap: .7rem; flex: 1; }
+.pc-emoji { font-size: 1.8rem; }
+.pc-name { font-weight: 700; color: var(--gray-100); }
+.pc-type { font-size: .75rem; color: var(--gray-400); margin: .1rem 0; }
+.pc-last { font-size: .7rem; color: var(--gray-500); }
+.pc-right { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; }
+.pc-status { font-size: .9rem; font-weight: 800; }
+.water-btn { padding: .3rem .7rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: .8rem; font-weight: 600; }
+.del-btn { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: .9rem; }
+.del-btn:hover { color: #dc2626; }
+</style>
+</BaseLayout>
