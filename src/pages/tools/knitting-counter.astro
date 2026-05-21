@@ -241,12 +241,13 @@ renderSaved(); renderProgress(); renderLog(); renderPatterns();
 .kc-sub { color: var(--gray-400); margin-top: .3rem; }
 .kc-body { display: grid; grid-template-columns: 220px 1fr 240px; gap: 1rem; }
 @media (max-width: 800px) { .kc-body { grid-template-columns: 1fr; } }
+.kc-left, .kc-center, .kc-right { min-width: 0; overflow: hidden; }
 .kc-card, .kc-saved-card, .kc-counter-card, .kc-progress-card, .kc-log-card, .kc-pattern-card { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 14px; padding: 1.1rem; margin-bottom: .8rem; }
 .kc-card-title { font-weight: 700; color: var(--gray-200); margin-bottom: .8rem; font-size: .9rem; }
 .kc-fg { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
 .kc-label { font-size: .75rem; color: var(--gray-400); }
 .kc-input { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .5rem .6rem; font-size: .9rem; width: 100%; box-sizing: border-box; }
-.kc-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; min-width: 50px; flex: 1; }
+.kc-input-sm { background: var(--gray-900); border: 1.5px solid var(--gray-700); border-radius: 8px; color: var(--gray-100); padding: .4rem .5rem; font-size: .82rem; min-width: 0; flex: 1; width: 0; }
 .kc-btn { width: 100%; padding: .5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .85rem; margin-top: .3rem; }
 .kc-btn.purple { background: #7c3aed; color: #fff; }
 .kc-btn.green { background: #16a34a; color: #fff; }
