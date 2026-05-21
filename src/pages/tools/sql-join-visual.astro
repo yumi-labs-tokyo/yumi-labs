@@ -1,0 +1,468 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout title="SQL JOIN種類ビジュアル学習" description="INNER/LEFT/RIGHT/FULLをベン図でアニメ表示。サンプルデータで結果をリアルタイムプレビュー。">
+<style>
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+  .hero { text-align: center; margin-bottom: 28px; }
+  .hero-title { font-size: 2rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.92rem; }
+
+  /* JOIN selector */
+  .join-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 28px; }
+  .join-btn {
+    padding: 14px 10px; border-radius: 12px; border: 2px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; text-align: center;
+    transition: all .2s; font-weight: 700;
+  }
+  .join-btn:hover { border-color: #38bdf8; color: #e2e8f0; }
+  .join-btn.active { border-color: #38bdf8; background: #0c2233; color: #38bdf8; }
+  .join-btn-name { font-size: 1rem; margin-bottom: 4px; }
+  .join-btn-desc { font-size: 0.72rem; color: inherit; opacity: .75; }
+
+  /* venn diagram */
+  .venn-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+  .venn-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 16px; text-align: center; }
+  .venn-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  #venn-svg { flex-shrink: 0; }
+  .venn-legend { flex: 1; min-width: 200px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #94a3b8; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .join-sql-box {
+    background: #0f172a; border-radius: 10px; padding: 14px 16px;
+    font-family: 'Courier New', monospace; font-size: 0.9rem; color: #e2e8f0;
+    margin-top: 14px; line-height: 1.8; position: relative;
+  }
+  .sql-kw { color: #38bdf8; font-weight: 700; }
+  .sql-tbl { color: #a78bfa; }
+  .sql-cmt { color: #475569; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    padding: 3px 10px; border-radius: 6px; border: 1px solid #334155;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.72rem;
+  }
+  .copy-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+
+  /* data tables */
+  .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media(max-width:580px){ .tables-row { grid-template-columns: 1fr; } }
+  .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+  .table-name { font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 10px; font-family: 'Courier New', monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { background: #0f172a; color: #64748b; padding: 6px 10px; text-align: left; font-weight: 600; }
+  td { padding: 6px 10px; border-bottom: 1px solid #1e293b; color: #cbd5e1; font-family: 'Courier New', monospace; }
+  tr:last-child td { border-bottom: none; }
+  td.hl-left  { background: rgba(56,189,248,.12); }
+  td.hl-right { background: rgba(167,139,250,.12); }
+  td.null-val { color: #475569; font-style: italic; }
+
+  /* result */
+  .result-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+  .result-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+  .result-count { display: inline-block; padding: 3px 12px; border-radius: 99px; background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.75rem; font-weight: 700; margin-left: 8px; }
+  .result-table-wrap { overflow-x: auto; }
+  .result-row-left  td { background: rgba(56,189,248,.07); }
+  .result-row-right td { background: rgba(167,139,250,.07); }
+  .result-row-both  td { background: rgba(52,211,153,.07); }
+
+  /* explanation */
+  .explain-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+  .explain-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 10px; }
+  .explain-body { color: #94a3b8; font-size: 0.88rem; line-height: 1.8; }
+  .explain-body strong { color: #e2e8f0; }
+
+  /* dataset switcher */
+  .dataset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .dataset-label { font-size: 0.78rem; color: #64748b; }
+  .dataset-btn {
+    padding: 5px 12px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 0.78rem;
+    transition: all .15s;
+  }
+  .dataset-btn.active { border-color: #38bdf8; color: #38bdf8; }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+  .anim { animation: fadeIn .3s ease; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">🗃️ SQL JOIN種類ビジュアル学習</div>
+    <div class="hero-sub">ベン図アニメーション × サンプルデータで JOIN を直感的に理解</div>
+  </div>
+
+  <!-- JOIN selector -->
+  <div class="join-grid" id="join-grid"></div>
+
+  <!-- venn diagram -->
+  <div class="venn-section">
+    <div class="venn-title">ベン図</div>
+    <div class="venn-wrap">
+      <svg id="venn-svg" width="240" height="160" viewBox="0 0 240 160"></svg>
+      <div class="venn-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>テーブル A のみ</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>テーブル B のみ</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>A と B の共通部分</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#334155"></div>結果に含まれない</div>
+      </div>
+    </div>
+    <div class="join-sql-box" id="join-sql-box">
+      <button class="copy-btn" onclick="copySql()">コピー</button>
+      <span id="join-sql-text"></span>
+    </div>
+  </div>
+
+  <!-- dataset switcher -->
+  <div class="dataset-row">
+    <span class="dataset-label">サンプルデータ：</span>
+    <div id="dataset-btns"></div>
+  </div>
+
+  <!-- source tables -->
+  <div class="tables-row" id="tables-row"></div>
+
+  <!-- result -->
+  <div class="result-card anim" id="result-card">
+    <div class="result-title" id="result-title">結果</div>
+    <div class="result-table-wrap" id="result-table-wrap"></div>
+  </div>
+
+  <!-- explanation -->
+  <div class="explain-card">
+    <div class="explain-title">📖 解説</div>
+    <div class="explain-body" id="explain-body"></div>
+  </div>
+</div>
+
+<script is:inline>
+// ======= JOIN TYPES =======
+const JOINS = [
+  {
+    id: 'inner',
+    name: 'INNER JOIN',
+    desc: '両方に一致する行のみ',
+    venn: { left: false, center: true, right: false },
+    color: '#34d399',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> *\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">INNER JOIN</span> <span class="sql-tbl">${b}</span>\n  <span class="sql-kw">ON</span> ${a}.${k} = ${b}.${k};`,
+    sqlRaw: (a, b, k) => `SELECT *\nFROM ${a}\nINNER JOIN ${b}\n  ON ${a}.${k} = ${b}.${k};`,
+    explain: '<strong>INNER JOIN</strong> は、両方のテーブルに一致するキーが存在する行だけを返します。どちらかにしかない行は結果に含まれません。最もよく使われるJOINです。<br><br>使い所：注文のある顧客だけ取得したい、製品カテゴリが存在する商品だけ取得したい、など。',
+    filter: (left, right, lk, rk) => {
+      const res = [];
+      left.forEach(l => {
+        right.forEach(r => {
+          if (l[lk] === r[rk]) res.push({ ...l, ...prefixObj(r, 'b_'), _src: 'both' });
+        });
+      });
+      return res;
+    },
+  },
+  {
+    id: 'left',
+    name: 'LEFT JOIN',
+    desc: '左テーブル全行 + 一致する右行',
+    venn: { left: true, center: true, right: false },
+    color: '#38bdf8',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> *\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">LEFT JOIN</span> <span class="sql-tbl">${b}</span>\n  <span class="sql-kw">ON</span> ${a}.${k} = ${b}.${k};`,
+    sqlRaw: (a, b, k) => `SELECT *\nFROM ${a}\nLEFT JOIN ${b}\n  ON ${a}.${k} = ${b}.${k};`,
+    explain: '<strong>LEFT JOIN</strong>（LEFT OUTER JOIN）は、左テーブルの全行を返します。右テーブルに一致する行がない場合は NULL が入ります。<br><br>使い所：注文していない顧客も含めて全顧客を取得したい、割り当て先がないタスクも表示したい、など。',
+    filter: (left, right, lk, rk) => {
+      return left.map(l => {
+        const r = right.find(r => r[rk] === l[lk]);
+        return r ? { ...l, ...prefixObj(r, 'b_'), _src: 'both' }
+                 : { ...l, ...nullObj(right[0], 'b_'), _src: 'left' };
+      });
+    },
+  },
+  {
+    id: 'right',
+    name: 'RIGHT JOIN',
+    desc: '右テーブル全行 + 一致する左行',
+    venn: { left: false, center: true, right: true },
+    color: '#a78bfa',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> *\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">RIGHT JOIN</span> <span class="sql-tbl">${b}</span>\n  <span class="sql-kw">ON</span> ${a}.${k} = ${b}.${k};`,
+    sqlRaw: (a, b, k) => `SELECT *\nFROM ${a}\nRIGHT JOIN ${b}\n  ON ${a}.${k} = ${b}.${k};`,
+    explain: '<strong>RIGHT JOIN</strong>（RIGHT OUTER JOIN）は、右テーブルの全行を返します。LEFT JOIN の左右を逆にしたもの。LEFT JOIN でテーブルの順序を入れ替えると同じ結果が得られるため、実務では LEFT JOIN を統一して使うチームが多いです。',
+    filter: (left, right, lk, rk) => {
+      return right.map(r => {
+        const l = left.find(l => l[lk] === r[rk]);
+        return l ? { ...l, ...prefixObj(r, 'b_'), _src: 'both' }
+                 : { ...nullObj(left[0], ''), ...prefixObj(r, 'b_'), _src: 'right' };
+      });
+    },
+  },
+  {
+    id: 'full',
+    name: 'FULL OUTER JOIN',
+    desc: '両テーブルの全行（NULL補完）',
+    venn: { left: true, center: true, right: true },
+    color: '#fb923c',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> *\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">FULL OUTER JOIN</span> <span class="sql-tbl">${b}</span>\n  <span class="sql-kw">ON</span> ${a}.${k} = ${b}.${k};`,
+    sqlRaw: (a, b, k) => `SELECT *\nFROM ${a}\nFULL OUTER JOIN ${b}\n  ON ${a}.${k} = ${b}.${k};`,
+    explain: '<strong>FULL OUTER JOIN</strong> は、両テーブルの全行を返します。一方にしか存在しない行には NULL が補完されます。<br><br>使い所：2つのデータソースの差分チェック、マスターとトランザクションの突合、など。MySQLは FULL JOIN 非サポートのため LEFT JOIN UNION RIGHT JOIN で代替。',
+    filter: (left, right, lk, rk) => {
+      const res = [];
+      const matched = new Set();
+      left.forEach(l => {
+        const r = right.find(r => r[rk] === l[lk]);
+        if (r) { res.push({ ...l, ...prefixObj(r, 'b_'), _src: 'both' }); matched.add(r[rk]); }
+        else res.push({ ...l, ...nullObj(right[0], 'b_'), _src: 'left' });
+      });
+      right.forEach(r => {
+        if (!matched.has(r[rk])) res.push({ ...nullObj(left[0], ''), ...prefixObj(r, 'b_'), _src: 'right' });
+      });
+      return res;
+    },
+  },
+  {
+    id: 'left-only',
+    name: 'LEFT ONLY',
+    desc: '左テーブルにのみ存在する行',
+    venn: { left: true, center: false, right: false },
+    color: '#38bdf8',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> ${a}.*\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">LEFT JOIN</span> <span class="sql-tbl">${b}</span>\n  <span class="sql-kw">ON</span> ${a}.${k} = ${b}.${k}\n<span class="sql-kw">WHERE</span> ${b}.${k} <span class="sql-kw">IS NULL</span>; <span class="sql-cmt">-- 右にない行だけ</span>`,
+    sqlRaw: (a, b, k) => `SELECT ${a}.*\nFROM ${a}\nLEFT JOIN ${b}\n  ON ${a}.${k} = ${b}.${k}\nWHERE ${b}.${k} IS NULL;`,
+    explain: '<strong>LEFT JOIN + WHERE IS NULL</strong> は、左テーブルにしか存在しない行を取得するパターンです。「まだ注文していない顧客」「担当がいないタスク」など差分抽出によく使われます。',
+    filter: (left, right, lk, rk) => {
+      return left.filter(l => !right.find(r => r[rk] === l[lk]))
+        .map(l => ({ ...l, ...nullObj(right[0], 'b_'), _src: 'left' }));
+    },
+  },
+  {
+    id: 'cross',
+    name: 'CROSS JOIN',
+    desc: '全組み合わせ（直積）',
+    venn: { left: true, center: true, right: true },
+    color: '#f472b6',
+    sql: (a, b, k) => `<span class="sql-kw">SELECT</span> *\n<span class="sql-kw">FROM</span> <span class="sql-tbl">${a}</span>\n<span class="sql-kw">CROSS JOIN</span> <span class="sql-tbl">${b}</span>; <span class="sql-cmt">-- ON句なし</span>`,
+    sqlRaw: (a, b, k) => `SELECT *\nFROM ${a}\nCROSS JOIN ${b};`,
+    explain: '<strong>CROSS JOIN</strong> は、左テーブルの各行と右テーブルの全行を組み合わせた直積を返します。ON 句が不要。行数は「左の行数 × 右の行数」になります。<br><br>使い所：全サイズ×全色の組み合わせ一覧、カレンダー生成、など。大きいテーブル同士では結果が爆発するので注意。',
+    filter: (left, right, lk, rk) => {
+      const res = [];
+      left.forEach(l => right.forEach(r => res.push({ ...l, ...prefixObj(r, 'b_'), _src: 'both' })));
+      return res;
+    },
+  },
+];
+
+// ======= DATASETS =======
+const DATASETS = [
+  {
+    id: 'order',
+    label: '顧客 × 注文',
+    a: { name: 'customers', key: 'id', rows: [
+      { id: 1, name: '田中太郎', city: '東京' },
+      { id: 2, name: '鈴木花子', city: '大阪' },
+      { id: 3, name: '佐藤一郎', city: '名古屋' },
+      { id: 4, name: '山田二郎', city: '福岡' },
+    ]},
+    b: { name: 'orders', key: 'customer_id', rows: [
+      { order_id: 101, customer_id: 1, item: 'ノートPC', amount: 98000 },
+      { order_id: 102, customer_id: 2, item: 'マウス',   amount: 3500 },
+      { order_id: 103, customer_id: 1, item: 'キーボード', amount: 8000 },
+      { order_id: 104, customer_id: 5, item: 'モニター', amount: 45000 },
+    ]},
+  },
+  {
+    id: 'product',
+    label: '商品 × カテゴリ',
+    a: { name: 'products', key: 'category_id', rows: [
+      { product_id: 1, product_name: 'りんご',   category_id: 10 },
+      { product_id: 2, product_name: 'バナナ',   category_id: 10 },
+      { product_id: 3, product_name: 'ノートPC', category_id: 20 },
+      { product_id: 4, product_name: '幻の商品', category_id: 99 },
+    ]},
+    b: { name: 'categories', key: 'category_id', rows: [
+      { category_id: 10, category_name: '食品' },
+      { category_id: 20, category_name: 'PC機器' },
+      { category_id: 30, category_name: '家電' },
+    ]},
+  },
+  {
+    id: 'dept',
+    label: '社員 × 部署',
+    a: { name: 'employees', key: 'dept_id', rows: [
+      { emp_id: 1, emp_name: '山本',   dept_id: 'A' },
+      { emp_id: 2, emp_name: '中村',   dept_id: 'B' },
+      { emp_id: 3, emp_name: '小林',   dept_id: 'C' },
+      { emp_id: 4, emp_name: '加藤',   dept_id: null },
+    ]},
+    b: { name: 'departments', key: 'dept_id', rows: [
+      { dept_id: 'A', dept_name: '開発部' },
+      { dept_id: 'B', dept_name: '営業部' },
+      { dept_id: 'D', dept_name: '総務部' },
+    ]},
+  },
+];
+
+// ======= UTILS =======
+function prefixObj(obj, prefix) {
+  const r = {};
+  Object.keys(obj).forEach(k => { r[prefix + k] = obj[k]; });
+  return r;
+}
+function nullObj(template, prefix) {
+  const r = {};
+  if (!template) return r;
+  Object.keys(template).forEach(k => { r[prefix + k] = null; });
+  return r;
+}
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ======= STATE =======
+let currentJoin = 'inner';
+let currentDataset = 'order';
+
+// ======= VENN SVG =======
+function renderVenn(join) {
+  const svg = document.getElementById('venn-svg');
+  const { left, center, right } = join.venn;
+  const CX_L = 85, CX_R = 155, CY = 80, R = 65;
+  const colLeft   = left   ? '#38bdf8' : '#1e293b';
+  const colCenter = center ? (left || right ? join.color : join.color) : '#1e293b';
+  const colRight  = right  ? '#a78bfa' : '#1e293b';
+  const opacity = 0.55;
+
+  svg.innerHTML = `
+    <defs>
+      <clipPath id="clip-left"><circle cx="${CX_L}" cy="${CY}" r="${R}"/></clipPath>
+      <clipPath id="clip-right"><circle cx="${CX_R}" cy="${CY}" r="${R}"/></clipPath>
+    </defs>
+    <!-- left base -->
+    <circle cx="${CX_L}" cy="${CY}" r="${R}" fill="${colLeft}" opacity="${left||center?opacity:0.1}" stroke="#334155" stroke-width="1.5"/>
+    <!-- right base -->
+    <circle cx="${CX_R}" cy="${CY}" r="${R}" fill="${colRight}" opacity="${right||center?opacity:0.1}" stroke="#334155" stroke-width="1.5"/>
+    <!-- center overlap: clip left circle to right, fill center color -->
+    <circle cx="${CX_R}" cy="${CY}" r="${R}" fill="${colCenter}" opacity="${center?opacity:0.0}" clip-path="url(#clip-left)"/>
+    <!-- labels -->
+    <text x="${CX_L-16}" y="${CY+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#e2e8f0">A</text>
+    <text x="${CX_R+16}" y="${CY+5}" text-anchor="middle" font-size="13" font-weight="700" fill="#e2e8f0">B</text>
+  `;
+}
+
+// ======= JOIN GRID =======
+function buildJoinGrid() {
+  document.getElementById('join-grid').innerHTML = JOINS.map(j =>
+    `<button class="join-btn${j.id === currentJoin ? ' active' : ''}" onclick="selectJoin('${j.id}')">
+      <div class="join-btn-name">${j.name}</div>
+      <div class="join-btn-desc">${j.desc}</div>
+    </button>`
+  ).join('');
+}
+
+// ======= DATASET BTNS =======
+function buildDatasetBtns() {
+  document.getElementById('dataset-btns').innerHTML = DATASETS.map(d =>
+    `<button class="dataset-btn${d.id === currentDataset ? ' active' : ''}" onclick="selectDataset('${d.id}')">${d.label}</button>`
+  ).join('');
+}
+
+// ======= SOURCE TABLES =======
+function renderSourceTables(ds) {
+  const renderTable = (tbl, sideClass) => {
+    const keys = Object.keys(tbl.rows[0] || {});
+    return `<div class="table-card">
+      <div class="table-name">${tbl.name}</div>
+      <table>
+        <thead><tr>${keys.map(k => `<th>${escHtml(k)}</th>`).join('')}</tr></thead>
+        <tbody>${tbl.rows.map(r =>
+          `<tr>${keys.map(k =>
+            `<td class="${sideClass}${r[k]===null?'null-val':''}">${r[k]===null?'NULL':escHtml(r[k])}</td>`
+          ).join('')}</tr>`
+        ).join('')}</tbody>
+      </table>
+    </div>`;
+  };
+  document.getElementById('tables-row').innerHTML =
+    renderTable(ds.a, 'hl-left ') + renderTable(ds.b, 'hl-right ');
+}
+
+// ======= RESULT TABLE =======
+function renderResult(join, ds) {
+  const lk = ds.a.key;
+  const rk = ds.b.key;
+
+  // CROSS JOIN: limit display rows
+  let rows = join.filter(ds.a.rows, ds.b.rows, lk, rk);
+  const total = rows.length;
+  if (join.id === 'cross' && rows.length > 12) rows = rows.slice(0, 12);
+
+  if (rows.length === 0) {
+    document.getElementById('result-table-wrap').innerHTML = '<p style="color:#475569;text-align:center;padding:16px">結果が0行です</p>';
+    document.getElementById('result-title').innerHTML = `結果 <span class="result-count">0 行</span>`;
+    return;
+  }
+
+  const keys = Object.keys(rows[0]).filter(k => k !== '_src');
+  const rowsHtml = rows.map(r => {
+    const cls = r._src === 'left' ? 'result-row-left' : r._src === 'right' ? 'result-row-right' : 'result-row-both';
+    return `<tr class="${cls}">${keys.map(k =>
+      `<td class="${r[k]===null?'null-val':''}">${r[k]===null?'NULL':escHtml(r[k])}</td>`
+    ).join('')}</tr>`;
+  }).join('');
+
+  const truncNote = total > rows.length ? `<div style="color:#64748b;font-size:.75rem;margin-top:8px">※ 表示は先頭${rows.length}行（全${total}行）</div>` : '';
+
+  document.getElementById('result-table-wrap').innerHTML = `
+    <table>
+      <thead><tr>${keys.map(k=>`<th>${escHtml(k)}</th>`).join('')}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>${truncNote}`;
+  document.getElementById('result-title').innerHTML = `結果 <span class="result-count">${total} 行</span>`;
+}
+
+// ======= SQL BOX =======
+function renderSql(join, ds) {
+  document.getElementById('join-sql-text').innerHTML = join.sql(ds.a.name, ds.b.name, ds.a.key);
+}
+
+function copySql() {
+  const join = JOINS.find(j => j.id === currentJoin);
+  const ds = DATASETS.find(d => d.id === currentDataset);
+  const text = join.sqlRaw(ds.a.name, ds.b.name, ds.a.key);
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+  });
+}
+
+// ======= EXPLAIN =======
+function renderExplain(join) {
+  document.getElementById('explain-body').innerHTML = join.explain;
+}
+
+// ======= MAIN RENDER =======
+function renderAll() {
+  const join = JOINS.find(j => j.id === currentJoin);
+  const ds   = DATASETS.find(d => d.id === currentDataset);
+  renderVenn(join);
+  renderSql(join, ds);
+  renderSourceTables(ds);
+  renderResult(join, ds);
+  renderExplain(join);
+  // animate result
+  const rc = document.getElementById('result-card');
+  rc.classList.remove('anim');
+  void rc.offsetWidth;
+  rc.classList.add('anim');
+}
+
+function selectJoin(id) {
+  currentJoin = id;
+  buildJoinGrid();
+  renderAll();
+}
+
+function selectDataset(id) {
+  currentDataset = id;
+  buildDatasetBtns();
+  renderAll();
+}
+
+buildJoinGrid();
+buildDatasetBtns();
+renderAll();
+</script>
+</BaseLayout>

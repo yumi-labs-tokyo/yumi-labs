@@ -331,7 +331,7 @@ export const tools: Tool[] = [
 		id: 50, slug: 'sql-join-visual',
 		name: 'SQL JOIN種類ビジュアル学習',
 		description: 'INNER/LEFT/FULLをベン図でアニメ表示、サンプルデータで結果プレビュー。',
-		emoji: '🗃️', category: 'learning', status: 'coming-soon',
+		emoji: '🗃️', category: 'learning', badge: 'New', status: 'available',
 	},
 	{
 		id: 51, slug: 'speed-reading',
