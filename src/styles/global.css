@@ -257,8 +257,13 @@ h5 {
 }
 
 
+/* ===== ツールページ共通ラッパー ===== */
+/* padding-bottom: 3rem = ツールUIの最下部ボタンと.tool-seoの間の最低保証余白 */
+.page-wrap { padding-bottom: 3rem; }
+
 /* ===== SEO Content Section (共通) ===== */
-.tool-seo { max-width: 900px; margin: 3rem auto 0; padding: 1.5rem 1rem 4rem; border-top: 1.5px solid var(--gray-700); }
+/* margin-top: 6rem = ツールUIと広告挿入ゾーンの間に十分な余白を確保（AdSense偶発クリック対策） */
+.tool-seo { max-width: 900px; margin: 6rem auto 0; padding: 2.5rem 1rem 4rem; border-top: 1.5px solid var(--gray-700); }
 .tool-seo .seo-inner { display: flex; flex-direction: column; gap: 1.2rem; }
 .tool-seo .seo-block { background: var(--gray-800); border: 1.5px solid var(--gray-700); border-radius: 12px; padding: 1.3rem 1.5rem; }
 .tool-seo .seo-h2 { font-size: 1.05rem; font-weight: 800; color: var(--gray-100); margin: 0 0 .7rem; padding-bottom: .5rem; border-bottom: 1px solid var(--gray-700); }
