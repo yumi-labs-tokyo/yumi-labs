@@ -7,12 +7,45 @@ interface Props {
 }
 
 const {
-	title = 'yumi-Labs — Creative Developer & Designer',
-	description = 'クリエイティブデベロッパー & デザイナー yumi のポートフォリオサイト',
+	title = 'yumi-Labs — 無料Webツール集',
+	description = '生活・仕事・趣味に使える無料ブラウザツール100本。登録不要・データは手元に。',
 } = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, 'https://yumi-labs.com').href;
 ---
 
-<!-- Google tag (gtag.js) -->
+<!-- 1. charset は最優先で最初に -->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- 2. 基本SEOタグ -->
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+
+<!-- 3. OGタグ（name属性と混在させない） -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="yumi-Labs" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:image" content="https://yumi-labs.com/assets/og-default.png" />
+<meta property="og:locale" content="ja_JP" />
+
+<!-- 4. その他メタ -->
+<meta name="generator" content={Astro.generator} />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" href="/favicon.ico" />
+
+<!-- 5. フォント -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+	href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
+	rel="stylesheet"
+/>
+
+<!-- 6. Google Analytics（charsetの後に配置） -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-PQPCZWCFNJ"></script>
 <script is:inline>
   window.dataLayer = window.dataLayer || [];
@@ -21,22 +54,8 @@ const {
   gtag('config', 'G-PQPCZWCFNJ');
 </script>
 
-<meta charset="UTF-8" />
-<meta name="description" property="og:description" content={description} />
-<meta name="viewport" content="width=device-width" />
-<meta name="generator" content={Astro.generator} />
-<title>{title}</title>
-
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" href="/favicon.ico" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-	href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
-	rel="stylesheet"
-/>
+<!-- 7. ダークモード（ブロッキングスクリプト） -->
 <script is:inline>
-	// This code is inlined in the head to make dark mode instant & blocking.
 	const getThemePreference = () => {
 		if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
 			return localStorage.getItem('theme');
@@ -47,7 +66,6 @@ const {
 	document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
 
 	if (typeof localStorage !== 'undefined') {
-		// Watch the document element and persist user preference when it changes.
 		const observer = new MutationObserver(() => {
 			const isDark = document.documentElement.classList.contains('theme-dark');
 			localStorage.setItem('theme', isDark ? 'dark' : 'light');
