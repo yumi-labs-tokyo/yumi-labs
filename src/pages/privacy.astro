@@ -1,0 +1,319 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="プライバシーポリシー — yumi-Labs"
+  description="yumi-Labsのプライバシーポリシー。Cookie・広告・アクセス解析・個人情報の取り扱いについて説明します。"
+>
+  <div class="wrapper priv-wrap">
+    <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
+
+    <header class="priv-header">
+      <h1>プライバシーポリシー</h1>
+      <p class="updated">最終更新日：2026年5月22日</p>
+    </header>
+
+    <div class="toc-card">
+      <p class="toc-title">目次</p>
+      <ol class="toc-list">
+        <li><a href="#basic">基本方針</a></li>
+        <li><a href="#collect">収集する情報</a></li>
+        <li><a href="#analytics">アクセス解析（Google アナリティクス）</a></li>
+        <li><a href="#ads">広告配信（Google AdSense）</a></li>
+        <li><a href="#affiliate">アフィリエイト</a></li>
+        <li><a href="#cookie">Cookie の管理</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
+      </ol>
+    </div>
+
+    <article class="priv-body">
+
+      <!-- 1 -->
+      <section id="basic" class="priv-section">
+        <h2><span class="num">01</span>基本方針</h2>
+        <p>
+          yumi-Labs（以下「当サイト」）は、ユーザーのプライバシーを尊重し、
+          個人情報の保護に努めます。
+          当サイトのツールに入力されたテキスト・個人情報をサーバーに保存したり、
+          第三者に販売・提供することは一切ありません。
+        </p>
+        <p>
+          本ポリシーは、当サイトが利用する外部サービス（広告・アクセス解析）における
+          データ収集の仕組みと、ユーザーが選択できる設定について説明するものです。
+        </p>
+      </section>
+
+      <!-- 2 -->
+      <section id="collect" class="priv-section">
+        <h2><span class="num">02</span>収集する情報</h2>
+        <p>当サイト自体がサーバーサイドで収集・保存する個人情報はありません。</p>
+        <p>ただし、以下の外部サービスを通じて匿名の利用統計データが収集される場合があります。</p>
+        <ul class="info-list">
+          <li>ページビュー数・滞在時間などのアクセスログ（Google アナリティクス）</li>
+          <li>広告の表示・クリックに関するデータ（Google AdSense）</li>
+          <li>アフィリエイトリンクのクリック情報（各アフィリエイトサービス）</li>
+        </ul>
+        <p>
+          AI機能を利用するツールでは、入力内容をリアルタイムに
+          Anthropic社のClaude APIへ送信しますが、当サイトはそのデータを保存・利用しません。
+          APIの利用規約は <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic のプライバシーポリシー</a> に準拠します。
+        </p>
+      </section>
+
+      <!-- 3 -->
+      <section id="analytics" class="priv-section">
+        <h2><span class="num">03</span>アクセス解析（Google アナリティクス）</h2>
+        <p>
+          当サイトでは、サイトの改善を目的として
+          <strong>Google アナリティクス 4（GA4）</strong>を使用しています。
+          このサービスはトラフィックデータの収集のために Cookie を使用します。
+        </p>
+        <p>
+          収集されるデータは匿名で処理され、個人を特定するものではありません。
+          データは Google のプライバシーポリシーに基づいて管理されます。
+        </p>
+        <div class="link-card">
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
+            Google プライバシーポリシー →
+          </a>
+        </div>
+        <p>
+          Google アナリティクスによるデータ収集を無効にしたい場合は、
+          <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google アナリティクス オプトアウト アドオン</a>
+          をご利用ください。
+        </p>
+      </section>
+
+      <!-- 4 -->
+      <section id="ads" class="priv-section">
+        <h2><span class="num">04</span>広告配信（Google AdSense）</h2>
+        <p>
+          当サイトでは、<strong>Google AdSense</strong>（Google LLC）による
+          広告配信サービスを利用しています。
+          Google AdSense は、ユーザーの興味・関心に合った広告を表示するために
+          Cookie や広告識別子を使用することがあります。
+        </p>
+        <p>
+          Google による広告 Cookie の使用を無効にするには、
+          <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">広告設定ページ</a>
+          からオプトアウトできます。
+          また <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info</a>
+          から第三者配信事業者のオプトアウトも可能です。
+        </p>
+        <div class="link-card">
+          <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">
+            Google の広告に関するポリシー →
+          </a>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="affiliate" class="priv-section">
+        <h2><span class="num">05</span>アフィリエイト</h2>
+        <p>
+          当サイトの一部のページには、アフィリエイトリンクが含まれる場合があります。
+          ユーザーがリンクを経由して商品・サービスを購入した場合、
+          当サイトに紹介料が支払われることがあります。
+        </p>
+        <p>
+          アフィリエイト収入が発生する箇所には「PR」「広告」等の表記を行います。
+          掲載商品の選定は編集上の独立性を保って行われており、
+          報酬の有無が記事の内容に影響することはありません。
+        </p>
+      </section>
+
+      <!-- 6 -->
+      <section id="cookie" class="priv-section">
+        <h2><span class="num">06</span>Cookie の管理</h2>
+        <p>
+          Cookie はほとんどのブラウザでデフォルトで有効になっています。
+          ブラウザの設定から Cookie を無効にすることができますが、
+          一部の機能が正常に動作しなくなる場合があります。
+        </p>
+        <div class="browser-list">
+          <div class="browser-item">
+            <span class="browser-label">Chrome</span>
+            設定 → プライバシーとセキュリティ → Cookie と他のサイトデータ
+          </div>
+          <div class="browser-item">
+            <span class="browser-label">Safari</span>
+            設定 → Safari → プライバシーとセキュリティ
+          </div>
+          <div class="browser-item">
+            <span class="browser-label">Firefox</span>
+            設定 → プライバシーとセキュリティ → Cookie とサイトデータ
+          </div>
+          <div class="browser-item">
+            <span class="browser-label">Edge</span>
+            設定 → Cookie とサイトのアクセス許可
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="contact" class="priv-section">
+        <h2><span class="num">07</span>お問い合わせ</h2>
+        <p>
+          本プライバシーポリシーに関するご質問・ご意見は、
+          サイト内の各ツールページ下部、またはSNSのDMよりお問い合わせください。
+        </p>
+        <p>
+          本ポリシーは、法令の改正・サービス内容の変更等に伴い、
+          予告なく更新される場合があります。
+          変更後のポリシーは本ページに掲載した時点で有効となります。
+        </p>
+      </section>
+
+    </article>
+
+    <footer class="priv-footer">
+      <p>最終更新日：2026年5月22日</p>
+      <div class="footer-links">
+        <a href="/terms/" class="back-link">利用規約・運営者情報</a>
+        <a href="/" class="back-link">← ツール一覧に戻る</a>
+      </div>
+    </footer>
+  </div>
+</BaseLayout>
+
+<style>
+  .priv-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 1rem 5rem;
+    box-sizing: border-box;
+  }
+
+  .breadcrumb { margin-bottom: 1.5rem; font-size: .875rem; }
+  .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .priv-header { margin-bottom: 2rem; }
+  .priv-header h1 { font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 800; margin: 0 0 .5rem; }
+  .updated { font-size: .82rem; color: var(--gray-400); margin: 0; }
+
+  /* TOC */
+  .toc-card {
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: .875rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .toc-title { font-size: .78rem; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 .75rem; }
+  .toc-list { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: .4rem; }
+  .toc-list li { font-size: .875rem; }
+  .toc-list a { color: var(--accent-regular); text-decoration: none; }
+  .toc-list a:hover { text-decoration: underline; }
+
+  /* Section */
+  .priv-section {
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--gray-800);
+  }
+  .priv-section:last-child { border-bottom: none; }
+
+  .priv-section h2 {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 0 1.25rem;
+  }
+  .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem; height: 2rem;
+    background: var(--accent-regular);
+    color: #fff;
+    border-radius: .5rem;
+    font-size: .75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .priv-section p {
+    font-size: .9rem;
+    line-height: 1.85;
+    color: var(--gray-200);
+    margin: 0 0 1rem;
+  }
+  .priv-section p:last-child { margin-bottom: 0; }
+
+  .priv-section a { color: var(--accent-regular); text-decoration: none; }
+  .priv-section a:hover { text-decoration: underline; }
+
+  /* Info list */
+  .info-list {
+    padding-left: 1.25rem;
+    margin: .75rem 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+  }
+  .info-list li {
+    font-size: .875rem;
+    color: var(--gray-200);
+    line-height: 1.7;
+  }
+
+  /* Link card */
+  .link-card {
+    display: inline-block;
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-left: 3px solid var(--accent-regular);
+    border-radius: 0 .5rem .5rem 0;
+    padding: .625rem 1rem;
+    margin: .5rem 0 1rem;
+    font-size: .875rem;
+    font-weight: 600;
+  }
+
+  /* Browser list */
+  .browser-list {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin: .75rem 0 1rem;
+  }
+  .browser-item {
+    display: flex;
+    align-items: baseline;
+    gap: .75rem;
+    padding: .625rem .875rem;
+    background: var(--gray-999);
+    border: 1px solid var(--gray-800);
+    border-radius: .5rem;
+    font-size: .82rem;
+    color: var(--gray-300);
+    line-height: 1.6;
+    flex-wrap: wrap;
+  }
+  .browser-label {
+    font-weight: 700;
+    color: var(--gray-0);
+    white-space: nowrap;
+    min-width: 4rem;
+  }
+
+  /* Footer */
+  .priv-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding-top: 2rem;
+    border-top: 1px dashed var(--gray-700);
+    font-size: .82rem;
+    color: var(--gray-500);
+  }
+  .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .back-link { color: var(--accent-regular); text-decoration: none; }
+  .back-link:hover { text-decoration: underline; }
+</style>

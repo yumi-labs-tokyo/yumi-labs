@@ -3,14 +3,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
-  title="利用規約・運営者情報・プライバシーポリシー — yumi-Labs"
-  description="yumi-Labsの利用規約、運営方針、免責事項、運営者情報、プライバシーポリシーについてのページです。"
+  title="利用規約・運営者情報 — yumi-Labs"
+  description="yumi-Labsの利用規約、運営方針、免責事項、運営者情報についてのページです。"
 >
   <div class="wrapper terms-wrap">
     <nav class="breadcrumb"><a href="/">← ツール一覧</a></nav>
 
     <header class="terms-header">
       <h1>利用規約・運営者情報</h1>
+      <p class="privacy-link-hint">プライバシーポリシーは<a href="/privacy/">こちらの独立ページ</a>をご覧ください。</p>
       <p class="updated">最終更新日：2026年5月19日</p>
     </header>
 
@@ -21,7 +22,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <li><a href="#policy">運営方針</a></li>
         <li><a href="#tools">提供中のツール</a></li>
         <li><a href="#operator">運営者情報・媒体資料</a></li>
-        <li><a href="#ads">広告・プライバシーポリシーについて</a></li>
+        <li><a href="#ads">広告について</a></li>
         <li><a href="#disclaimer">免責事項</a></li>
       </ol>
     </div>
@@ -142,40 +143,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       <!-- 5 -->
       <section id="ads" class="terms-section">
-        <h2><span class="num">05</span>広告・プライバシーポリシーについて</h2>
+        <h2><span class="num">05</span>広告について</h2>
         <p>
-          現在（2026年5月時点）、当サイトには広告を掲載しています。
+          当サイトでは、運営・維持コストを賄うため、以下の形式での広告掲載を行っています。
         </p>
-        <p>
-          サイトの運営・維持コストを賄うため、以下の形式での広告掲載をしています。
-        </p>
-        <p>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7462635987379157"
-     crossorigin="anonymous"></script>
-     </p>
         <ul>
           <li><strong>Google AdSense</strong>などの第三者配信広告</li>
           <li>ツール・サービスに関連した<strong>アフィリエイトリンク</strong></li>
           <li>企業との<strong>タイアップ・スポンサー記事</strong>（明示表記あり）</li>
         </ul>
         <p>
-          当サイトでは、第三者配信の広告サービス（Googleアドセンス）を利用しています。
+          Cookie・アクセス解析・個人情報の取り扱いに関する詳細は、
+          独立したページをご用意しています。
         </p>
-        <p>
-          広告配信事業者は、ユーザーの興味に応じた広告を表示するために
-        </p>
-        <p>
-          **「Cookie（クッキー）」**を使用することがあります。
-        </p>
-        <p>
-          アフィリエイト収入が発生する場合は、該当箇所に明記します。
-        </p>
-        <p>
-          ユーザーは、ブラウザの設定でCookieを無効にすることで、このトラッキングを拒否できます。
-        </p>
-        <p>
-          （Googleアナリティクスなどのアクセス解析を入れている場合）アクセス解析のためにCookieを使用しています。
-        </p>
+        <a href="/privacy/" class="privacy-cta">
+          プライバシーポリシーを読む →
+        </a>
       </section>
 
       <!-- 6 -->
@@ -228,6 +211,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     padding: 2rem 1rem 5rem;
     box-sizing: border-box;
   }
+
+  .privacy-link-hint {
+    font-size: .82rem;
+    color: var(--gray-400);
+    margin: .5rem 0 0;
+  }
+  .privacy-link-hint a { color: var(--accent-regular); text-decoration: none; }
+  .privacy-link-hint a:hover { text-decoration: underline; }
+
+  .privacy-cta {
+    display: inline-block;
+    margin-top: .75rem;
+    padding: .625rem 1.25rem;
+    background: color-mix(in srgb, var(--accent-regular) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-regular) 40%, transparent);
+    border-radius: .5rem;
+    color: var(--accent-regular);
+    font-size: .875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .2s;
+  }
+  .privacy-cta:hover { background: color-mix(in srgb, var(--accent-regular) 22%, transparent); }
 
   .breadcrumb { margin-bottom: 1.5rem; font-size: .875rem; }
   .breadcrumb a { color: var(--accent-regular); text-decoration: none; }
