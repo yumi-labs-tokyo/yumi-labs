@@ -58,11 +58,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   :global(.sqljv td.hl-right) { background: rgba(167,139,250,.12); }
   :global(.sqljv td.null-val) { color: #475569; font-style: italic; }
 
+  /* モバイル: テーブルを画面内に強制収納（横スクロール不要・はみ出し不可） */
+  @media (max-width: 600px) {
+    :global(.sqljv table) { table-layout: fixed; width: 100%; min-width: 0; font-size: 0.62rem; }
+    :global(.sqljv th), :global(.sqljv td) {
+      white-space: normal; word-break: break-all; overflow-wrap: anywhere;
+      padding: 4px 4px;
+    }
+    :global(.sqljv .table-card) { padding: 10px; overflow-x: hidden; }
+  }
+
   /* result */
   .result-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 24px; overflow: hidden; }
   .result-title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
   :global(.sqljv .result-count) { display: inline-block; padding: 3px 12px; border-radius: 99px; background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.75rem; font-weight: 700; margin-left: 8px; }
   .result-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  @media (max-width: 600px) { .result-table-wrap { overflow-x: hidden; } }
   :global(.sqljv .result-row-left  td) { background: rgba(56,189,248,.07); }
   :global(.sqljv .result-row-right td) { background: rgba(167,139,250,.07); }
   :global(.sqljv .result-row-both  td) { background: rgba(52,211,153,.07); }
