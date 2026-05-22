@@ -48,7 +48,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   /* data tables */
   .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   @media(max-width:580px){ .tables-row { grid-template-columns: 1fr; } }
-  .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; min-width: 0; }
   .table-name { font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 10px; font-family: 'Courier New', monospace; }
   table { min-width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   th { background: #0f172a; color: #64748b; padding: 6px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
